@@ -48,6 +48,9 @@ public class BernyTest : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        PxPre.Berny.TTF.Loader loader = new PxPre.Berny.TTF.Loader();
+        loader.Read("Assets\\Testing\\Nerko\\NerkoOne-Regular.ttf");
+
         this.curveDocument = new Document();
 
         BShape shapeRect = this.curveDocument.AddRectangle(Vector2.zero, new Vector2(1.0f, 1.0f));
