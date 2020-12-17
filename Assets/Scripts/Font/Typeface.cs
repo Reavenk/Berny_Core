@@ -28,25 +28,15 @@ namespace PxPre
 {
     namespace Berny
     {
-        namespace TTF
+        namespace Font
         {
-            namespace Table
+            public class Typeface
             {
-                /// <summary>
-                /// OS/2 — OS/2 and Windows Metrics Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/os2
-                /// 
-                /// The OS/2 table consists of a set of metrics and other data that 
-                /// are required in OpenType fonts.
-                /// 
-                /// Six versions of the OS/2 table have been defined: versions 0 to 5. 
-                /// All versions are supported, but use of version 4 or later is strongly 
-                /// recommended.
-                /// </summary>
-                public struct OS2
-                {
-                    public const string TagName = "OS/2";
-                }
+                public string name = "";
+                public List<Glyph> glyphs = new List<Glyph>();
+                public Dictionary<int, Glyph> glyphLookup = new Dictionary<int, Glyph>();
+                public float newlineDst = 0.0f;
+
             }
         }
     }

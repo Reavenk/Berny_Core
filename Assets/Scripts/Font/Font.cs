@@ -21,11 +21,13 @@
 // SOFTWARE.
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PxPre
 {
     namespace Berny
     {
+        // TODO: Change filename to something specifically about TTFLoading
         namespace TTF
         {
             public class Loader
@@ -65,16 +67,25 @@ namespace PxPre
                 public bool IsTTF { get => this.sfntVersion == FormatTrueType; }
                 public bool IsOTF { get => this.sfntVersion == FormatOTF; }
 
-                public bool Read(string path)
+                int unitsPerEm = 0;
+                int offsetByteWidth = 0;
+                int numGlyphs = 0;
+
+                public Font.Typeface Read(string path)
                 {
                     TTFReader r = new TTFReader(path);
                     return this.Read(r);
                 }
 
-                public bool Read(TTFReader r)
+                public Font.Typeface Read(TTFReader r)
                 {
+                    // https://tchayen.github.io/ttf-file-parsing/
                     r.SetPosition(0);
                     r.ReadInt(out this.sfntVersion);
+
+                    if(this.sfntVersion != FormatTrueType && this.sfntVersion != FormatOTF)
+                        return null;
+
                     r.ReadInt(out this.numTables);
                     r.ReadInt(out this.searchRange);
                     r.ReadInt(out this.entrySelector);
@@ -88,7 +99,183 @@ namespace PxPre
                         this.tables.Add(t.tag, t);
                     }
 
-                    return true;
+                    Table tabEntHead;
+                    if(this.tables.TryGetValue(TTF.Table.head.TagName, out tabEntHead) == false)
+                        return null;
+
+                    r.SetPosition(tabEntHead.offset);
+                    TTF.Table.head tableHead = new TTF.Table.head();
+                    tableHead.Read(r);
+                    this.unitsPerEm = tableHead.unitsPerEm;
+                    this.offsetByteWidth = tableHead.OffsetByteWidth;
+
+                    // maxp will tell us how many glyphs there are in the file
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntMaxP;
+                    if(this.tables.TryGetValue(TTF.Table.maxp.TagName, out tabEntMaxP) == false)
+                        return null;
+
+                    r.SetPosition(tabEntMaxP.offset);
+                    TTF.Table.maxp tableMaxP = new TTF.Table.maxp();
+                    tableMaxP.Read(r);
+                    this.numGlyphs = tableMaxP.numGlyphs;
+
+                    // cmap tells us the mapping between character codes and glyph indices used 
+                    // throughout the font file
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntCMap;
+                    if(this.tables.TryGetValue(TTF.Table.cmap.TagName, out tabEntCMap) == false)
+                        return null;
+
+                    r.SetPosition(tabEntCMap.offset);
+                    TTF.Table.cmap tableCMap = new TTF.Table.cmap();
+                    tableCMap.Read(r, tabEntCMap.offset);
+                    //tableCMap.encodingRecords
+
+                    // glyf provides xMin, yMin, xMax, yMax
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntGlyf;
+                    if(this.tables.TryGetValue(TTF.Table.glyf.TagName, out tabEntGlyf) == false)
+                        return null;
+
+                    r.SetPosition(tabEntGlyf.offset);
+                    //TTF.Table.glyf tableGlyf = new TTF.Table.glyf();
+                    //tableGlyf.Read(r);
+                    //tableGlyf.xMin;
+                    //tableGlyf.yMin;
+                    //tableGlyf.xMax;
+                    //tableGlyf.yMax;
+
+                    // loca knows offsets of glyphs in the glyf table
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntLoca;
+                    if(this.tables.TryGetValue(TTF.Table.loca.TagName, out tabEntLoca) == false)
+                        return null;
+
+                    r.SetPosition(tabEntLoca.offset);
+                    TTF.Table.loca tableLoca = new TTF.Table.loca();
+                    tableLoca.Read(r, numGlyphs, this.offsetByteWidth == 4);
+                     
+                    // hhea will tell us how many horizontal metrics there are defined in the hmtx 
+                    // table(it doesn't have to be one for each character)
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntHHea;
+                    if(this.tables.TryGetValue(TTF.Table.hhea.TagName, out tabEntHHea) == false)
+                        return null;
+
+                    r.SetPosition(tabEntHHea.offset);
+                    TTF.Table.hhea tableHhea = new TTF.Table.hhea();
+                    tableHhea.Read(r);
+
+                    // hmtx contains information about leftSideBearing (which is how far each character 
+                    // wants to be from the previous one) and advanceWidth which is how much horizontal 
+                    // space it claims for itself
+                    ////////////////////////////////////////////////////////////////////////////////
+                    Table tabEntHmtx;
+                    if(this.tables.TryGetValue(TTF.Table.hmtx.TagName, out tabEntHmtx) == false)
+                        return null;
+
+                    r.SetPosition(tabEntHmtx.offset);
+                    TTF.Table.hmtx tableHmtx = new TTF.Table.hmtx();
+                    tableHmtx.Read(r, tableHhea.numberOfHMetrics, numGlyphs);
+
+                    // TODO:
+                    int selectedOffset = -1;
+                    for(int i = 0; i < tableCMap.numTables; ++i)
+                    {
+                        if(
+                            tableCMap.encodingRecords[i].IsWindowsPlatform() || 
+                            tableCMap.encodingRecords[i].IsUnicodePlatform())
+                        { 
+                            selectedOffset = (int)tableCMap.encodingRecords[i].subtableOffset;
+                            break;
+                        }
+                    }
+
+                    Font.Typeface ret = new Font.Typeface();
+
+                    int glyphCount = tableLoca.GetGlyphCount();
+                    for (int i = 0; i < glyphCount; ++i)
+                    {
+                        uint lid = tableLoca.GetGlyphOffset( tables["glyf"], i);
+                        r.SetPosition(lid);
+
+                        Font.Glyph fontGlyph = new Font.Glyph();
+                        fontGlyph.advance = (float)tableHmtx.hMetrics[i].advanceWidth / (float)tableHead.unitsPerEm;
+                        fontGlyph.leftSideBearing = (float)tableHmtx.hMetrics[i].lsb / (float)tableHead.unitsPerEm;
+
+                        uint glyphSize = tableLoca.GetGlyphSize(i);
+                        if (glyphSize == 0)
+                        {
+                            // Empty glyph?
+                            // https://docs.microsoft.com/en-us/typography/opentype/spec/loca
+                            // By definition, index zero points to the “missing character”, which is the 
+                            // character that appears if a character is not found in the font. The missing 
+                            // character is commonly represented by a blank box or a space. If the font does 
+                            // not contain an outline for the missing character, then the first and second 
+                            // offsets should have the same value. This also applies to any other characters 
+                            // without an outline, such as the space character. If a glyph has no outline, 
+                            // then loca[n] = loca [n+1]. In the particular case of the last glyph(s), loca[n] 
+                            // will be equal the length of the glyph data ('glyf') table. The offsets must 
+                            // be in ascending order with loca[n] <= loca[n+1].
+                            ret.glyphs.Add(fontGlyph);
+                            continue;
+                        }
+                        TTF.Table.glyf glyf = new TTF.Table.glyf();
+                        glyf.Read(r);
+
+                        Font.Contour curContour = new Font.Contour();
+                        fontGlyph.contours.Add(curContour);
+                        int lastContourId = 0;
+                        int curEnd = glyf.endPtsOfCountours[lastContourId];
+
+                        for (int j = 0; j < glyf.xCoordinates.Count; ++j)
+                        {
+                            if(j > curEnd)
+                            {
+                                curContour = new Font.Contour();
+                                fontGlyph.contours.Add(curContour);
+
+                                ++lastContourId;
+                                curEnd = glyf.endPtsOfCountours[lastContourId];
+                            }
+
+
+                            Font.Point pt = new Font.Point();
+                            pt.position = 
+                                new Vector2(
+                                    ((float)glyf.xMin + (float)glyf.xCoordinates[j])/(float)tableHead.unitsPerEm,
+                                    (float)glyf.yCoordinates[j]/(float)tableHead.unitsPerEm);
+
+                            curContour.points.Add(pt);
+
+                        }
+                        
+                        ret.glyphs.Add(fontGlyph);
+                    }
+
+                    Dictionary<uint, uint> characterRemap = null;
+                    foreach (TTF.Table.cmap.CharacterConversionMap ccm in tableCMap.EnumCharacterMaps())
+                    {
+                        characterRemap = ccm.MapCodeToIndex(r);
+                        break;
+                    }
+                    foreach(KeyValuePair<uint, uint> kvp in characterRemap)
+                    {
+                        int code = (int)kvp.Key;
+                        int idx = (int)kvp.Value;
+
+                        if(idx >= ret.glyphs.Count)
+                            continue;
+
+                        if(ret.glyphLookup.ContainsKey(code) == true)
+                            continue;
+
+                        ret.glyphLookup[code] = ret.glyphs[idx];
+                    }
+
+
+                    return ret;
                 }
 
                 public void Clear()

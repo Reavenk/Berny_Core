@@ -50,8 +50,10 @@ namespace PxPre
                         public short lsb;               // Glyph left side bearing, in font design units.
                     }
 
-                    public List<longHorMetric> hMetrics;
-                    public List<short> leftSideBearings;
+                    public const string TagName = "hmtx";
+
+                    public List<longHorMetric> hMetrics;    // Paired advance width and left side bearing values for each glyph. Records are indexed by glyph ID.
+                    public List<short> leftSideBearings;    // Left side bearings for glyph IDs greater than or equal to numberOfHMetrics.
 
                     public void Read(TTFReader r, int numberOfHMetrics, int numGlyphs)
                     {
@@ -65,7 +67,7 @@ namespace PxPre
                         }
 
                         this.leftSideBearings = new List<short>();
-                        // We could have them pass in ths numGlyphs-numberOfHMetrics instead of 
+                        // We could have them pass in the numGlyphs-numberOfHMetrics instead of 
                         // calculating this ourselves, but I think this helps add rigor.
                         for (int i = 0; i < numGlyphs - numberOfHMetrics; ++i)
                             this.leftSideBearings.Add(r.ReadInt16());

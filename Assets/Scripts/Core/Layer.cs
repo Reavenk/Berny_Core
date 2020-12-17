@@ -57,7 +57,7 @@ namespace PxPre
             }
 
 
-            bool dirty = false;
+            bool dirty = true;
 
             public Layer(Document doc)
             { 

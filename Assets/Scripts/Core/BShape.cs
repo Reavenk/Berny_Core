@@ -172,7 +172,7 @@ namespace PxPre
             /// If true, the shape has been modified since the last time data was formally
             /// prepared for presentation.
             /// </summary>
-            bool dirty = false;
+            bool dirty = true;
 
             // Currently unused, planned for non-path SVG shapes
             //public string objectType = string.Empty;

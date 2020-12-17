@@ -57,7 +57,7 @@ namespace PxPre
             /// If true, the document has been changed since the last time it was prepared 
             /// for presentation.
             /// </summary>
-            bool dirty = false;
+            bool dirty = true;
 
             /// <summary>
             /// Enumerate through the document layers.

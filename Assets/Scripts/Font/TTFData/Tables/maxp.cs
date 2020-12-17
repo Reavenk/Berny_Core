@@ -41,8 +41,10 @@ namespace PxPre
                 /// Fonts with TrueType outlines must use Version 1.0 of this table, where all 
                 /// data is required.
                 /// </summary>
-                public struct MaxP
+                public struct maxp
                 {
+                    public const string TagName = "maxp";
+
                     public ushort majorVersion;
                     public ushort minorVersion;
                     public ushort numGlyphs;

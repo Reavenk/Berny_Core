@@ -28,6 +28,30 @@ namespace PxPre
     namespace Berny
     {
         /// <summary>
+        /// Cached values for how much a node's part will move (per-unit)
+        /// during inflation.
+        /// </summary>
+        public struct InflationCache
+        { 
+            /// <summary>
+            /// Influence on the BNode's point.
+            /// </summary>
+            public Vector2 selfInf;
+
+            /// <summary>
+            /// Influence on the BNode's p1 tangent.
+            /// This is also known as the previous' output tangent.
+            /// </summary>
+            public Vector2 inInf;
+
+            /// <summary>
+            /// Influence on the BNode's p2 tangent.
+            /// This is also known as the next's input tangent.
+            /// </summary>
+            public Vector2 outInf;
+        }
+
+        /// <summary>
         /// Represents a bezier path inside a shape. 
         /// 
         /// This class focuses explicitly on defining the path geometry and leaves
@@ -50,7 +74,7 @@ namespace PxPre
             /// True if the loop has been changed since the last time the object was prepared
             /// for presentation.
             /// </summary>
-            public bool dirty = false;
+            public bool dirty = true;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>
@@ -313,7 +337,7 @@ namespace PxPre
             /// Get a list of all the islands and the type of loop they are, whether they're
             /// opened or closed.
             /// </summary>
-            /// <returns>A list of endpoint queries containing a referemce tp all the islands.</returns>
+            /// <returns>A list of endpoint queries containing a reference to all the islands.</returns>
             public List<BNode.EndpointQuery> GetIslandsDescriptive()
             { 
                 List<BNode.EndpointQuery> ret = new List<BNode.EndpointQuery>();
@@ -672,6 +696,44 @@ namespace PxPre
                     ret += it.CalculateWindingSamples();
 
                 return ret;
+            }
+
+            public static Vector2 RotateEdge90CCW(Vector2 v2)
+            { 
+                return new Vector2(-v2.y, v2.x);
+            }
+
+            public void Inflate(float amt)
+            { 
+                Dictionary<BNode, InflationCache> cachedInf = 
+                    new Dictionary<BNode, InflationCache>();
+
+                // Go through all nodes and get their influences. We can't do this
+                // on the same pass we update them, or else we would be modifying
+                // values that would be evaluated later as dirty neighbors.
+                foreach(BNode bn in this.nodes)
+                { 
+                    InflationCache ic = new InflationCache();
+                    bn.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
+
+                    cachedInf.Add(bn, ic);
+                }
+
+                foreach(KeyValuePair<BNode, InflationCache> kvp in cachedInf)
+                { 
+                    BNode bn = kvp.Key;
+                    // This is just us being lazy for sanity. Sure we could try to 
+                    // inflate while keeping smooth or symmetry, or it might just
+                    // naturally work itself out if we leave it alone - but I'd rather
+                    // take the easy way out on this for now.
+                    // (wleu)
+                    if(bn.tangentMode != BNode.TangentMode.Disconnected)
+                        bn.SetTangentDisconnected();
+
+                    bn.Pos += amt * kvp.Value.selfInf;
+                    bn.TanIn += amt * (kvp.Value.inInf - kvp.Value.selfInf);
+                    bn.TanOut += amt * (kvp.Value.outInf - kvp.Value.selfInf);
+                }
             }
         }
     } 

@@ -1,86 +1,15 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   xmlns:d2p1="inkscape"
-   xmlns:dc0="dc"
-   xmlns:cc0="cc"
-   xmlns:rdf0="rdf"
-   xmlns:d1p1="PxPreVector"
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   d1p1:version="1.1"
-   width="1000mm"
-   height="1000mm"
-   viewBox="0 0 1 1"
-   id="svg8"
-   version="1.1"
-   sodipodi:docname="TestSave.svg"
-   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)">
-  <sodipodi:namedview
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1"
-     objecttolerance="10"
-     gridtolerance="10"
-     guidetolerance="10"
-     inkscape:pageopacity="0"
-     inkscape:pageshadow="2"
-     inkscape:window-width="1309"
-     inkscape:window-height="1041"
-     id="namedview8"
-     showgrid="false"
-     inkscape:zoom="0.079999996"
-     inkscape:cx="3269.9669"
-     inkscape:cy="3031.6947"
-     inkscape:window-x="887"
-     inkscape:window-y="40"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="layer2"
-     inkscape:document-rotation="0" />
-  <defs
-     id="defs2" />
-  <metadata
-     id="metadata5">
-    <rdf0:RDF>
-      <cc0:Work
-         about="">
-        <dc0:format>image/svg+xml</dc0:format>
-        <dc0:type
-           resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc0:title />
-      </cc0:Work>
-    </rdf0:RDF>
-    <rdf:RDF>
-      <cc:Work
-         rdf:about="">
-        <dc:format>image/svg+xml</dc:format>
-        <dc:type
-           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-      </cc:Work>
-    </rdf:RDF>
+<svg d1p1:version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns/#" xmlns:rdf="http://w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1000mm" height="1000mm" viewBox="0 0 1 1" id="svg8" xmlns:d1p1="PxPreVector">
+  <defs />
+  <metadata id="metadata5">
+    <RDF xmlns="rdf">
+      <Work about="" xmlns="cc">
+        <format xmlns="dc">image/svg+xml</format>
+        <type resource="http://purl.org/dc/dcmitype/StillImage" xmlns="dc" />
+        <title xmlns="dc" />
+      </Work>
+    </RDF>
   </metadata>
-  <g
-     d2p1:label=""
-     d2p1:groupmode="layer"
-     id="layer1"
-     style="display:inline">
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M -0.36694313,0.09180168 C 0.25482767,0.95831204 1.2633854,1.0781771 0.91281253,-0.15875"
-       id="path833"
-       sodipodi:nodetypes="cc" />
-    <path
-       style="display:inline;fill:none;stroke:#000000;stroke-width:0.0264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M 1.4661397,0.98060643 C 0.91281253,-0.15875 -0.35057287,0.10583333 0.19821229,1.2224892"
-       id="path833-2"
-       sodipodi:nodetypes="cc" />
+  <g d2p1:label="" d2p1:groupmode="layer" id="layer1" style="display:inline" xmlns:d2p1="inkscape">
+    <path style="fill: #ffffff; fill-opacity: 1; stroke: #000000; stroke-opacity: 1; stroke-width: 0.001; stroke-linecap: butt; stroke-miterlimit: 4; stroke-linejoin: round; stroke-dasharray: none; " d="M -1, 1 C -0.5,1.5 0.5,1.5 1,1 1.5,0.5 1.5,-0.5 1,-1 0.5,-1.5 -0.5,-1.5 -1,-1 -1.5,-0.5 -1.5,0.5 -1,1 Z" id="" />
   </g>
-  <g
-     inkscape:groupmode="layer"
-     id="layer2"
-     inkscape:label="Layer 1" />
 </svg>

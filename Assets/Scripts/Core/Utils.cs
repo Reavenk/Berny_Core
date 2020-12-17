@@ -1205,7 +1205,7 @@ namespace PxPre
 
                 Vector4 roots_drv = new Vector4(1e38F, 1e38F, 1e38F, 1e38F);
 
-                int num_roots_drv = solve_quartic(c1, ref roots_drv);
+                int num_roots_drv = SolveQuartic(c1, ref roots_drv);
                 SortVector4(ref roots_drv);
 
                 float ub = UpperBoundLagrange5(b0, b1, b2, b3, b4);
@@ -1398,108 +1398,6 @@ namespace PxPre
                 return Mathf.Sqrt(d0);
             }
 
-            // Modified from http://tog.acm.org/resources/GraphicsGems/gems/Roots3And4.c
-            // Credits to Doublefresh for hinting there
-            public static int solve_quartic(Vector4 coeffs, ref Vector4 s)
-            {
-
-                float a = coeffs[3];
-                float b = coeffs[2];
-                float c = coeffs[1];
-                float d = coeffs[0];
-
-                /*  substitute x = y - A/4 to eliminate cubic term:
-                x^4 + px^2 + qx + r = 0 */
-
-                float sq_a = a * a;
-                float p = -3.0f/ 8.0f * sq_a + b;
-                float q = 1.0f/ 8.0f * sq_a * a - 1.0f/ 2.0f * a * b + c;
-                float r = -3.0f/ 256.0f* sq_a * sq_a + 1.0f/ 16.0f* sq_a * b - 1.0f/ 4.0f* a * c + d;
-
-                int num;
-              
-                /* solve the resolvent cubic ... */
-
-                Vector3 cubic_coeffs = 
-                    new Vector3(
-                        1.0f / 2.0f * r * p - 1.0f / 8.0f * q * q,
-                        -r,
-                        -1.0f / 2.0f * p);
-
-                Vector3 s3 = s;
-
-                SolveCubic(cubic_coeffs, ref s3);
-
-                /* ... and take the one real solution ... */
-
-                float z = s3[0];
-
-                /* ... to build two quadric equations */
-
-                float u = z * z - r;
-                float v = 2.0f * z - p;
-
-                if (u > -sdeps)
-                    u = Mathf.Sqrt(Mathf.Abs(u));
-                else
-                    return 0;
-
-                if (v > -sdeps)
-                    v = Mathf.Sqrt(Mathf.Abs(v));
-                else
-                    return 0;
-
-                Vector2 quad_coeffs = 
-                    new Vector2(
-                        z - u,
-                        q < 0.0f ? -v : v);
-
-                Vector2 s2 = s3;
-                num = SolveQuadric(quad_coeffs, ref s2);
-
-                quad_coeffs[0] = z + u;
-                quad_coeffs[1] = q < 0.0f ? v : -v;
-
-                Vector2 tmp = new Vector2(1e38f, 1e38f);
-                int old_num = num;
-
-                num += SolveQuadric(quad_coeffs, ref tmp);
-                if (old_num != num)
-                {
-                    if (old_num == 0)
-                    {
-                        s[0] = tmp[0];
-                        s[1] = tmp[1];
-                    }
-                    else
-                    {//old_num == 2
-                        s[2] = tmp[0];
-                        s[3] = tmp[1];
-                    }
-                }
-
-                /* resubstitute */
-
-                float sub = 1.0f/ 4.0f * a;
-
-                s = new Vector4(s2.x, s2.y, s3.z, s.w);
-
-                /* single halley iteration to fix cancellation */
-                for (int i = 0; i < 4; i += 2)
-                {
-                    if (i < num)
-                    {
-                        s[i] -= sub;
-                        s[i] = HalleyIteration4(coeffs, s[i]);
-
-                        s[i + 1] -= sub;
-                        s[i + 1] = HalleyIteration4(coeffs, s[i + 1]);
-                    }
-                }
-
-                return num;
-            }
-
             /// <summary>
             /// https://www.shadertoy.com/view/4sKyzW
             /// </summary>
@@ -1618,7 +1516,7 @@ namespace PxPre
             /// <param name="p2">The end point tangent.</param>
             /// <param name="p3">The end point.</param>
             /// <returns>The evaluated point on the Bezier curve.</returns>
-            public static Vector2 ParametriCubeBezier(float t, Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3)
+            public static Vector2 ParametricCubeBezier(float t, Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3)
             {
                 // Multiple positions and basis
                 Vector2 a0 = (-p0 + 3.0f * p1 - 3.0f * p2 + p3);
@@ -1626,12 +1524,30 @@ namespace PxPre
                 Vector2 a2 = (-3.0f * p0 + 3.0f * p1);
                 Vector2 a3 = p0;
 
-                // Add in time
-                // Super interesting how this is done different from the rest of
-                // the Bezier code where the basis are multiplied in reverse :
-                // with the basis and t, and then against the points.
                 return (((a0 * t) + a1) * t + a2) * t + a3;
 
+            }
+
+            /// <summary>
+            /// Given the 4 points of a 1D Bezier curve it returns the values
+            /// that should be multiplied by t^3, t^2, t, and 1,
+            /// as a linear combination, to evaluate the Bezier at time t.
+            /// 
+            /// See ParametricCubeBezier for more information from similar usage.
+            /// </summary>
+            /// <param name="p0"></param>
+            /// <param name="p1"></param>
+            /// <param name="p2"></param>
+            /// <param name="p3"></param>
+            /// <returns></returns>
+            public static Vector4 BezierCoefficients(float p0, float p1, float p2, float p3)
+            { 
+                return 
+                    new Vector4(
+                        -p0 + 3.0f * p1 - 3.0f * p2 + p3,
+                        3.0f * p0 - 6.0f * p1 + 3.0f * p2,
+                        -3.0f * p0 + 3.0f * p1,
+                        p0);
             }
 
             /// <summary>
@@ -1787,7 +1703,83 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Saolve a quartic 
+            /// Solves the Cubic formula, 
+            /// 
+            /// From Wolfram (https://mathworld.wolfram.com/CubicFormula.html), 
+            /// the formula matches as a3 * z^3 + a2 * z^2 + a1 * z + a0 == 0
+            /// This will be what the parameter definitions will reference.
+            /// </summary>
+            /// <param name="p0">The value of a3</param>
+            /// <param name="p1">The value of a2</param>
+            /// <param name="p2">The value of a1</param>
+            /// <param name="p3">The value of a0</param>
+            /// <param name="t">An ordered collection of solutions. To know how many values in
+            /// the vector are relevant, see the return value.</param>
+            /// <returns>
+            /// The number of solution found. This is also the number of entries in the 
+            /// out parameter t that were filled.
+            /// </returns>
+            /// <remarks>
+            /// While the function is originally added to solve for cubic Bezier segments
+            /// against line segments, it was decided best to keep the function generic. The biggest
+            /// consequence of that is the function is unbounded. So if any bounding (between [0.0, 1.0])
+            /// needs to be checked, that should be done by the caller.
+            /// </remarks>
+            /// <remarks>
+            /// Results can be validated with this online solver: 
+            /// https://www.calculatorsoup.com/calculators/algebra/cubicequation.php
+            /// </remarks>
+            public static int SolveCubicFormula(float p0, float p1, float p2, float p3, out Vector3 t)
+            {
+                // https://mathworld.wolfram.com/CubicFormula.html
+                // https://www.particleincell.com/2013/cubic-line-intersection/
+                float a = p0;
+                float b = p1;
+                float c = p2;
+                float d = p3;
+
+                float A = b / a;
+                float B = c / a;
+                float C = d / a;
+
+                float Q = (3.0f * B - Mathf.Pow(A, 2.0f)) / 9.0f;
+                float R = (9.0f * A * B - 27.0f * C - 2.0f * Mathf.Pow(A, 3.0f)) / 54.0f;
+                float D = Mathf.Pow(Q, 3.0f) + Mathf.Pow(R, 2.0f);    // polynomial discriminant
+
+                t = new Vector3();
+
+                if (D >= 0)                         // complex or duplicate roots
+                {
+                    float S = Mathf.Sign(R + Mathf.Sqrt(D)) * Mathf.Pow(Mathf.Abs(R + Mathf.Sqrt(D)), (1.0f / 3.0f));
+                    float T = Mathf.Sign(R - Mathf.Sqrt(D)) * Mathf.Pow(Mathf.Abs(R - Mathf.Sqrt(D)), (1.0f / 3.0f));
+
+                    t[0] = -A / 3 + (S + T);                                // real root
+                    float Im = Mathf.Abs(Mathf.Sqrt(3) * (S - T) / 2);      // complex part of root pair   
+                    if (Im != 0)
+                        return 1;
+                    
+                    t[1] = -A / 3 - (S + T) / 2;  // real part of complex root
+                    t[2] = -A / 3 - (S + T) / 2;  // real part of complex root
+                    // 3 real roots
+
+                }
+                else                                          // distinct real roots
+                {
+                    float th = Mathf.Acos(R / Mathf.Sqrt(-Mathf.Pow(Q, 3.0f)));
+
+                    t[0] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos(th / 3) - A / 3;
+                    t[1] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos((th + 2 * Mathf.PI) / 3.0f) - A / 3.0f;
+                    t[2] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos((th + 4 * Mathf.PI) / 3.0f) - A / 3.0f;
+                    // 3 real roots
+                }
+
+                //SortVector3(ref t);
+                // We don't do [0,1] bounds checking here, we leave that for 
+                return 3;
+            }
+
+            /// <summary>
+            /// Solve a quartic 
             /// </summary>
             /// <param name="coeffs"></param>
             /// <param name="s"></param>
@@ -1894,6 +1886,104 @@ namespace PxPre
                 }
 
                 return num;
+            }
+
+            /// <summary>
+            /// Calculate the intersection of a unbounded-or-unbounded line against a cubic
+            /// Bezier segment.
+            /// </summary>
+            /// <param name="intersectCurveTs">The t values of intersections for the Bezier.</param>
+            /// <param name="intersectLineTs">The t values of the intersections for the line.</param>
+            /// <param name="pt0">The starting point (p0) of the cubic Bezier segment.</param>
+            /// <param name="pt1">The starting control (p1) of the cubic Bezier segment.</param>
+            /// <param name="pt2">The ending control (p2) of the cubic Bezier segment.</param>
+            /// <param name="pt3">The ending point (p3) of the cubic Bezier segment.</param>
+            /// <param name="l0">A point on the line. If lineBounds is true, this also acts as the left testing bounds.</param>
+            /// <param name="l1">Another point on the line. If lineBounds is true, this also acts as a testing bounds.</param>
+            /// <param name="lineBounds">
+            /// If true, only things inside the line bounds will be returned. 
+            /// If false, everything colliding will be returned, even if false.
+            /// </param>
+            /// <returns>The number of intersections added.</returns>
+            /// <remarks>
+            /// intersectCurveTs and intersectLineTs are mapped, so that an index of n
+            /// for one array will be the collision of for index n of the other.
+            /// </remarks>
+            public static int IntersectLine(
+                List<float> intersectCurveTs,
+                List<float> intersectLineTs,
+                Vector2 pt0,
+                Vector2 pt1,
+                Vector2 pt2,
+                Vector2 pt3,
+                Vector2 l0,     // A point on the line
+                Vector2 l1,     // Another point on the line
+                bool lineBounds = true)     
+            {
+                // https://www.particleincell.com/2013/cubic-line-intersection/
+
+                // Convert explicit line to parametric form
+                // Ax + By + C0
+                float A = l1.y - l0.y;
+                float B = l0.x - l1.x;
+                float C =
+                    l0.x * (l0.y - l1.y) +
+                    l0.y * (l1.x - l0.x);
+
+                Vector4 bx = Utils.BezierCoefficients(pt0.x, pt1.x, pt2.x, pt3.x);
+                Vector4 by = Utils.BezierCoefficients(pt0.y, pt1.y, pt2.y, pt3.y);
+
+                // Setup the cubic formula to represent the Bezier segment
+                // intersecting with the line
+                Vector4 P =
+                    new Vector4(
+                        A * bx.x + B * by.x,        // t^3
+                        A * bx.y + B * by.y,        // t^2
+                        A * bx.z + B * by.z,        // t^
+                        A * bx.w + B * by.w + C);       // 1
+
+                // Solve for collisions
+                Vector3 r;
+                int roots = SolveCubicFormula(P.x, P.y, P.z, P.w, out r);
+
+                int ret = 0;
+                for (int i = 0; i < roots; ++i)
+                {
+                    float t = r[i];
+
+                    float t2 = t*t;
+                    float t3 = t2 * t;
+
+                    Vector2 X =
+                        new Vector2(
+                            bx.x * t3 + bx.y * t2 + bx.z * t + bx.w,
+                            by.x * t3 + by.y * t2 + by.z * t + by.w);
+
+                    float s;
+                    if (Mathf.Abs(l0.x - l1.x) > Mathf.Epsilon) // If not vertical line
+                        s = (X[0] - l0.x) / (l1.x - l0.x);
+                    else
+                        s = (X[1] - l0.y) / (l1.y - l0.y);
+
+                    // Make sure the collision point is in bounds of our
+                    // line and path segment
+                    //
+                    // For testing if it's in bounds of the line, we have a 
+                    // parameter to decide if we want to check for that, if not, the
+                    // line rejection turns off and anything on the unbounded line
+                    // will be added.
+                    if (t < 0.0f || t > 1.0f || (lineBounds == true && (s < 0.0f || s > 1.0f)))
+                        continue;
+
+                    if(intersectCurveTs != null)
+                        intersectCurveTs.Add(t);
+
+                    if(intersectLineTs != null)
+                        intersectLineTs.Add(s);
+
+                    ++ret;
+                }
+                return ret;
             }
         }
     }

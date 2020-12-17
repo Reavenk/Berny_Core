@@ -34,6 +34,8 @@ public class BernyTest : MonoBehaviour
 {
     public Document curveDocument;
 
+    public PxPre.Berny.Font.Typeface typeface;
+
     public struct FillEntry
     { 
         public BShape shape;
@@ -49,7 +51,7 @@ public class BernyTest : MonoBehaviour
     void Start()
     {
         PxPre.Berny.TTF.Loader loader = new PxPre.Berny.TTF.Loader();
-        loader.Read("Assets\\Testing\\Nerko\\NerkoOne-Regular.ttf");
+        this.typeface = loader.Read("Assets\\Testing\\Nerko\\NerkoOne-Regular.ttf");
 
         this.curveDocument = new Document();
 
@@ -140,8 +142,32 @@ public class BernyTest : MonoBehaviour
         }
     }
 
-    //private void OnDrawGizmos()
-    //{
-    //    
-    //}
+    private void OnDrawGizmos()
+    {
+        if(this.typeface == null)
+            return;
+
+        Gizmos.color = Color.magenta;
+
+        float x = 0.0f;
+        foreach(PxPre.Berny.Font.Glyph g in this.typeface.glyphs)
+        { 
+            for(int i = 0; i < g.contours.Count; ++i)
+            {
+                PxPre.Berny.Font.Contour c = g.contours[i];
+                for (int j = 0; j < c.points.Count - 1; ++j)
+                {
+                    Gizmos.DrawLine(
+                        new Vector2( x, 0.0f) + c.points[j].position,
+                        new Vector2(x, 0.0f) + c.points[j + 1].position);
+                }
+
+                Gizmos.DrawLine(
+                    new Vector2( x, 0.0f) + c.points[0].position,
+                    new Vector2(x, 0.0f) + c.points[c.points.Count - 1].position);
+            }
+
+            x += g.advance;
+        }
+    }
 }

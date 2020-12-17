@@ -76,7 +76,7 @@ namespace PxPre
                     public const string TagName = "head";
 
                     // See member head.magicNumber.
-                    public const int ExpectedMagicNumber = 0x5F03CF5;
+                    public const int ExpectedMagicNumber = 0x5F0F3CF5;
 
                     public ushort majorVersion;             // Major version number of the font header table — set to 1.
                     public ushort minorVersion;             // Minor version number of the font header table — set to 0.
@@ -96,6 +96,23 @@ namespace PxPre
                     public ushort fontDirectionHint;        // 
                     public short indexToLocFormat;          // 0 for short offsets (Offset16), 1 for long (Offset32).
                     public short glyphDataFormat;           // 0 for current format.
+
+                    public int OffsetByteWidth
+                    {
+                        get
+                        {
+                            switch (this.indexToLocFormat)
+                            {
+                                case 0:
+                                    return 2;   // Offset16 / uint16
+                                case 1:
+                                    return 4;   // Offset32 / uint32
+                            }
+
+                            return 0;
+                        }
+
+                    }
 
                     public void Read(TTFReader r)
                     {

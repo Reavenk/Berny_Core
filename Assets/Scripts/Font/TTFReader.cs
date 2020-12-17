@@ -73,13 +73,19 @@ namespace PxPre
 
             public char ReadUint8()
             {
-                return this.reader.ReadChar();
+                return (char)this.reader.ReadByte();
             }
 
             public ushort ReadUint16()
             {
                 return (ushort)(this.reader.ReadByte() << 8 | this.reader.ReadByte());
             }
+
+            public uint ReadUInt24()
+            {
+                return (uint)((this.reader.ReadByte() << 16) | (this.reader.ReadByte() << 8) | (this.reader.ReadByte() << 0));
+            }
+
 
             public uint ReadUInt32()
             {
@@ -136,6 +142,12 @@ namespace PxPre
             {
                 ushort len = this.ReadUint16();
                 return this.ReadString(len);
+            }
+
+            public string ReadPascalString()
+            {
+                char c = this.ReadUint8();
+                return this.ReadString(c);
             }
 
             public void ReadInt(out char i)

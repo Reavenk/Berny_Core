@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace PxPre 
 {   
@@ -115,6 +116,21 @@ namespace PxPre
                 { 
                     this.node = node;
                     this.result = result;
+                }
+
+                public IEnumerable<BNode> Enumerate()
+                { 
+                    BNode it = this.node;
+                    while(it != null)
+                    {
+                        yield return it;
+                        it = it.next;
+
+                        // If we've come full circle, we're done.
+                        if(it == this.node)
+                            yield break;
+
+                    }
                 }
             }
 
@@ -342,7 +358,7 @@ namespace PxPre
             /// <summary>
             /// The property for the node's position. 
             /// 
-            /// Ensures the dirty flag is set if somethign outside modifies it.
+            /// Ensures the dirty flag is set if something outside modifies it.
             /// </summary>
             public Vector2 Pos 
             {
@@ -470,12 +486,12 @@ namespace PxPre
             /// The dirty state of the. If true, the node is dirty which means it has been
             /// modified since the last time it was prepared for presentation.
             /// </summary>
-            bool dirty = false;
+            bool dirty = true;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>
             /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
-            /// if each app session runs deterministicly the same. Used for identifying objects when
+            /// if each app session runs deterministically the same. Used for identifying objects when
             /// debugging.
             /// </summary>
             public int debugCounter;
@@ -496,6 +512,49 @@ namespace PxPre
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
                 this.debugCounter = Utils.RegisterCounter();
+#endif
+            }
+
+            public BNode(BLoop parent, BNode reference, bool copyLinks, bool reverse)
+            { 
+                this.parent = parent;
+
+                this.tangentMode = reference.tangentMode;
+                this.pos = reference.pos;
+
+                // Handle normal first
+                if(reverse == false)
+                { 
+                    this.tanIn = reference.tanIn;
+                    this.tanOut = reference.TanOut;
+                    //
+                    this.useTanIn = reference.useTanIn;
+                    this.useTanOut = reference.useTanOut;
+
+                    if(copyLinks == true)
+                    { 
+                        this.prev = reference.prev;
+                        this.next = reference.next;
+                    }
+                }
+                // Handle reverse case
+                else
+                {
+                    this.tanIn = reference.tanOut;
+                    this.tanOut = reference.TanIn;
+                    //
+                    this.useTanIn = reference.useTanOut;
+                    this.useTanOut = reference.useTanIn;
+
+                    if (copyLinks == true)
+                    { 
+                        this.prev = reference.next;
+                        this.next = reference.prev;
+                    }
+                }
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                    this.debugCounter = Utils.RegisterCounter();
 #endif
             }
 
@@ -1386,7 +1445,7 @@ namespace PxPre
             /// Get the axis aligned bounding box of the bezier curve.
             /// </summary>
             /// <returns>The bounds of the node.</returns>
-            /// <remarks>The return result is only corrct if the node isn't an ending point.</remarks>
+            /// <remarks>The return result is only correct if the node isn't an ending point.</remarks>
             public BoundsMM2 GetBounds()
             {
                 if(this.next == null)
@@ -1401,6 +1460,99 @@ namespace PxPre
 
                 return Utils.GetBoundingBoxCubic(p0, p1, p2, p3);
             }
+
+            // When inflating, how much to move out per unit inflation amount.
+            public Vector2 GetInflateDirection(Vector2 vA, Vector2 vB, Vector2 vC)
+            {
+                Vector2 atb = (vB - vA);
+                Vector2 ctb = (vB - vC);
+
+                bool atbDegen = atb.sqrMagnitude <= Mathf.Epsilon;
+                bool ctbDegen = ctb.sqrMagnitude <= Mathf.Epsilon;
+
+                if(atbDegen == true && ctbDegen == true)
+                    return Vector2.zero;
+
+                // If we have a degenerate, we just send the other valid edge.
+                // Remember the scale needs to be embedded in the vector, and 
+                // without a bend, it's simply unit length.
+                if(atbDegen == true)
+                    return -RotateEdge90CCW(ctb.normalized);
+                if(ctbDegen == true)
+                    return RotateEdge90CCW(atb.normalized);
+
+                // Now that we know these are not degenerated, lets do the
+                // full solution
+                atb.Normalize();
+                ctb.Normalize();
+                Vector2 atbRot = RotateEdge90CCW(atb.normalized);
+                Vector2 ctbRot = -RotateEdge90CCW(ctb.normalized);
+
+                // Needs to be normalized for dot product, at for rescaling.
+                Vector2 avg = (atbRot + ctbRot).normalized;
+
+                // The more bendy it is, the more we expand the joint
+                // at unit length.
+                float dot = Vector2.Dot(atbRot, avg);
+                return avg * (1.0f / dot);
+            }
+
+            public Vector2 RotateEdge90CCW(Vector2 v2)
+            {
+                return new Vector2(-v2.y, v2.x);
+            }
+
+            public void GetInflateDirection(out Vector2 selfInf, out Vector2 inInf, out Vector2 outInf)
+            {
+                PathBridge pb = this.GetPathBridgeInfo();
+
+                // We need to fill everything about this segment's inflation except for the lazy
+                // point (if we have a next node, that's their responsibility).
+                //
+                // The easiest thing to do is just get everything we need as line segments - and
+                // if we don't have the information, imply it - then send it all to GetInflateDirection(),
+                // which have error handling for us, so we don't complicate this code section worrying
+                // about degenerate cases.
+
+                Vector2 p_p2;       // Two before us
+                Vector2 p_p1;       // One before us
+                Vector2 p0      = this.pos;
+                Vector2 p1      = this.pos + pb.prevTanOut;
+                Vector2 p1n;        // The next tangent's inwards
+
+                if(this.prev != null)
+                { 
+                    PathBridge pbPrev = this.prev.GetPathBridgeInfo();
+                    p_p1 = this.pos + pbPrev.nextTanIn;
+                    p_p2 = this.prev.pos + pbPrev.prevTanOut;
+                }
+                else
+                {
+                    p_p1 = p0;
+                    p_p2 = p_p1;
+                }
+
+                if(this.next != null)
+                {
+                    PathBridge pbnext = this.next.GetPathBridgeInfo();
+
+                    p1n = this.next.pos + pb.nextTanIn;
+                }
+                else
+                { 
+                    // Not too useful except to keep a flowy look. If we don't have a 
+                    // next point to reference, infer what movement we can from the first point's
+                    // tangent.
+                    p1n = p1;
+                }
+
+                inInf = GetInflateDirection(p_p2, p_p1, p0);
+                selfInf = GetInflateDirection(p_p1, p0, p1);
+                outInf = GetInflateDirection(p0, p1, p1n);
+
+            }
+
+            
         }
     }
 }

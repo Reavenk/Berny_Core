@@ -21,10 +21,18 @@ public class CurveEditor : Editor
     /// </summary>
     BNode.TangentType movedTangentType = BNode.TangentType.Output;
 
+
+    public Vector2 intersectTestStart = new Vector2(-2.0f, -2.0f);
+    public Vector2 intersectTextEnd = new Vector2(2.0f, 2.0f);
+
+    public List<Vector2> intersectionPreviews = new List<Vector2>();
+
     /// <summary>
     /// The location to place editing widgets.
     /// </summary>
     Vector2 averagePoint = Vector2.zero;
+
+    public float infAmt = 0.05f;
 
     /// <summary>
     /// Unity inspector function.
@@ -58,6 +66,140 @@ public class CurveEditor : Editor
         { 
             this.ScanSelectedIntersections(t.curveDocument);
         }
+
+        GUILayout.Space(20.0f);
+
+        if(GUILayout.Button("LOAD Ven") == true)
+        {
+            t.curveDocument.Clear();
+            SVGSerializer.Load("Ven.svg", t.curveDocument);
+        }
+
+        if (GUILayout.Button("LOAD TriVen") == true)
+        {
+            t.curveDocument.Clear();
+            SVGSerializer.Load("TriVen.svg", t.curveDocument);
+        }
+
+        if (GUILayout.Button("LOAD CircAnCirc") == true)
+        {
+            t.curveDocument.Clear();
+            SVGSerializer.Load("CircAnCirc.svg", t.curveDocument);
+        }
+
+        if (GUILayout.Button("LOAD Complex") == true)
+        {
+            t.curveDocument.Clear();
+            SVGSerializer.Load("Complex.svg", t.curveDocument);
+        }
+
+        if (GUILayout.Button("LOAD Edges") == true)
+        {
+            t.curveDocument.Clear();
+            SVGSerializer.Load("Edges.svg", t.curveDocument);
+        }
+
+        GUILayout.Space(20.0f);
+
+        this.infAmt = EditorGUILayout.FloatField("Inflation Amt", this.infAmt);
+        if(GUILayout.Button("Inflate") == true)
+        {
+            foreach(Layer l in t.curveDocument.Layers())
+            {
+                foreach(BShape bs in l.shapes)
+                { 
+                    foreach(BLoop bl in bs.loops)
+                        bl.Inflate(this.infAmt);
+                }
+            }
+        }
+
+        if(GUILayout.Button("Edgeify") == true)
+        {
+            foreach (Layer l in t.curveDocument.Layers())
+            {
+                foreach (BShape bs in l.shapes)
+                {
+                    foreach (BLoop bl in bs.loops)
+                    {
+                        List<BNode> islands = bl.GetIslands();
+
+                        foreach(BNode bisl in islands)
+                        {
+                            // This will probably just give us bisl back, but it that's the case, then it should
+                            // be minimal overhead - just to be safe though, and to see what kind of connectivity we're dealing with.
+                            BNode.EndpointQuery eq = bisl.GetPathLeftmost();
+
+                            List<BNode> origs = new List<BNode>();
+                            List<BNode> copies = new List<BNode>();
+                            List<InflationCache> inflations = new List<InflationCache>();
+                            foreach(BNode it in eq.Enumerate())
+                            {
+                                origs.Add(it);
+
+                                BNode cpy = new BNode(bl, it, false, true);
+                                copies.Add(cpy);
+
+                                bl.nodes.Add(cpy);
+
+                                InflationCache ic = new InflationCache();
+                                it.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
+                                inflations.Add(ic);
+                            }
+
+                            // Stitch the new chain - it should have a reverse winding.
+                            //
+                            // The loop is a little backwards, but basically we sub instead of add to
+                            // treat the prev item in the array like the next in the chain.
+                            for(int i = 1; i < copies.Count; ++i)
+                            { 
+                                copies[i].next = copies[i - 1];
+                                copies[i - 1].prev = copies[i];
+                            }
+
+                            int lastIdx = copies.Count - 1;
+                            if(eq.result == BNode.EndpointResult.Cyclical)
+                            { 
+                                // If it was cyclical, it should close in on itself and it should
+                                // never touch the original outline;
+                                //
+                                // Remember we're treating copies in reverse.
+                                copies[lastIdx].prev = copies[0];
+                                copies[0].next = copies[lastIdx];
+                            }
+                            else
+                            {
+                                // Or else the opposite ends connect to each other.
+                                // Remember we're treating copies in reverse.
+                                origs[0].prev = copies[0];
+                                copies[0].next = origs[0];
+
+                                origs[lastIdx].next = copies[lastIdx];
+                                copies[lastIdx].prev = origs[lastIdx];
+
+                                origs[0].UseTanIn = false;
+                                origs[lastIdx].UseTanOut = false;
+                                copies[0].UseTanOut = false;
+                                copies[lastIdx].UseTanIn = false;
+                            }
+
+                            // Now that we have copies and connectivity set up, it's time
+                            // to apply the thickening
+                            for(int i = 0; i < copies.Count; ++i)
+                            { 
+                                // Push out the original
+                                origs[i].Pos += this.infAmt * inflations[i].selfInf;
+                                origs[i].TanIn += this.infAmt * (inflations[i].inInf - inflations[i].selfInf);
+                                origs[i].TanOut += this.infAmt * (inflations[i].outInf - inflations[i].selfInf);
+
+                                // We can optinally pull in the copy
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         GUILayout.Space(20.0f);
 
@@ -284,6 +426,53 @@ public class CurveEditor : Editor
                     bn.next.Pos = pt3;
                 }
             }
+
+            GUILayout.Space(20.0f);
+
+            this.intersectTestStart = EditorGUILayout.Vector2Field("Intersection Start", this.intersectTestStart);
+            this.intersectTextEnd = EditorGUILayout.Vector2Field("Intersection End", this.intersectTextEnd);
+            if(GUILayout.Button("Line Intersection Test") == true)
+            { 
+
+                this.intersectionPreviews.Clear();
+                foreach(BNode node in this.selectedNodes)
+                {
+                    List<float> curveOuts = new List<float>();
+
+                    if(node.next == null)
+                        continue;
+
+                    BNode.PathBridge pb = node.GetPathBridgeInfo(); 
+
+                    Vector2 pt0 = node.Pos;
+                    Vector2 pt1 = node.Pos + pb.prevTanOut;
+                    Vector2 pt2 = node.next.Pos + pb.nextTanIn;
+                    Vector2 pt3 = node.next.Pos;
+                    int cols = 
+                        Utils.IntersectLine(
+                            curveOuts, 
+                            null, 
+                            pt0, 
+                            pt1,
+                            pt2,
+                            pt3,
+                            this.intersectTestStart,
+                            this.intersectTextEnd);
+
+                    for(int i = 0; i < cols; ++i)
+                    {
+                        float intLam = curveOuts[i];
+                        float a, b, c, d;
+                        Utils.GetBezierWeights(intLam, out a, out b, out c, out d);
+                        this.intersectionPreviews.Add(a * pt0 + b * pt1 + c * pt2 + d * pt3);
+                    }
+                }
+
+                if(this.intersectionPreviews.Count == 0)
+                    Debug.Log("No collisions found");
+                else
+                    Debug.Log($"{this.intersectionPreviews.Count} Collisions found");
+            }
         }
 
         if (t.curveDocument.IsDirty() == true)
@@ -313,6 +502,17 @@ public class CurveEditor : Editor
 
 
         bool recalculateAverage = false;
+
+        for(int i = 0; i < this.intersectionPreviews.Count; ++i)
+        { 
+            Handles.Button(
+                this.intersectionPreviews[i], 
+                Quaternion.identity, 
+                0.1f, 
+                0.1f, 
+                Handles.SphereHandleCap);
+        }
+        Handles.DrawLine(this.intersectTestStart, this.intersectTextEnd);
 
         // Draw all curves and show handles for them.
         Handles.color = Color.white;

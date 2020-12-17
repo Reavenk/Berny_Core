@@ -47,28 +47,28 @@ namespace PxPre
                 {
                     public const string TagName = "hhea";
                     
-                    public ushort majorVersion;
-                    public ushort minorVersion;
-                    public short ascender;
-                    public short descender;
-                    public short lineGap;
-                    public ushort advanceWidthMax;
-                    public short minLeftSideBearing;
-                    public short minRightSideBearing;
-                    public short xMaxExtent;
-                    public short caretSlopeRise;
-                    public short caretSlopeRun;
-                    public short caredOffset;
+                    public ushort majorVersion;         // Major version number of the horizontal header table — set to 1.
+                    public ushort minorVersion;         // Minor version number of the horizontal header table — set to 0.
+                    public short ascender;              // Apple specific. See https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6hhea.html
+                    public short descender;             // Apple specific. See https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6hhea.html
+                    public short lineGap;               // Typographic line gap. Negative LineGap values are treated as zero in some legacy platform implementations.
+                    public ushort advanceWidthMax;      // Maximum advance width value in 'hmtx' table.
+                    public short minLeftSideBearing;    // Minimum left sidebearing value in 'hmtx' table for glyphs with contours (empty glyphs should be ignored).
+                    public short minRightSideBearing;   // Minimum right sidebearing value; calculated as min(aw - (lsb + xMax - xMin)) for glyphs with contours (empty glyphs should be ignored).
+                    public short xMaxExtent;            // Max(lsb + (xMax - xMin)).
+                    public short caretSlopeRise;        // Used to calculate the slope of the cursor (rise/run); 1 for vertical.
+                    public short caretSlopeRun;         // 0 for vertical.
+                    public short caredOffset;           // The amount by which a slanted highlight on a glyph needs to be shifted to produce the best appearance. Set to 0 for non-slanted fonts
 
                     // short reserved_0;
                     // short reserved_1;
                     // short reserved_2;
                     // short reserved_3;
 
-                    public short metricDataFormat;
-                    public ushort numberOfHMetrics;
+                    public short metricDataFormat;      // 0 for current format.
+                    public ushort numberOfHMetrics;     // Number of hMetric entries in 'hmtx' table
 
-                    public void Run(TTFReader r)
+                    public void Read(TTFReader r)
                     {
                         r.ReadInt(out this.majorVersion);
                         r.ReadInt(out this.minorVersion);
