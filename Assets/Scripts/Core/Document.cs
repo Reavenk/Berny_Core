@@ -178,6 +178,33 @@ namespace PxPre
                 this.dirty = false;
             }
 
+            public IEnumerable<Layer> EnumerateLayers()
+            {
+                return this.layers;
+            }
+
+            public IEnumerable<BShape> EnumerateShapes()
+            { 
+                foreach(Layer layer in this.layers)
+                { 
+                    foreach(BShape bs in layer.shapes)
+                        yield return bs;
+
+                }
+            }
+
+            public IEnumerable<BLoop> EnumerateLoops()
+            { 
+                foreach(Layer layer in this.layers)
+                { 
+                    foreach(BShape bs in layer.shapes)
+                    { 
+                        foreach(BLoop bl in bs.loops)
+                            yield return bl;
+                    }
+                }
+            }
+
             /// <summary>
             /// Enumerate through all the nodes of the document.
             /// 

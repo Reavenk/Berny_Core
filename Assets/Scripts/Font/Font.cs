@@ -71,13 +71,19 @@ namespace PxPre
                 int offsetByteWidth = 0;
                 int numGlyphs = 0;
 
-                public Font.Typeface Read(string path)
+                public Font.Typeface ReadTTF(string path)
                 {
-                    TTFReader r = new TTFReader(path);
-                    return this.Read(r);
+                    TTFReader r = new TTFReaderFile(path);
+                    return this.ReadTTF(r);
                 }
 
-                public Font.Typeface Read(TTFReader r)
+                public Font.Typeface ReadTTF(byte [] data)
+                { 
+                    TTFReaderBytes r = new TTFReaderBytes(data);
+                    return this.ReadTTF(r);
+                }
+
+                public Font.Typeface ReadTTF(TTFReader r)
                 {
                     // https://tchayen.github.io/ttf-file-parsing/
                     r.SetPosition(0);
@@ -242,6 +248,11 @@ namespace PxPre
 
 
                             Font.Point pt = new Font.Point();
+
+                            // If it's not on the curve, it's a control point for 
+                            // a quadratic Bezier.
+                            pt.control = (glyf.simpflags[j] & TTF.Table.glyf.ON_CURVE_POINT) == 0;
+
                             pt.position = 
                                 new Vector2(
                                     ((float)glyf.xMin + (float)glyf.xCoordinates[j])/(float)tableHead.unitsPerEm,

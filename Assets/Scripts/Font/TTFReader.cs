@@ -28,176 +28,130 @@ namespace PxPre
 {
     namespace Berny
     {
-        public class TTFReader
+        namespace TTF
         {
-            System.IO.BinaryReader reader = null;
-            System.IO.FileStream filestream = null;
-
-            public TTFReader(string path)
-            { 
-                if(this.Open(path) == false)
-                    throw new System.Exception("Could not open file");
-            }
-
-            public bool IsOpen()
-            { 
-                return this.reader != null;
-            }
-
-            public bool Open(string path)
+            public abstract class TTFReader
             {
-                this.Close();
+                public abstract bool IsOpen();
+                public abstract bool Close();
 
-                this.filestream = System.IO.File.Open(path, System.IO.FileMode.Open);
-                reader = new System.IO.BinaryReader(this.filestream);
-                return true;
-            }
+                public abstract byte ReadInt8();
+                public abstract char ReadUint8();
 
-            public bool Close()
-            {
-                if (this.filestream != null)
+                public abstract long GetPosition();
+                public abstract bool SetPosition(long pos);
+
+                public abstract byte[] ReadBytes(int length);
+
+                public ushort ReadUint16()
                 {
-                    this.filestream.Close();
-                    this.filestream = null;
-                    this.reader = null;
-
-                    return true;
+                    return (ushort)(this.ReadInt8() << 8 | this.ReadInt8());
                 }
-                return false;
-            }
 
-            public byte ReadInt8()
-            {
-                return this.reader.ReadByte();
-            }
-
-            public char ReadUint8()
-            {
-                return (char)this.reader.ReadByte();
-            }
-
-            public ushort ReadUint16()
-            {
-                return (ushort)(this.reader.ReadByte() << 8 | this.reader.ReadByte());
-            }
-
-            public uint ReadUInt24()
-            {
-                return (uint)((this.reader.ReadByte() << 16) | (this.reader.ReadByte() << 8) | (this.reader.ReadByte() << 0));
-            }
+                public uint ReadUInt24()
+                {
+                    return (uint)((this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                }
 
 
-            public uint ReadUInt32()
-            {
-                return (uint)((this.reader.ReadByte() << 24) | (this.reader.ReadByte() << 16) | (this.reader.ReadByte() << 8) | (this.reader.ReadByte() << 0));
-            }
+                public uint ReadUInt32()
+                {
+                    return (uint)((this.ReadInt8() << 24) | (this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                }
 
-            public short ReadInt16()
-            {
-                return (short)(this.reader.ReadByte() << 8 | this.reader.ReadByte());
-            }
+                public short ReadInt16()
+                {
+                    return (short)(this.ReadInt8() << 8 | this.ReadInt8());
+                }
 
-            public int ReadInt32()
-            {
-                return (int)((this.reader.ReadByte() << 24) | (this.reader.ReadByte() << 16) | (this.reader.ReadByte() << 8) | (this.reader.ReadByte() << 0));
-            }
+                public int ReadInt32()
+                {
+                    return (int)((this.ReadInt8() << 24) | (this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                }
 
-            public short ReadFWord()
-            {
-                return this.ReadInt16();
-            }
+                public short ReadFWord()
+                {
+                    return this.ReadInt16();
+                }
 
-            public ushort ReadUFWord()
-            {
-                return this.ReadUint16();
-            }
+                public ushort ReadUFWord()
+                {
+                    return this.ReadUint16();
+                }
 
-            public ushort ReadOffset16()
-            {
-                return this.ReadUint16();
-            }
+                public ushort ReadOffset16()
+                {
+                    return this.ReadUint16();
+                }
 
-            public int ReadOffset32()
-            {
-                return this.ReadOffset32();
-            }
+                public int ReadOffset32()
+                {
+                    return this.ReadOffset32();
+                }
 
-            public float ReadFDot14()
-            {
-                return (float)this.ReadInt16() / (float)(1 << 14);
-            }
+                public float ReadFDot14()
+                {
+                    return (float)this.ReadInt16() / (float)(1 << 14);
+                }
 
-            public float ReadFixed()
-            {
-                return (float)this.ReadInt32() / (float)(1 << 16);
-            }
+                public float ReadFixed()
+                {
+                    return (float)this.ReadInt32() / (float)(1 << 16);
+                }
 
-            public string ReadString(int length)
-            {
-                byte[] rbStr = this.reader.ReadBytes(length);
-                return System.Text.ASCIIEncoding.ASCII.GetString(rbStr);
-            }
+                public string ReadString(int length)
+                {
+                    byte[] rbStr = this.ReadBytes(length);
+                    return System.Text.ASCIIEncoding.ASCII.GetString(rbStr);
+                }
 
-            public string ReadNameRecord()
-            {
-                ushort len = this.ReadUint16();
-                return this.ReadString(len);
-            }
+                public string ReadNameRecord()
+                {
+                    ushort len = this.ReadUint16();
+                    return this.ReadString(len);
+                }
 
-            public string ReadPascalString()
-            {
-                char c = this.ReadUint8();
-                return this.ReadString(c);
-            }
+                public string ReadPascalString()
+                {
+                    char c = this.ReadUint8();
+                    return this.ReadString(c);
+                }
 
-            public void ReadInt(out char i)
-            {
-                i = this.ReadUint8();
-            }
+                public void ReadInt(out char i)
+                {
+                    i = this.ReadUint8();
+                }
 
-            public void ReadInt(out byte i)
-            {
-                i = this.ReadInt8();
-            }
+                public void ReadInt(out byte i)
+                {
+                    i = this.ReadInt8();
+                }
 
-            public void ReadInt(out short i)
-            {
-                i = this.ReadInt16();
-            }
+                public void ReadInt(out short i)
+                {
+                    i = this.ReadInt16();
+                }
 
-            public void ReadInt(out ushort i)
-            {
-                i = this.ReadUint16();
-            }
+                public void ReadInt(out ushort i)
+                {
+                    i = this.ReadUint16();
+                }
 
-            public void ReadInt(out int i)
-            {
-                i = this.ReadInt32();
-            }
+                public void ReadInt(out int i)
+                {
+                    i = this.ReadInt32();
+                }
 
-            public void ReadInt(out uint i)
-            {
-                i = this.ReadUInt32();
-            }
+                public void ReadInt(out uint i)
+                {
+                    i = this.ReadUInt32();
+                }
 
-            public System.DateTime ReadDate()
-            {
-                long macTime = this.ReadUInt32() * 0x100000000 + this.ReadUInt32();
-                return new System.DateTime(macTime * 1000);
-            }
-
-            public long GetPosition()
-            {
-                return this.filestream.Position;
-            }
-
-            public bool SetPosition(long pos)
-            {
-                if (this.filestream == null)
-                    return false;
-
-                return this.filestream.Seek(pos, System.IO.SeekOrigin.Begin) == pos;
-            }
+                public System.DateTime ReadDate()
+                {
+                    long macTime = this.ReadUInt32() * 0x100000000 + this.ReadUInt32();
+                    return new System.DateTime(macTime * 1000);
+                }            }
         }
     }
 }

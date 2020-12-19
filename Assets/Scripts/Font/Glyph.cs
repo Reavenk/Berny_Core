@@ -11,6 +11,7 @@ namespace PxPre
             public struct Point
             { 
                 public int flags;
+                public bool control;
                 public Vector2 position;
                 public Vector2 tangentIn;
                 public Vector2 tangentOut;

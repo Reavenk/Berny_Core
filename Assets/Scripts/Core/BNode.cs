@@ -293,6 +293,16 @@ namespace PxPre
                 }
             }
 
+            public struct SubdivideInfo
+            { 
+                public Vector2 prevOut;
+                public Vector2 nextIn;
+
+                public Vector2 subPos;
+                public Vector2 subIn;
+                public Vector2 subOut;
+            }
+
             /// <summary>
             /// The node's parent. If this is set to reference a parent, the parent loop should also
             /// contain a reference to the child node in its BLoop.nodes variable.
@@ -1171,6 +1181,15 @@ namespace PxPre
                 }
             }
 
+            internal void _Invert()
+            { 
+                BNode n = this.prev;
+                this.prev = this.next;
+                this.next = n;
+
+                this.SwapTangents();
+            }
+
             /// <summary>
             /// Swap the input and output tangents.
             /// </summary>
@@ -1552,7 +1571,159 @@ namespace PxPre
 
             }
 
-            
+            public BNode GetMinOnIsland(int comp)
+            { 
+                EndpointQuery eq = this.GetPathLeftmost();
+                if(eq.node.next == null)
+                    return eq.node;
+
+                PathBridge pb = eq.node.GetPathBridgeInfo();
+                BNode ret = eq.node;
+
+                float min = 
+                    Mathf.Min(
+                        eq.node.pos[comp], 
+                        (eq.node.pos + pb.prevTanOut)[comp], 
+                        (eq.node.next.pos + pb.nextTanIn)[comp]);
+
+                BNode it = eq.node.next;
+                while(it != null && it != eq.node)
+                { 
+                    pb = it.GetPathBridgeInfo();
+                    float itMin = 
+                        Mathf.Min(
+                            it.pos[comp], 
+                            (it.pos + pb.prevTanOut)[comp]);
+
+
+                    if(it.next != null)
+                    { 
+                        itMin = 
+                            Mathf.Min(
+                                itMin,
+                                (it.next.pos + pb.nextTanIn)[comp]);
+                    }
+
+                    if(itMin < min)
+                    { 
+                        min = itMin;
+                        ret = it;
+                    }
+
+                    it = it.next;
+                }
+                return ret;
+            }
+
+            public BNode GetMaxOnIsland(int comp)
+            {
+                EndpointQuery eq = this.GetPathLeftmost();
+                if (eq.node.next == null)
+                    return eq.node;
+
+                PathBridge pb = eq.node.GetPathBridgeInfo();
+                BNode ret = eq.node;
+
+                float min =
+                    Mathf.Max(
+                        eq.node.pos[comp],
+                        (eq.node.pos + pb.prevTanOut)[comp],
+                        (eq.node.next.pos + pb.nextTanIn)[comp]);
+
+                BNode it = eq.node.next;
+                while (it != null && it != eq.node)
+                {
+                    pb = it.GetPathBridgeInfo();
+                    float itMin =
+                        Mathf.Max(
+                            it.pos[comp],
+                            (it.pos + pb.prevTanOut)[comp]);
+
+
+                    if (it.next != null)
+                    {
+                        itMin =
+                            Mathf.Max(
+                                itMin,
+                                (it.next.pos + pb.nextTanIn)[comp]);
+                    }
+
+                    if (itMin < min)
+                    {
+                        min = itMin;
+                        ret = it;
+                    }
+
+                    it = it.next;
+                }
+                return ret;
+            }
+
+            public bool MinTest(int comp, ref float minimum, ref BNode ret)
+            { 
+                float m = this.pos[comp];
+                if(this.useTanIn == true)
+                    m = Mathf.Min( m, this.pos[comp] + this.tanIn[comp]);
+                
+                if(this.useTanOut == true)
+                    m = Mathf.Max( m, this.pos[comp] + this.tanOut[comp]);
+
+                if(ret == null || m < minimum)
+                { 
+                    minimum = m;
+                    ret = this;
+                    return true;
+                }
+                return false;
+            }
+
+            public bool MaxTest(int comp, ref float maximum, ref BNode ret)
+            { 
+                float m = this.pos[comp];
+                if(this.UseTanIn == true)
+                    m = Mathf.Max(m, this.pos[comp] + this.TanIn[comp]);
+
+                if(this.useTanOut == true)
+                    m = Mathf.Max(m, this.pos[comp] + this.tanOut[comp]);
+
+                if(ret == null || m > maximum)
+                { 
+                    maximum = m;
+                    ret = this;
+                    return true;
+                }
+                return false;
+            }
+
+            public SubdivideInfo GetSubdivideInfo(float t)
+            { 
+                PathBridge pb = this.GetPathBridgeInfo();
+
+                Vector2 p0 = this.pos;
+                Vector2 p1 = this.pos + pb.prevTanOut;
+                Vector2 p3 = ((this.next != null) ? this.next : this).pos;
+                Vector2 p2 = p3 + pb.nextTanIn;
+
+                Vector2 p00 = Vector2.Lerp(p0, p1, t);
+                Vector2 p01 = Vector2.Lerp(p1, p2, t);
+                Vector2 p02 = Vector2.Lerp(p2, p3, t);
+
+                Vector2 p10 = Vector2.Lerp(p00, p01, t);
+                Vector2 p11 = Vector2.Lerp(p01, p02, t);
+
+                Vector2 pp = Vector2.Lerp(p10, p11, t);
+
+                SubdivideInfo ret = new SubdivideInfo();
+                //
+                ret.prevOut = p00 - p0;
+                ret.nextIn  = p02 - p3;
+                //
+                ret.subPos = pp;
+                ret.subIn = p10 - pp;
+                ret.subOut = p11 - pp;
+
+                return ret;
+            }
         }
     }
 }

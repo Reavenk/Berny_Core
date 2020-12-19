@@ -51,7 +51,7 @@ public class BernyTest : MonoBehaviour
     void Start()
     {
         PxPre.Berny.TTF.Loader loader = new PxPre.Berny.TTF.Loader();
-        this.typeface = loader.Read("Assets\\Testing\\Nerko\\NerkoOne-Regular.ttf");
+        this.typeface = loader.ReadTTF("Assets\\Testing\\Nerko\\NerkoOne-Regular.ttf");
 
         this.curveDocument = new Document();
 
@@ -106,6 +106,16 @@ public class BernyTest : MonoBehaviour
                 this.UpdateForFill(shape);
             }
         }
+    }
+
+    public void ClearFills()
+    {
+        foreach(KeyValuePair<BShape, FillEntry > kvp in this.fillEntries)
+        { 
+            FillEntry fe = kvp.Value;
+            GameObject.Destroy(fe.go);
+        }
+        this.fillEntries.Clear();
     }
 
     GameObject cursor = null;

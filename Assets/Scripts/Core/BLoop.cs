@@ -735,6 +735,12 @@ namespace PxPre
                     bn.TanOut += amt * (kvp.Value.outInf - kvp.Value.selfInf);
                 }
             }
+
+            public void Reverse()
+            { 
+                foreach(BNode bn in this.nodes)
+                    bn._Invert();
+            }
         }
     } 
 }

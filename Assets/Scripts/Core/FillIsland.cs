@@ -58,17 +58,46 @@ namespace PxPre
                 FillSegment fsstart = this.GetAStartingPoint();
                 FillSegment it = fsstart;
 
-                while(true)
-                { 
-                    Vector2 towa = it.prev.nextPos - it.prev.prevPos;
-                    Vector2 from = it.nextPos - it.prevPos;
-
-                    this.cachedWinding += towa.x * from.y - towa.y * from.x;
+                // Calculate averages
+                int samples = 0;
+                Vector2 avg = Vector2.zero;
+                while (true)
+                {
+                    ++samples;
+                    avg += it.pos;
 
                     it = it.next;
-                    if(it == fsstart)
+                    if (it == fsstart)
                         break;
                 }
+                avg /= (float)samples;
+
+                while (true)
+                {
+                    Vector2 fromAvg = it.pos - avg;
+                    Vector2 toNxt = it.next.pos - it.pos;
+
+                    this.cachedWinding += fromAvg.x * toNxt.y - fromAvg.y * toNxt.x;
+
+                    it = it.next;
+                    if (it == fsstart)
+                        break;
+                }
+
+
+                // The old winding calculation method
+                //it = fsstart;
+                //while (true)
+                //{ 
+                //    Vector2 towa = (it.pos - it.prev.pos).normalized;
+                //    Vector2 from = it.next.pos - it.pos;
+                //
+                //    this.cachedWinding += towa.x * from.y - towa.y * from.x;
+                //
+                //    it = it.next;
+                //    if(it == fsstart)
+                //        break;
+                //}
 
                 return this.cachedWinding;
             }
@@ -99,7 +128,7 @@ namespace PxPre
 
             /// <summary>
             /// Processes the segments in the island's link list until all segments 
-            /// are gone and the shape is tesselated with triangles.
+            /// are gone and the shape is tessellated with triangles.
             /// </summary>
             /// <param name="triangles">The output of triangle mesh indices.</param>
             /// <param name="vectors">The output and manager of Vector2 vertices.</param>
@@ -110,12 +139,12 @@ namespace PxPre
                 if(Utils.verboseDebug == true && this.TestValidity() == false)
                     throw new System.Exception("Error discovered in FillIsland.ConsumeIntoTriangles, aborting.");
 
-                // Note that this currently doens't handle clipping through concave
+                // Note that this currently doesn't handle clipping through concave
                 // edges.
 
-                // Simple ear clipping. This will dissassemble the path and clear
+                // Simple ear clipping. This will disassemble the path and clear
                 // the island. If this is not preffered, sue GetTriangles() instead with
-                // consume set to false to make a sacraficial copy instead.
+                // consume set to false to make a sacrificial copy instead.
 
                 float wind = this.CalculateWinding();
                 // I doubt this will ever happen.
@@ -124,10 +153,15 @@ namespace PxPre
 
                 FillSegment lastAdded = null;
                 FillSegment it = GetAStartingPoint();
+                FillSegment start = it;
+
+                // If we loop around too many times, we need to stop because nothing
+                // would change and it would be an infinite loop.
+                int unaddedLoops = 0;
                 while(segments.Count > 2)
                 { 
-                    Vector2 towa = it.nextPos - it.prevPos;
-                    Vector2 from = it.next.nextPos - it.next.prevPos;
+                    Vector2 towa = it.pos - it.prev.pos;
+                    Vector2 from = it.next.pos - it.pos;
                     float localWind = towa.x * from.y - towa.y * from.x;
 
                     bool skip = false;
@@ -137,43 +171,54 @@ namespace PxPre
                     else
                     {
                         FillSegment fsPtCheck = it;
+                        fsPtCheck = fsPtCheck.next.next; // If there's at least 2 segments, this should be valid
+
                         while(true)
                         { 
-                            if(Utils.PointInTriangle(fsPtCheck.nextPos, it.prevPos, it.nextPos, it.next.nextPos) == true)
+                            if(Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
                             { 
                                 skip = true;
                                 break;
                             }
 
                             fsPtCheck = fsPtCheck.next;
-                            if(fsPtCheck == it)
+
+                            // We don't check to go full circle, but one less than. The points should not
+                            // be the actual parts of the triangle.
+                            if (fsPtCheck == it.prev) 
                                 break;
                         }
                     }
 
                     if(skip == true)
                     {
-                        it = it.next;
-                        if (it == lastAdded)
+                        it = it.next; 
+                        if (it == lastAdded || (lastAdded == null && it == start))
+                        {
                             wind = this.CalculateWinding();
+                            ++unaddedLoops;
+
+                            if(unaddedLoops == 2)
+                                break;
+                        }
 
                         continue;
                     }
 
                     // Record the triangle
-                    triangles.Add(vectors.GetVectorID(it.prevPos));
-                    triangles.Add(vectors.GetVectorID(it.nextPos));
-                    triangles.Add(vectors.GetVectorID(it.next.nextPos));
+                    triangles.Add(vectors.GetVectorID(it.prev.pos));
+                    triangles.Add(vectors.GetVectorID(it.pos));
+                    triangles.Add(vectors.GetVectorID(it.next.pos));
+                    unaddedLoops = 0;
 
 
                     // Get rid of the prev (and don't advance the iterator) to
-                    // clip out the vertice
+                    // clip out the vertex
                     FillSegment nextIt = it.next;
                     FillSegment prevIt = it.prev;
                     segments.Remove(it);
                     nextIt.prev = prevIt;
                     prevIt.next = nextIt;
-                    nextIt.prevPos = it.prevPos;
                     //
                     lastAdded = it.prev;
                     it = nextIt;
@@ -199,10 +244,9 @@ namespace PxPre
                 while(true)
                 { 
                     FillSegment itCpy = new FillSegment();
-                    itCpy.next = it.next;
-                    itCpy.prev = it.prev;
-                    itCpy.nextPos = it.nextPos;
-                    itCpy.prevPos = it.prevPos;
+                    itCpy.next  = it.next;
+                    itCpy.prev  = it.prev;
+                    itCpy.pos   = it.pos;
 
                     fiNew.segments.Add(itCpy);
                     cloneLookup.Add(it, itCpy);
@@ -280,18 +324,6 @@ namespace PxPre
                         ret = false;
                     }
 
-                    if (fsit.prevPos != fsit.prev.nextPos)
-                    {
-                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} previous point doesn't match neighbors.");
-                        ret = false;
-                    }
-
-                    if (fsit.nextPos != fsit.next.prevPos)
-                    {
-                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} next point doesn't match neighbors.");
-                        ret = false;
-                    }
-
                     ++ct;
 
                     if(this.segments.Contains(fsit) == false)
@@ -326,20 +358,22 @@ namespace PxPre
 
                 FillSegment fsstart = this.GetAStartingPoint();
 
+                // Export going forward
                 FillSegment fsit = fsstart;
                 while (true)
                 {
-                    export += fsit.nextPos.x.ToString() + ", " + fsit.nextPos.y.ToString() + ", " + fsit.debugCtr + "\n";
+                    export += fsit.pos.x.ToString() + ", " + fsit.pos.y.ToString() + ", " + fsit.debugCtr + "\n";
 
                     fsit = fsit.next;
                     if (fsit == fsstart)
                         break;
                 }
                 
+                // Export going backwards
                 fsit = fsstart;
                 while (true)
                 {
-                    export += fsit.prevPos.x.ToString() + ", " + fsit.prevPos.y.ToString() + ", " + fsit.debugCtr +"\n";
+                    export += fsit.pos.x.ToString() + ", " + fsit.pos.y.ToString() + ", " + fsit.debugCtr +"\n";
 
                     fsit = fsit.prev;
                     if (fsit == fsstart)

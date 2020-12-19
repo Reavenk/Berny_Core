@@ -395,6 +395,27 @@ namespace PxPre
 
                             }
 
+                            SVGMat mat = SVGMat.Identity();
+
+                            System.Xml.XmlAttribute attrTrans = eleLE.Attributes["transform"];
+                            if(attrTrans != null)
+                            { 
+                                string strTrans = attrTrans.Value;
+                                if(strTrans.StartsWith("matrix(") == true)
+                                { 
+                                    int matlen = "matrix(".Length;
+                                    // Not exactly robust parsing - an extra -1 for the closing parenthesis
+                                    string matValues = strTrans.Substring(matlen, strTrans.Length - matlen - 1); 
+                                    string [] vals = matValues.Split(new char[]{',' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                                    float.TryParse(vals[0].Trim(), out mat.x.x);
+                                    float.TryParse(vals[1].Trim(), out mat.x.y);
+                                    float.TryParse(vals[2].Trim(), out mat.y.x);
+                                    float.TryParse(vals[3].Trim(), out mat.y.y);
+                                    float.TryParse(vals[4].Trim(), out mat.t.x);
+                                    float.TryParse(vals[5].Trim(), out mat.t.y);
+                                }
+                            }
 
                             System.Xml.XmlAttribute attrPathDraw = eleLE.Attributes["d"];
                             if(attrPathDraw != null)
@@ -439,12 +460,12 @@ namespace PxPre
                                         if(ConsumeVector2(parts, ref i, out v) == false)
                                             break; //Aborting
 
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref firstNode, ref prevNode);
+                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
 
                                         if(lastCmd == 'l') // if relative
                                             v += lastPos;
 
-                                        BNode node = new BNode(curLoop, v);
+                                        BNode node = new BNode(curLoop, mat.Mul(v));
                                         curLoop.nodes.Add(node);
                                         node.prev = prevNode;
                                         prevNode.next = node;
@@ -460,7 +481,7 @@ namespace PxPre
                                         if(ConsumeFloat(parts, ref i, out f) == false)
                                             break; // Aborting
 
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref firstNode, ref prevNode);
+                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
 
                                         Vector2 v = lastPos;
                                         if(lastCmd == 'h') 
@@ -468,7 +489,7 @@ namespace PxPre
                                         else
                                             v.x = f; // Global
 
-                                        BNode node = new BNode(curLoop, v);
+                                        BNode node = new BNode(curLoop, mat.Mul(v));
                                         curLoop.nodes.Add(node);
                                         node.prev = prevNode;
                                         prevNode.next = node;
@@ -484,7 +505,7 @@ namespace PxPre
                                         if(ConsumeFloat(parts, ref i, out f) == false)
                                             break;
 
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref firstNode, ref prevNode);
+                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
 
                                         Vector2 v = lastPos;
                                         if(lastCmd == 'v') 
@@ -492,7 +513,7 @@ namespace PxPre
                                         else
                                             v.y = f; // Global
 
-                                        BNode node = new BNode(curLoop, v);
+                                        BNode node = new BNode(curLoop, mat.Mul(v));
                                         curLoop.nodes.Add(node);
                                         node.prev = prevNode;
                                         prevNode.next = node;
@@ -513,7 +534,7 @@ namespace PxPre
                                             break; //Aborting
                                         }
 
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref firstNode, ref prevNode);
+                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
 
                                         // Relative
                                         if (lastCmd == 'c')
@@ -523,16 +544,16 @@ namespace PxPre
                                             v += lastPos;
                                         }
 
-                                        BNode node = new BNode(curLoop, v);
+                                        BNode node = new BNode(curLoop, mat.Mul(v));
                                         curLoop.nodes.Add(node);
                                         //
                                         node.prev = prevNode;
                                         prevNode.next = node;
                                         //
                                         prevNode.UseTanOut = true;
-                                        prevNode.TanOut = tcurout - prevNode.Pos;
+                                        prevNode.TanOut = mat.Mul(tcurout) - prevNode.Pos;
                                         node.UseTanIn = true;
-                                        node.TanIn = tnxtin - v;
+                                        node.TanIn = mat.Mul(tnxtin) - node.Pos;
 
                                         prevNode = node;
                                         lastPos = v;
@@ -547,7 +568,7 @@ namespace PxPre
                                             break; // Aborting
                                         }
 
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref firstNode, ref prevNode);
+                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
 
                                         // Relative
                                         if (lastCmd == 'S')
@@ -556,14 +577,14 @@ namespace PxPre
                                             v += lastPos;
                                         }
 
-                                        BNode node = new BNode(curLoop, v);
+                                        BNode node = new BNode(curLoop, mat.Mul(v));
                                         curLoop.nodes.Add(node);
                                         node.prev = prevNode;
                                         prevNode.next = node;
                                         prevNode.UseTanOut = true;
-                                        prevNode.TanOut = t - prevNode.Pos;
+                                        prevNode.TanOut = mat.Mul(t) - prevNode.Pos;
                                         node.UseTanOut = true;
-                                        node.TanIn = t - v;
+                                        node.TanIn = mat.Mul(t) - node.Pos;
 
                                         prevNode = node;
                                         lastPos = v;
@@ -762,7 +783,7 @@ namespace PxPre
                 return ret;
             }
 
-            public static void EnsureLoopAndNode(BShape shape, ref BLoop loop, Vector2 lastPos, ref BNode first, ref BNode prev)
+            public static void EnsureLoopAndNode(BShape shape, ref BLoop loop, Vector2 lastPos, ref SVGMat mat, ref BNode first, ref BNode prev)
             { 
                 if(loop == null)
                 { 
@@ -774,7 +795,7 @@ namespace PxPre
 
                 if(prev == null)
                 {
-                    first = new BNode(loop, lastPos);
+                    first = new BNode(loop, mat.Mul(lastPos));
                     loop.nodes.Add(first);
                     prev = first;
 

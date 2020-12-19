@@ -32,7 +32,7 @@ namespace PxPre
         public class FillSegment
         {
             // This class is basically like BSample, but instead of holding a flattened
-            // version of the path for outlining, it's used for calculating how to tesselate
+            // version of the path for outlining, it's used for calculating how to tessellate
             // the path when being filled with triangles.
             //
             // The structure is admittedly a bit odd as it's different from the rest of
@@ -52,22 +52,18 @@ namespace PxPre
             /// <summary>
             /// The previous segment in the chain.
             /// </summary>
-            public Vector2 nextPos;
+            public Vector2 pos;
 
             /// <summary>
             /// The previous segment in the chain.
             /// </summary>
             public FillSegment prev;
 
-            /// <summary>
-            /// The previous position
-            /// </summary>
-            public Vector2 prevPos;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>
             /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
-            /// if each app session runs deterministicly the same. Used for identifying objects when
+            /// if each app session runs deterministically the same. Used for identifying objects when
             /// debugging.
             /// </summary>
             public readonly int debugCtr;

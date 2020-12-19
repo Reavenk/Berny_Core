@@ -76,12 +76,14 @@ namespace PxPre
                 public float lA0;       // Lower t of A of the final subdivided window.
                 public float lA1;       // Higher t of A of the final subdivided window.
                 public float lAEst;     // The final estimated t value of A for the intersection.
+                public bool linearA;
 
                 // Another node who's part of the intersection
                 public BNode nodeB;     
                 public float lB0;       // Lower t of B of the final subdivided window.
                 public float lB1;       // Higher t of B of the final subdivided window.
                 public float lBEst;     // The final estimated t value of B for the intersection.
+                public bool linearB;
 
                 /// <summary>
                 /// Constructor
@@ -96,11 +98,38 @@ namespace PxPre
                     this.lA0 = A.lambda0;
                     this.lA1 = A.lambda1;
                     this.lAEst = AEst;
+                    this.linearA = false;
+
 
                     this.nodeB = B.node;
                     this.lB0 = B.lambda0;
                     this.lB1 = B.lambda1;
                     this.lBEst = bEst;
+                    this.linearB = false;
+                }
+
+                public static void CleanIntersectionList(List<Utils.BezierSubdivSample> lst, float eps = 0.00001f)
+                {
+                    for (int i = 0; i < lst.Count; ++i)
+                    {
+                        // Note how we're starting from the end going back next to i
+                        for (int j = lst.Count - 1; j > i; --j)
+                        {
+                            // If they're different "enough" somehow, let it pass
+                            // and move on.
+                            if (lst[i].nodeA != lst[j].nodeA || lst[i].nodeB != lst[j].nodeB)
+                                continue;
+
+                            if (lst[i].lAEst - lst[j].lAEst > eps)
+                                continue;
+
+                            if (lst[i].lBEst - lst[j].lBEst > eps)
+                                continue;
+
+                            // Or else, they're too similar
+                            lst.RemoveAt(j);
+                        }
+                    }
                 }
             }
 
@@ -193,11 +222,41 @@ namespace PxPre
                     
                     this.bounds = GetBoundingBoxCubic(sdpt0, sdpt1, sdpt2, sdpt3);
                 }
+
+                public static BezierSubdivRgn FromNode(BNode node)
+                {
+                    Utils.BezierSubdivRgn ret = new Utils.BezierSubdivRgn();
+                    ret.node = node;
+                    ret.lambda0 = 0.0f;
+                    ret.lambda1 = 1.0f;
+                    ret.pt0 = node.Pos;
+                    ret.pt1 = node.Pos + node.TanOut;
+                    ret.pt2 = node.next.Pos + node.next.TanIn;
+                    ret.pt3 = node.next.Pos;
+                    ret.CalculateBounds();
+
+                    return ret;
+                }
+
+                public static BezierSubdivRgn FromNode(BNode node, float leftLam, float rightLam)
+                {
+                    Utils.BezierSubdivRgn ret = new Utils.BezierSubdivRgn();
+                    ret.node = node;
+                    ret.lambda0 = leftLam;
+                    ret.lambda1 = rightLam;
+                    ret.pt0 = node.Pos;
+                    ret.pt1 = node.Pos + node.TanOut;
+                    ret.pt2 = node.next.Pos + node.next.TanIn;
+                    ret.pt3 = node.next.Pos;
+                    ret.CalculateBounds();
+
+                    return ret;
+                }
             }
 
             // For some things, we may want to check against a bool if debugging utilities should be turned
-            // on instead of relying on preprocessors. If the compiler is savy enough - which is most 
-            // definitly should be, it will optimized out if statements with a const false value.
+            // on instead of relying on preprocessors. If the compiler is savvy enough - which is most 
+            // definitely should be, it will optimized out if statements with a const false value.
             public const bool verboseDebug =
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
                 true;
@@ -375,6 +434,7 @@ namespace PxPre
             /// <param name="a"></param>
             /// <param name="b"></param>
             /// <returns></returns>
+            /// <remarks>A positive value will be a clockwise winding.</remarks>
             public static float Vector2Cross(Vector2 a, Vector2 b)
             { 
                 // It's the equivalent of pretending a and b are 3D vectors and 
@@ -1008,10 +1068,16 @@ namespace PxPre
                         if(rgnA.node == rgnB.node)
                         {
                             // TODO: If they're the same node, reject piecewise connections
-                            if(
-                                (rgnA.lambda0 < rgnB.lambda0 && rgnA.lambda1 + segEps < rgnB.lambda0) ||
-                                (rgnB.lambda0 < rgnA.lambda0 && rgnB.lambda1 + segEps < rgnA.lambda0))
-                            {
+
+                            //
+                            // The on-segment testing is canceled, because it we've gotten this far,
+                            // we're going to assume it's in. Floating point imprecision has been
+                            // a thorny problem when evaluating s and t at these small distances.
+                            //
+                            //if(
+                            //    (rgnA.lambda0 < rgnB.lambda0 && rgnA.lambda1 + segEps < rgnB.lambda0) ||
+                            //    (rgnB.lambda0 < rgnA.lambda0 && rgnB.lambda1 + segEps < rgnA.lambda0))
+                            //{
 
                                 //if (s >= 0.0f && s <= 1.0f && t >= 0.0 && t <= 1.0f)
                                 //{
@@ -1028,19 +1094,24 @@ namespace PxPre
                                                 rgnB.lambda1,
                                                 t)));
                                 //}
-                            }
+                            //}
                         }
                         else if(rgnA.node.next == rgnB.node || rgnB.node.next == rgnA.node)
                         {
                             // Else if they're peicewise node connections, reject very end connections
-                            if(
-                                (rgnA.node.next == rgnB.node && rgnA.lambda1 < 1.0f - segEps) ||
-                                (rgnA.node.prev == rgnB.node && rgnA.lambda0 > segEps))
-                            {
-                                // Note we don't have the -or-equal-to comparisons
-                                //if (s > 0.0f && s < 1.0f && t > 0.0 && t < 1.0f)
-                                //{
-                                    outList.Add(
+                            //
+                            // The on-segment testing is canceled, because it we've gotten this far,
+                            // we're going to assume it's in. Floating point imprecision has been
+                            // a thorny problem when evaluating s and t at these small distances.
+                            //
+                            //if(
+                            //    (rgnA.node.next == rgnB.node && rgnA.lambda1 < 1.0f - segEps) ||
+                            //    (rgnA.node.prev == rgnB.node && rgnA.lambda0 > segEps))
+                            //{
+                            // Note we don't have the -or-equal-to comparisons
+                            //if (s > 0.0f && s < 1.0f && t > 0.0 && t < 1.0f)
+                            //{
+                            outList.Add(
                                         new BezierSubdivSample(
                                             rgnA,
                                             Mathf.Lerp(
@@ -1053,15 +1124,19 @@ namespace PxPre
                                                 rgnB.lambda1,
                                                 t)));
                                 //}
-                            }
+                            //}
                         }
                         else
-                        { 
+                        {
                             // Two nodes actually intersecting and not numerical error
 
-                            if(s >= -segEpsLamSlack && s <= 1.0f + segEpsLamSlack && t >= -segEpsLamSlack && t <= 1.0f + segEpsLamSlack)
-                            { 
-                                outList.Add(
+                            // The on-segment testing is canceled, because it we've gotten this far,
+                            // we're going to assume it's in. Floating point imprecision has been
+                            // a thorny problem when evaluating s and t at these small distances.
+                            //
+                            //if(s >= -segEpsLamSlack && s <= 1.0f + segEpsLamSlack && t >= -segEpsLamSlack && t <= 1.0f + segEpsLamSlack)
+                            //{ 
+                            outList.Add(
                                     new BezierSubdivSample(
                                         rgnA, 
                                         Mathf.Lerp(
@@ -1073,7 +1148,7 @@ namespace PxPre
                                             rgnB.lambda0,
                                             rgnB.lambda1, 
                                             t)));
-                            }
+                            //}
                         }
                     }
 
@@ -1082,7 +1157,7 @@ namespace PxPre
 
                 
 
-                // Subdivide out canidates
+                // Subdivide out candidates
                 BezierSubdivRgn rgnAA, rgnAB;
                 rgnA.Split(out rgnAA, out rgnAB);
 
@@ -1093,6 +1168,139 @@ namespace PxPre
                 SubdivideSample(rgnAA, rgnBB, iterLeft - 1, minDst, outList);
                 SubdivideSample(rgnAB, rgnBA, iterLeft - 1, minDst, outList);
                 SubdivideSample(rgnAB, rgnBB, iterLeft - 1, minDst, outList);
+            }
+
+            public static void NodeIntersections(BNode nodeA, BNode nodeB, int iterLeft, float minDst, List<BezierSubdivSample> outList)
+            { 
+                // If we don't have two segments, then we can't have any kind of segment intersection
+                if(nodeA.next == null || nodeB.next == null)
+                    return;
+
+
+                bool isLineA = nodeA.UseTanOut == false && nodeA.next.UseTanIn == false;
+                bool isLineB = nodeB.UseTanOut == false && nodeB.next.UseTanIn == false;
+
+                // If the entire segment isn't using tangents, we have two straight
+                // lines, so we can just do a simple line segment test and be done with
+                // it without complex subdivision iterations
+                //
+                if (isLineA == true && isLineB == true)
+                { 
+                    float s, t;
+                    if(Utils.ProjectSegmentToSegment(
+                        nodeA.Pos,
+                        nodeA.next.Pos,
+                        nodeB.Pos,
+                        nodeB.next.Pos,
+                        out s,
+                        out t) == true)
+                    {
+                        if(s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f)
+                        {
+                            BezierSubdivSample bss = new BezierSubdivSample();
+                            //
+                            bss.linearA = true;
+                            bss.nodeA = nodeA;
+                            bss.lAEst = s;
+                            //
+                            bss.linearB = true;
+                            bss.nodeB = nodeB;
+                            bss.lBEst = t;
+                            outList.Add(bss);
+                        }
+                    }
+                }
+                else if(isLineA == true || isLineB == true)
+                { 
+                    // We have two options here, we could have mirrored
+                    // lineA line and lineB line branches that are duplicate,
+                    // or a unified implementation that does branching. For
+                    // now we do the latter - one unified implementation for
+                    // curve-to-line with multiple branches inside.
+                    BNode curve;
+                    BNode line;
+
+                    if(isLineA == true)
+                    { 
+                        line = nodeA;
+                        curve = nodeB;
+                    }
+                    else
+                    { 
+                        line = nodeB;
+                        curve = nodeA;
+                    }
+
+                    BNode.PathBridge pb = nodeB.GetPathBridgeInfo();
+
+                    List<float> intersectCurve = new List<float>();
+                    List<float> intersectLine = new List<float>();
+                    Utils.IntersectLine(
+                        intersectCurve, 
+                        intersectLine,
+                        curve.Pos,
+                        curve.Pos + pb.prevTanOut,
+                        curve.next.Pos + pb.nextTanIn,
+                        curve.next.Pos,
+                        line.Pos,
+                        line.next.Pos);
+
+                    for(int i = 0; i < intersectCurve.Count; ++i)
+                    {
+                        BezierSubdivSample bss = new BezierSubdivSample();
+                        bss.nodeA = nodeA;
+                        bss.nodeB = nodeB;
+                        if(isLineA)
+                        { 
+                            bss.lAEst = intersectLine[i];
+                            bss.linearA = true;
+                            bss.lBEst = intersectCurve[i];
+                            bss.linearB = false;
+                        }
+                        else
+                        {
+                            bss.lAEst = intersectCurve[i];
+                            bss.linearA = false;
+                            bss.lBEst = intersectLine[i];
+                            bss.linearB = true;
+                        }
+                    }
+                }
+                else
+                {
+                    SubdivideSample(
+                        BezierSubdivRgn.FromNode(nodeA),
+                        BezierSubdivRgn.FromNode(nodeB),
+                        iterLeft, 
+                        minDst,
+                        outList);
+                }
+            }
+
+            /// <summary>
+            /// The upward sloping basis of a Bezier hermite.
+            /// </summary>
+            /// <param name="t">The interpolation value.</param>
+            /// <returns></returns>
+            public static float HermiteS(float t)
+            { 
+                return -2.0f *t*t*t + 3.0f*t*t;
+            }
+
+            /// <summary>
+            /// Given a value pt, find the parameter t that would go
+            /// into HermiteS to make it return back to us pt;
+            /// </summary>
+            /// <param name="pt">The target value to receive from HermiteS.</param>
+            /// <returns>The value needed to put into HermiteS for it to return pt.</returns>
+            public static float InvertHermiteS(float pt)
+            {
+                // https://www.wolframalpha.com/input/?i=invert+y+%3D+-2x%5E3+%2B+3x%5E2
+
+                float sqrPart = Mathf.Sqrt(pt * pt - pt);
+                float cubePart = Mathf.Pow(2.0f * sqrPart - 2.0f * pt + 1.0f, 1.0f / 3.0f);
+
+                return 0.5f * (cubePart + 1.0f/cubePart + 1.0f);
             }
 
             /// <summary>
@@ -1985,6 +2193,14 @@ namespace PxPre
                 }
                 return ret;
             }
+
+            public static void TestIntersection(BNode a, BNode b, bool clean)
+            {
+                List<Utils.BezierSubdivSample> inter = new List<Utils.BezierSubdivSample>();
+            }
+
+            
+
         }
     }
 }

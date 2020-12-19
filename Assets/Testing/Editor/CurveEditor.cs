@@ -34,12 +34,20 @@ public class CurveEditor : Editor
 
     public float infAmt = 0.05f;
 
+    public static string textToCreate = "Text To Create!";
+    public static bool drawKnots = true;
+
     /// <summary>
     /// Unity inspector function.
     /// </summary>
     public override void OnInspectorGUI()
     {
+        if(drawKnots == false)
+            this.selectedNodes.Clear();
+
         base.OnInspectorGUI();
+
+        drawKnots = EditorGUILayout.Toggle("Draw Knots", drawKnots);
 
         BernyTest t = (BernyTest)this.target;
         if (t == null || t.curveDocument == null)
@@ -116,97 +124,19 @@ public class CurveEditor : Editor
 
         if(GUILayout.Button("Edgeify") == true)
         {
-            foreach (Layer l in t.curveDocument.Layers())
-            {
-                foreach (BShape bs in l.shapes)
-                {
-                    foreach (BLoop bl in bs.loops)
-                    {
-                        List<BNode> islands = bl.GetIslands();
-
-                        foreach(BNode bisl in islands)
-                        {
-                            // This will probably just give us bisl back, but it that's the case, then it should
-                            // be minimal overhead - just to be safe though, and to see what kind of connectivity we're dealing with.
-                            BNode.EndpointQuery eq = bisl.GetPathLeftmost();
-
-                            List<BNode> origs = new List<BNode>();
-                            List<BNode> copies = new List<BNode>();
-                            List<InflationCache> inflations = new List<InflationCache>();
-                            foreach(BNode it in eq.Enumerate())
-                            {
-                                origs.Add(it);
-
-                                BNode cpy = new BNode(bl, it, false, true);
-                                copies.Add(cpy);
-
-                                bl.nodes.Add(cpy);
-
-                                InflationCache ic = new InflationCache();
-                                it.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
-                                inflations.Add(ic);
-                            }
-
-                            // Stitch the new chain - it should have a reverse winding.
-                            //
-                            // The loop is a little backwards, but basically we sub instead of add to
-                            // treat the prev item in the array like the next in the chain.
-                            for(int i = 1; i < copies.Count; ++i)
-                            { 
-                                copies[i].next = copies[i - 1];
-                                copies[i - 1].prev = copies[i];
-                            }
-
-                            int lastIdx = copies.Count - 1;
-                            if(eq.result == BNode.EndpointResult.Cyclical)
-                            { 
-                                // If it was cyclical, it should close in on itself and it should
-                                // never touch the original outline;
-                                //
-                                // Remember we're treating copies in reverse.
-                                copies[lastIdx].prev = copies[0];
-                                copies[0].next = copies[lastIdx];
-                            }
-                            else
-                            {
-                                // Or else the opposite ends connect to each other.
-                                // Remember we're treating copies in reverse.
-                                origs[0].prev = copies[0];
-                                copies[0].next = origs[0];
-
-                                origs[lastIdx].next = copies[lastIdx];
-                                copies[lastIdx].prev = origs[lastIdx];
-
-                                origs[0].UseTanIn = false;
-                                origs[lastIdx].UseTanOut = false;
-                                copies[0].UseTanOut = false;
-                                copies[lastIdx].UseTanIn = false;
-                            }
-
-                            // Now that we have copies and connectivity set up, it's time
-                            // to apply the thickening
-                            for(int i = 0; i < copies.Count; ++i)
-                            { 
-                                // Push out the original
-                                origs[i].Pos += this.infAmt * inflations[i].selfInf;
-                                origs[i].TanIn += this.infAmt * (inflations[i].inInf - inflations[i].selfInf);
-                                origs[i].TanOut += this.infAmt * (inflations[i].outInf - inflations[i].selfInf);
-
-                                // We can optinally pull in the copy
-                            }
-                        }
-                    }
-                }
-            }
+            foreach (BLoop bl in t.curveDocument.EnumerateLoops())
+                PxPre.Berny.Operators.Edgify(bl, this.infAmt);
         }
-
 
         GUILayout.Space(20.0f);
 
+        GUI.color = Color.red;
         if(GUILayout.Button("Clear") == true)
         { 
             t.curveDocument.Clear();
+            t.ClearFills();
         }
+        GUI.color = Color.white;
 
         if(GUILayout.Button("Save SVG") == true)
         { 
@@ -473,6 +403,76 @@ public class CurveEditor : Editor
                 else
                     Debug.Log($"{this.intersectionPreviews.Count} Collisions found");
             }
+
+            GUILayout.BeginHorizontal();
+                if(GUILayout.Button("Wind Sel Back") == true)
+                { 
+                    List<BNode> bnsel = new List<BNode>(this.selectedNodes);
+                    this.selectedNodes.Clear();
+                    foreach(BNode bn in bnsel)
+                    { 
+                        if(bn.prev != null)
+                            this.selectedNodes.Add(bn.prev);
+                    }
+                }
+                if(GUILayout.Button("Wind Sel Fwd") == true)
+                {
+                    List<BNode> bnsel = new List<BNode>(this.selectedNodes);
+                    this.selectedNodes.Clear();
+                    foreach(BNode bn in bnsel)
+                    { 
+                        if(bn.next != null)
+                            this.selectedNodes.Add(bn.next);
+                    }
+                }
+            GUILayout.EndHorizontal();
+
+            if(GUILayout.Button("Test Union") == true)
+            { 
+                BLoop srcLoop = null;
+                List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(out srcLoop, this.selectedNodes);
+                
+                // If loops is filled, srcLoop should be non-null
+                if (loops.Count > 0)
+                    Boolean.Union(srcLoop, true, loops.ToArray());
+            }
+
+            if(GUILayout.Button("Test Difference") == true)
+            {
+                List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(this.selectedNodes);
+                if(loops.Count >= 2)
+                    Boolean.Difference( loops[0], loops[1], true);
+            }
+
+            if(GUILayout.Button("Test Intersection") == true)
+            {
+                List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(this.selectedNodes);
+                if (loops.Count >= 2)
+                    Boolean.Intersection(loops[0], loops[1], true);
+            }
+
+            if (GUILayout.Button("Test Exclusion") == true)
+            {
+                List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(this.selectedNodes);
+                if (loops.Count >= 2)
+                    Boolean.Exclusion(loops[0], loops[1], true);
+            }
+        }
+
+        textToCreate =
+                GUILayout.TextField(
+                    textToCreate,
+                    GUILayout.ExpandWidth(true),
+                    GUILayout.Height(100.0f));
+
+        if (GUILayout.Button("Create Text") == true)
+        {
+            PxPre.Berny.Text.GenerateString(
+                t.curveDocument.GetFirstLayer(), 
+                Vector2.zero, 
+                t.typeface, 
+                1.0f,
+                textToCreate);
         }
 
         if (t.curveDocument.IsDirty() == true)
@@ -524,27 +524,30 @@ public class CurveEditor : Editor
             else
                 Handles.color = Color.white;
 
-            bool inter = Handles.Button(bn.Pos, Quaternion.identity, 0.1f, 0.1f, Handles.CubeHandleCap);
-
-            Handles.color = Color.white;
-            if(inter == true)
+            if(drawKnots == true)
             {
-                recalculateAverage = true;
+                bool inter = Handles.Button(bn.Pos, Quaternion.identity, 0.1f, 0.1f, Handles.CubeHandleCap);
 
-                if (Event.current.shift == true)
-                { 
-                    if(sel == true)
-                        this.selectedNodes.Remove(bn);
-                    else
-                        this.selectedNodes.Add(bn);
-                }
-                else
+                Handles.color = Color.white;
+                if(inter == true)
                 {
-                    this.selectedNodes.Clear();
-                    this.selectedNodes.Add(bn);
-                }
+                    recalculateAverage = true;
 
-                this.movedTangent = null;
+                    if (Event.current.shift == true)
+                    { 
+                        if(sel == true)
+                            this.selectedNodes.Remove(bn);
+                        else
+                            this.selectedNodes.Add(bn);
+                    }
+                    else
+                    {
+                        this.selectedNodes.Clear();
+                        this.selectedNodes.Add(bn);
+                    }
+
+                    this.movedTangent = null;
+                }
             }
 
             BSample bit = bn.sample;
@@ -556,31 +559,34 @@ public class CurveEditor : Editor
         }
     
         // For selected items, show handles for their tangents.
-        foreach(BNode bn in this.selectedNodes)
+        if(drawKnots == true)
         {
-            if(bn.UseTanIn == true)
+            foreach(BNode bn in this.selectedNodes)
             {
-                Handles.color = Color.blue;
-                if(Handles.Button(bn.Pos + bn.TanIn, Quaternion.identity, 0.05f, 0.05f, Handles.CubeHandleCap) == true)
+                if(bn.UseTanIn == true)
                 {
-                    this.movedTangent = bn;
-                    this.movedTangentType = BNode.TangentType.Input;
+                    Handles.color = Color.blue;
+                    if(Handles.Button(bn.Pos + bn.TanIn, Quaternion.identity, 0.05f, 0.05f, Handles.CubeHandleCap) == true)
+                    {
+                        this.movedTangent = bn;
+                        this.movedTangentType = BNode.TangentType.Input;
+                    }
+                    Handles.color = Color.white;
+                    Handles.DrawDottedLine(bn.Pos + bn.TanIn, bn.Pos, 1.0f);
                 }
-                Handles.color = Color.white;
-                Handles.DrawDottedLine(bn.Pos + bn.TanIn, bn.Pos, 1.0f);
-            }
 
-            //
-            if(bn.UseTanOut == true)
-            {
-                Handles.color = Color.blue;
-                if(Handles.Button(bn.Pos + bn.TanOut, Quaternion.identity, 0.05f, 0.05f, Handles.CubeHandleCap) == true)
+                //
+                if(bn.UseTanOut == true)
                 {
-                    this.movedTangent = bn;
-                    this.movedTangentType = BNode.TangentType.Output;
+                    Handles.color = Color.blue;
+                    if(Handles.Button(bn.Pos + bn.TanOut, Quaternion.identity, 0.05f, 0.05f, Handles.CubeHandleCap) == true)
+                    {
+                        this.movedTangent = bn;
+                        this.movedTangentType = BNode.TangentType.Output;
+                    }
+                    Handles.color = Color.white;
+                    Handles.DrawDottedLine(bn.Pos + bn.TanOut, bn.Pos, 1.0f);
                 }
-                Handles.color = Color.white;
-                Handles.DrawDottedLine(bn.Pos + bn.TanOut, bn.Pos, 1.0f);
             }
         }
 
@@ -727,26 +733,8 @@ public class CurveEditor : Editor
                 { 
                     for(int j = i + 1; j < roots.Count - 1; ++j)
                     {
-                        Utils.BezierSubdivRgn rgnA = new Utils.BezierSubdivRgn();
-                        rgnA.node = bn;
-                        rgnA.lambda0 = roots[i];
-                        rgnA.lambda1 = roots[i + 1];
-                        rgnA.pt0 = bn.Pos;
-                        rgnA.pt1 = bn.Pos + bn.TanOut;
-                        rgnA.pt2 = bn.next.Pos + bn.next.TanIn;
-                        rgnA.pt3 = bn.next.Pos;
-                        rgnA.CalculateBounds();
-
-                        Utils.BezierSubdivRgn rgnB = new Utils.BezierSubdivRgn();
-                        rgnB.node = bn;
-                        rgnB.lambda0 = roots[j];
-                        rgnB.lambda1 = roots[j+1];
-                        rgnB.pt0 = bn.Pos;
-                        rgnB.pt1 = bn.Pos + bn.TanOut;
-                        rgnB.pt2 = bn.next.Pos + bn.next.TanIn;
-                        rgnB.pt3 = bn.next.Pos;
-                        rgnB.CalculateBounds();
-
+                        Utils.BezierSubdivRgn rgnA = Utils.BezierSubdivRgn.FromNode(bn, roots[i], roots[i+1]);
+                        Utils.BezierSubdivRgn rgnB = Utils.BezierSubdivRgn.FromNode(bn, roots[j], roots[j+1]);
                         Utils.SubdivideSample(rgnA, rgnB, 20, Mathf.Epsilon, inter);
                     }
                 }
@@ -766,51 +754,14 @@ public class CurveEditor : Editor
                 // TODO: Check path tangent function
                 BNode bnj = nodes[j];
 
-                Utils.BezierSubdivRgn rgnA = new Utils.BezierSubdivRgn();
-                rgnA.node = bni;
-                rgnA.lambda0 = 0.0f;
-                rgnA.lambda1 = 1.0f;
-                rgnA.pt0 = bni.Pos;
-                rgnA.pt1 = bni.Pos + bni.TanOut;
-                rgnA.pt2 = bni.next.Pos + bni.next.TanIn;
-                rgnA.pt3 = bni.next.Pos;
-                rgnA.CalculateBounds();
-
-                Utils.BezierSubdivRgn rgnB = new Utils.BezierSubdivRgn();
-                rgnB.node = bnj;
-                rgnB.lambda0 = 0.0f;
-                rgnB.lambda1 = 1.0f;
-                rgnB.pt0 = bnj.Pos;
-                rgnB.pt1 = bnj.Pos + bnj.TanOut;
-                rgnB.pt2 = bnj.next.Pos + bnj.next.TanIn;
-                rgnB.pt3 = bnj.next.Pos;
-                rgnB.CalculateBounds();
-
+                Utils.BezierSubdivRgn rgnA = Utils.BezierSubdivRgn.FromNode(bni);
+                Utils.BezierSubdivRgn rgnB = Utils.BezierSubdivRgn.FromNode(bnj);
                 Utils.SubdivideSample(rgnA, rgnB, 20, Mathf.Epsilon, inter);
             }
         }
 
         // Get rid of similar ones, they're probably from numerical errors
-        for(int i = 0; i < inter.Count; ++i)
-        { 
-            // Note how we're starting from the end going back next to i
-            for(int j = inter.Count - 1; j > i; --j)
-            { 
-                // If they're different "enough" somehow, let it pass
-                // and move on.
-                if(inter[i].nodeA != inter[j].nodeA || inter[i].nodeB != inter[j].nodeB)
-                    continue;
-
-                if(inter[i].lAEst - inter[j].lAEst > 0.00001f)
-                    continue;
-
-                if (inter[i].lBEst - inter[j].lBEst > 0.00001f)
-                    continue;
-
-                // Or else, they're too similar
-                inter.RemoveAt(j);
-            }
-        }
+        Utils.BezierSubdivSample.CleanIntersectionList(inter);
 
         foreach(Utils.BezierSubdivSample interS in inter)
         {

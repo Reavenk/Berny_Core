@@ -113,8 +113,7 @@ namespace PxPre
                         // Transfer positions. We keep a local copy of positions, but by convention,
                         // the prevPos will match the prev's nextPos, and the nextPos will match
                         // the next's prevPos.
-                        fs.prevPos = bit.pos;
-                        fs.nextPos = bit.next.pos;
+                        fs.pos = bit.pos;
 
                         island.segments.Add(fs);
 
@@ -181,10 +180,10 @@ namespace PxPre
                         //island.DumpDebugCSV("SanatizeIslandIntersections_Before");
                         float s,t;
                         if( Utils.ProjectSegmentToSegment(
-                                it.prevPos, 
-                                it.nextPos, 
-                                itOther.prevPos, 
-                                itOther.nextPos, 
+                                it.pos, 
+                                it.next.pos, 
+                                itOther.pos, 
+                                itOther.next.pos, 
                                 out s, 
                                 out t) == false)
                         { 
@@ -199,24 +198,20 @@ namespace PxPre
                         // When a collision happens, we need to split them into two islands 
                         // at the collision point
 
-                        Vector2 colPt = it.prevPos + s * (it.nextPos - it.prevPos);
+                        Vector2 colPt = it.pos + s * (it.next.pos - it.pos);
 
                         // First we create the point and set some references
                         // Stitch "us"
-                        it.nextPos = colPt;
                         FillSegment newUsStitch = new FillSegment();
-                        newUsStitch.prevPos = colPt;
+                        newUsStitch.pos = colPt;
                         newUsStitch.prev = it;
                         newUsStitch.next = itOther.next;
-                        newUsStitch.nextPos = itOther.next.prevPos;
                         //
                         // And stitch "them",
-                        itOther.nextPos = colPt;
                         FillSegment newThemStitch = new FillSegment();
-                        newThemStitch.prevPos = colPt;
+                        newThemStitch.pos = colPt;
                         newThemStitch.prev = itOther;
                         newThemStitch.next = it.next;
-                        newThemStitch.nextPos = it.next.prevPos;
 
                         // And then we patch it all up
                         it.next = newUsStitch;
@@ -267,8 +262,8 @@ namespace PxPre
                     // iterate over it - so we make a copy.
                     HashSet<FillIsland> originalIslands = new HashSet<FillIsland>(this.islands);
 
-                    foreach(FillIsland fi in originalIslands)
-                        this.SanatizeIslandIntersections(fi);
+                    //foreach(FillIsland fi in originalIslands)
+                    //    this.SanatizeIslandIntersections(fi);
                 }
 
                 foreach(FillIsland fi in this.islands)
