@@ -66,22 +66,38 @@ namespace PxPre
                 Pixels
             }
 
+            public struct NodeTPos
+            {
+                public BNode node;
+                public float t;
+
+                public NodeTPos(BNode node, float t)
+                {
+                    this.node = node;
+                    this.t = t;
+                }
+            }
+
             /// <summary>
-            /// Return value recording an found intersection of two Bezier path segments from iterative subsivision
+            /// Return value recording an found intersection of two Bezier path segments from iterative subdivision
             /// </summary>
             public struct BezierSubdivSample
             {
                 // A node who's a part of the intersection.
                 public BNode nodeA;
+            #if BWINDOW
                 public float lA0;       // Lower t of A of the final subdivided window.
                 public float lA1;       // Higher t of A of the final subdivided window.
+            #endif
                 public float lAEst;     // The final estimated t value of A for the intersection.
                 public bool linearA;
 
                 // Another node who's part of the intersection
                 public BNode nodeB;     
+            #if BWINDOW
                 public float lB0;       // Lower t of B of the final subdivided window.
                 public float lB1;       // Higher t of B of the final subdivided window.
+            #endif
                 public float lBEst;     // The final estimated t value of B for the intersection.
                 public bool linearB;
 
@@ -95,15 +111,19 @@ namespace PxPre
                 public BezierSubdivSample(BezierSubdivRgn A, float AEst, BezierSubdivRgn B, float bEst)
                 { 
                     this.nodeA = A.node;
+#if BWINDOW
                     this.lA0 = A.lambda0;
                     this.lA1 = A.lambda1;
+#endif
                     this.lAEst = AEst;
                     this.linearA = false;
 
 
                     this.nodeB = B.node;
+#if BWINDOW
                     this.lB0 = B.lambda0;
                     this.lB1 = B.lambda1;
+#endif
                     this.lBEst = bEst;
                     this.linearB = false;
                 }
@@ -120,10 +140,10 @@ namespace PxPre
                             if (lst[i].nodeA != lst[j].nodeA || lst[i].nodeB != lst[j].nodeB)
                                 continue;
 
-                            if (lst[i].lAEst - lst[j].lAEst > eps)
+                            if (Mathf.Abs(lst[i].lAEst - lst[j].lAEst) > eps)
                                 continue;
 
-                            if (lst[i].lBEst - lst[j].lBEst > eps)
+                            if (Mathf.Abs(lst[i].lBEst - lst[j].lBEst) > eps)
                                 continue;
 
                             // Or else, they're too similar
@@ -131,6 +151,9 @@ namespace PxPre
                         }
                     }
                 }
+
+                public NodeTPos GetTPosA() => new NodeTPos(this.nodeA, this.lAEst);
+                public NodeTPos GetTPosB() => new NodeTPos(this.nodeB, this.lBEst);
             }
 
             /// <summary>
@@ -1264,6 +1287,7 @@ namespace PxPre
                             bss.lBEst = intersectLine[i];
                             bss.linearB = true;
                         }
+                        outList.Add(bss);
                     }
                 }
                 else

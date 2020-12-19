@@ -1697,6 +1697,8 @@ namespace PxPre
 
             public SubdivideInfo GetSubdivideInfo(float t)
             { 
+                // TODO: Handle linear also
+
                 PathBridge pb = this.GetPathBridgeInfo();
 
                 Vector2 p0 = this.pos;
@@ -1723,6 +1725,41 @@ namespace PxPre
                 ret.subOut = p11 - pp;
 
                 return ret;
+            }
+
+            public Vector2 CalculatetPoint(float t)
+            {
+                if(this.next == null)
+                    return this.pos;
+
+                if(this.IsLine() == true)
+                    return this.pos + (this.next.pos - this.pos) * t;
+                else
+                { 
+                    float a, b, c, d;
+                    Utils.GetBezierWeights(t, out a, out b, out c, out d);
+
+                    return 
+                        a * this.pos + 
+                        b * (this.pos + this.tanOut) +
+                        c * (this.next.pos + this.next.tanIn) +
+                        d * this.next.pos;
+                }
+            }
+
+            public bool IsLine()
+            { 
+                if(this.next == null)
+                    return false;
+
+                return 
+                    this.useTanOut == false && 
+                    this.next.useTanIn == false;
+            }
+
+            public bool IsSegment()
+            { 
+                return this.next != null;
             }
         }
     }

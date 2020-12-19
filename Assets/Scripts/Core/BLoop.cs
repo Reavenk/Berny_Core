@@ -741,6 +741,20 @@ namespace PxPre
                 foreach(BNode bn in this.nodes)
                     bn._Invert();
             }
+
+            public void DumpInto(BLoop dst)
+            { 
+                if(dst == this)
+                    return;
+
+                foreach(BNode bn in this.nodes)
+                { 
+                    bn.parent = dst;
+                    dst.nodes.Add(bn);
+                }
+
+                this.nodes.Clear();
+            }
         }
     } 
 }

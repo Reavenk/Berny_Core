@@ -77,34 +77,24 @@ public class CurveEditor : Editor
 
         GUILayout.Space(20.0f);
 
-        if(GUILayout.Button("LOAD Ven") == true)
-        {
-            t.curveDocument.Clear();
-            SVGSerializer.Load("Ven.svg", t.curveDocument);
-        }
+        string [] files = 
+            new string[]
+            { 
+                "Ven",
+                "TriVen",
+                "CircAnCirc",
+                "Complex",
+                "Complex2",
+                "Edges"
+            };
 
-        if (GUILayout.Button("LOAD TriVen") == true)
+        foreach(string f in files)
         {
-            t.curveDocument.Clear();
-            SVGSerializer.Load("TriVen.svg", t.curveDocument);
-        }
-
-        if (GUILayout.Button("LOAD CircAnCirc") == true)
-        {
-            t.curveDocument.Clear();
-            SVGSerializer.Load("CircAnCirc.svg", t.curveDocument);
-        }
-
-        if (GUILayout.Button("LOAD Complex") == true)
-        {
-            t.curveDocument.Clear();
-            SVGSerializer.Load("Complex.svg", t.curveDocument);
-        }
-
-        if (GUILayout.Button("LOAD Edges") == true)
-        {
-            t.curveDocument.Clear();
-            SVGSerializer.Load("Edges.svg", t.curveDocument);
+            if (GUILayout.Button("LOAD " + f) == true)
+            {
+                t.curveDocument.Clear();
+                SVGSerializer.Load(f + ".svg", t.curveDocument);
+            }
         }
 
         GUILayout.Space(20.0f);
@@ -767,11 +757,19 @@ public class CurveEditor : Editor
         {
             if(interS.nodeA == interS.nodeB)
             {
+#if BWINDOW
                 Debug.Log($"SELF Collision detected at range {interS.lA0} - {interS.lA1} for object 1 and {interS.lB0} - {interS.lB1} for object 2.");
+#else
+                Debug.Log($"SELF Collision detected at range {interS.lAEst} for object 1 and {interS.lBEst} for object 2.");
+#endif
             }
             else
             {
+#if BWINDOW
                 Debug.Log($"Collision detected at range {interS.lA0} - {interS.lA1} for object 1 and {interS.lB0} - {interS.lB1} for object 2.");
+#else
+                Debug.Log($"Collision detected at range {interS.lAEst} for object 1 and {interS.lBEst} for object 2.");
+#endif
             }
         }
     }

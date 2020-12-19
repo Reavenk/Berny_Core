@@ -431,9 +431,12 @@ namespace PxPre
                                 char lastCmd = (char)0;
                                 while(i < parts.Count)
                                 { 
+                                    // Did we parse the command on this loop iter?
+                                    bool parsedLetter = false;
                                     if(parts[i].Length == 1 && char.IsLetter(parts[i][0]) == true)
                                     {
                                         lastCmd = parts[i][0];
+                                        parsedLetter = true;
                                         ++i;
                                     }
                                         
@@ -443,7 +446,22 @@ namespace PxPre
                                         if(ConsumeVector2(parts, ref i, out v) == false)
                                             break; // Aborting
 
-                                        lastPos += v;
+                                        v = lastPos + v;
+
+                                        if(parsedLetter == false)
+                                        {
+                                            EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+                                            BNode node = new BNode(curLoop, mat.Mul(v));
+                                            prevNode.next = node;
+                                            node.prev = prevNode;
+                                            node.UseTanOut = false;
+                                            node.UseTanIn = false;
+                                            curLoop.nodes.Add(node);
+                                            prevNode = node;
+                                        }
+
+                                        lastPos = v;
+
 
                                     }
                                     else if(lastCmd == 'M') // Global Move To
@@ -451,6 +469,18 @@ namespace PxPre
                                         Vector2 v;
                                         if(ConsumeVector2(parts, ref i, out v) == false)
                                             break; //Aborting
+
+                                        if(parsedLetter == false)
+                                        {
+                                            EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+                                            BNode node = new BNode(curLoop, mat.Mul(v));
+                                            prevNode.next = node;
+                                            node.prev = prevNode;
+                                            node.UseTanOut = false;
+                                            node.UseTanIn = false;
+                                            curLoop.nodes.Add(node);
+                                            prevNode = node;
+                                        }
 
                                         lastPos = v;
                                     }
