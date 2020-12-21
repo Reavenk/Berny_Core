@@ -174,6 +174,8 @@ namespace PxPre
             /// </summary>
             bool dirty = true;
 
+            public BShapeGen shapeGenerator = null;
+
             // Currently unused, planned for non-path SVG shapes
             //public string objectType = string.Empty;
             //public Dictionary<string, float> objectFloats = new Dictionary<string, float>();
@@ -321,7 +323,10 @@ namespace PxPre
             /// </summary>
             public void FlushDirty()
             { 
-                foreach(BLoop bl in this.loops)
+                if(this.shapeGenerator != null)
+                    this.shapeGenerator.Reconstruct();
+
+                foreach (BLoop bl in this.loops)
                     bl.FlushDirty();
 
                 this.dirty = false;
@@ -366,6 +371,21 @@ namespace PxPre
 
                 loop.shape = this;
                 this.loops.Add(loop);
+                this.FlagDirty();
+            }
+
+            public BLoop AddLoop()
+            { 
+                BLoop loop = new BLoop(this);
+                this.AddLoop(loop);
+                return loop;
+            }
+
+            public BLoop AddLoop(params BNode.BezierInfo [] pathData)
+            { 
+                BLoop loop = new BLoop(this, pathData);
+                this.AddLoop(loop);
+                return loop;
             }
 
             /// <summary>
@@ -434,6 +454,15 @@ namespace PxPre
 
                 return ret;
 
+            }
+
+            public void Clear()
+            {
+                if(this.loops.Count == 0)
+                    return;
+
+                this.loops.Clear();
+                this.FlagDirty();
             }
         }
     }

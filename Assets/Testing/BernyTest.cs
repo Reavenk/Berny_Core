@@ -45,7 +45,16 @@ public class BernyTest : MonoBehaviour
         public Mesh mesh;
     }
 
+    public enum FillType
+    { 
+        Filled,
+        Outlined,
+        FilledAndOutlined
+    }
+
     Dictionary<BShape, FillEntry> fillEntries = new Dictionary<BShape, FillEntry>();
+
+    public Shader standardShader;
 
     // Start is called before the first frame update
     void Start()
@@ -66,7 +75,7 @@ public class BernyTest : MonoBehaviour
         this.curveDocument.FlushDirty();
     }
 
-    public void UpdateForFill(BShape bs)
+    public void UpdateForFill(BShape bs, FillType ft, float width)
     {
         FillEntry fe;
         if (this.fillEntries.TryGetValue(bs, out fe)  == false)
@@ -74,36 +83,93 @@ public class BernyTest : MonoBehaviour
             GameObject go = new GameObject("ShapeFill");
             MeshFilter mf = go.AddComponent<MeshFilter>();
             MeshRenderer mr = go.AddComponent<MeshRenderer>();
-            Mesh m = new Mesh();
 
             fe.go = go;
             fe.mf = mf;
             fe.mr = mr;
-            fe.mesh = m;
-
-            fe.mf.mesh = fe.mesh;
 
             this.fillEntries.Add(bs, fe);
         }
 
-        List<int> triangles = new List<int>();
-        Vector2Repo vectorRepo = new Vector2Repo();
+        Mesh m = new Mesh();
+        fe.mf.mesh = m;
+        fe.mesh = m;
 
-        FillSession session = new FillSession();
-        session.ExtractFillLoops(bs);
-        session.GetTriangles(triangles, vectorRepo, true, true);
+        if (ft == FillType.Filled)
+        {
+            List<int> triangles = new List<int>();
+            Vector2Repo vectorRepo = new Vector2Repo();
 
-        fe.mesh.SetVertices(vectorRepo.GetVector3Array());
-        fe.mesh.SetIndices(triangles, MeshTopology.Triangles, 0);
+            FillSession session = new FillSession();
+            session.ExtractFillLoops(bs);
+            session.GetTriangles(triangles, vectorRepo, true, true);
+
+            fe.mesh.SetVertices(vectorRepo.GetVector3Array());
+            fe.mesh.SetIndices(triangles, MeshTopology.Triangles, 0);
+
+            Material matFill = new Material(this.standardShader);
+            matFill.color = Color.white;
+
+            fe.mr.sharedMaterial = matFill;
+        }
+        else if(ft == FillType.Outlined)
+        {
+            List<int> triangles = new List<int>();
+            Vector2Repo vectorRepo = new Vector2Repo();
+
+            FillSession session = new FillSession();
+            session.ExtractFillLoops(bs);
+            foreach(FillIsland fi in session.islands)
+                fi.MakeOutlineBridged(width);
+            
+            session.GetTriangles(triangles, vectorRepo, true, true);
+
+            fe.mesh.SetVertices(vectorRepo.GetVector3Array());
+            fe.mesh.SetIndices(triangles, MeshTopology.Triangles, 0);
+
+            Material matStroke = new Material(this.standardShader);
+            matStroke.color = Color.black;
+
+            fe.mr.sharedMaterial = matStroke;
+        }
+        else if(ft == FillType.FilledAndOutlined)
+        {
+            List<int> triangles = new List<int>();
+            List<int> strokeTris = new List<int>();
+            Vector2Repo vectorRepo = new Vector2Repo();
+
+            FillSession session = new FillSession();
+            session.ExtractFillLoops(bs);
+            FillSession outSession = session.Clone();
+
+            session.GetTriangles(triangles, vectorRepo, true, true);
+
+            foreach (FillIsland fi in outSession.islands)
+                fi.MakeOutlineBridged(width);
+
+            outSession.GetTriangles(strokeTris, vectorRepo, true, true);
+
+            fe.mesh.subMeshCount = 2;
+            fe.mesh.SetVertices(vectorRepo.GetVector3Array());
+            fe.mesh.SetIndices(triangles, MeshTopology.Triangles, 0);
+            fe.mesh.SetIndices(strokeTris, MeshTopology.Triangles, 1);
+
+            Material matFill = new Material(this.standardShader);
+            matFill.color = Color.white;
+            Material matStroke = new Material(this.standardShader);
+            matStroke.color = Color.black;
+
+            fe.mr.sharedMaterials = new Material[]{ matFill, matStroke };
+        }
     }
 
-    public void UpdateFillsForAll()
+    public void UpdateFillsForAll(FillType ft, float stroke)
     { 
         foreach(Layer layer in this.curveDocument.Layers())
         { 
             foreach(BShape shape in layer.shapes)
             { 
-                this.UpdateForFill(shape);
+                this.UpdateForFill(shape, ft, stroke);
             }
         }
     }

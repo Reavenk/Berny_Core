@@ -29,7 +29,17 @@ namespace PxPre
     namespace Berny
     { 
         public static class Boolean
-        { 
+        {
+            public delegate BoundingMode BooleanImpl(BLoop dstloop, List<BNode> dstSegs, List<BNode> otherSegs);
+
+            public enum BoundingMode
+            { 
+                NoCollision,
+                Collision,
+                LeftSurroundsRight,
+                RightSurroundsLeft
+            }
+
             public class SplitInfo
             { 
                 public enum SplitResult
@@ -126,6 +136,18 @@ namespace PxPre
             {
                 public Dictionary<BNode, SplitInfo> splits = new Dictionary<BNode, SplitInfo>();
 
+
+                public SplitCollection(
+                    BLoop dstLoop,
+                    List<Utils.BezierSubdivSample> delCollisions,
+                    Dictionary<Utils.NodeTPos, BNode> createdSubdivs)
+                { 
+                    this.SetupFromCollisionData(dstLoop, delCollisions, createdSubdivs);
+                }
+
+                public SplitCollection()
+                { }
+
                 public SplitInfo GetSplitInfo(BNode bn)
                 { 
                     SplitInfo ret;
@@ -206,41 +228,126 @@ namespace PxPre
                     // The first entry of any split will always be the original node
                     return si.origNext;
                 }
+
+                public void SetupFromCollisionData(
+                    BLoop dstLoop, 
+                    List<Utils.BezierSubdivSample> delCollisions,
+                    Dictionary<Utils.NodeTPos, BNode> createdSubdivs)
+                {
+                    foreach (Utils.BezierSubdivSample bss in delCollisions)
+                    {
+                        Vector2 pos = bss.nodeA.CalculatetPoint(bss.lAEst);
+                        BNode newSubNode = new BNode(dstLoop, pos);
+                        dstLoop.nodes.Add(newSubNode);
+
+                        createdSubdivs.Add(bss.GetTPosA(), newSubNode);
+                        createdSubdivs.Add(bss.GetTPosB(), newSubNode);
+
+                        SplitInfo sia = this.GetSplitInfo(bss.nodeA);
+                        sia.AddEntry(bss.lAEst, newSubNode);
+
+                        SplitInfo sib = this.GetSplitInfo(bss.nodeB);
+                        sib.AddEntry(bss.lBEst, newSubNode);
+                    }
+                }
             }
 
-            public static void Union(BLoop dst, bool removeRight, params BLoop [] others)
+            public static void Union(BLoop dst, params BLoop [] others)
             {
                 foreach(BLoop bl in others)
-                    Union(dst, bl, removeRight);
+                {
+                    PerIslandBoolean(
+                        dst, 
+                        bl, 
+                        (x, segsA, segsB)=>
+                        {
+                            return Union(x, segsA, segsB); 
+                        },
+                        true);
+                }
             }
 
-            public static void Union(BLoop left, BLoop right, bool removeRight)
-            { 
-                if(left == right || left == null || right == null)
+            public static void PerIslandBoolean(BLoop left, BLoop right, BooleanImpl op, bool removeRight)
+            {
+                if (left == right || left == null || right == null)
                     return;
 
-                List<Utils.BezierSubdivSample> delCollisions = GetLoopCollisionInfo(left, right);
+                // If we're doing a boolean, it's no longer a generated shape - even if it ends
+                // up untouched.
+                left.shape = null;
+                right.shape = null;
+
+                List<BNode> islandsA = left.GetIslands(IslandTypeRequest.Closed);
+                List<BNode> islandB = right.GetIslands(IslandTypeRequest.Closed);
+
+
+                foreach(BNode islA in islandsA)
+                { 
+                    foreach(BNode islB in islandB)
+                    {
+                        List<BNode> islandSegsA = new List<BNode>(islA.Travel());
+                        List<BNode> islandSegsB = new List<BNode>(islB.Travel());
+
+                        op(left, islandSegsA, islandSegsB);
+                    }
+                }
+                if(removeRight == true)
+                    RemoveLoop(right, true);
+            }
+
+            public static BoundingMode Union(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB, bool mergeNonCol = true)
+            { 
+                List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
+                GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
+                Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
+
+                // If we didn't find any collisions, it's either because they don't overlap
+                // at all, or one island fully wraps around another island.
+                if (delCollisions.Count == 0)
+                {
+                    BoundingMode bm = GetLoopBoundingMode(islandSegsA, islandSegsB);
+
+                    // If an island is completely surrounded by another island, one of the 
+                    // islands gets "smothered out of existence."
+                    if (bm == BoundingMode.LeftSurroundsRight)
+                    {
+                        // Just remember everything from the right out of existence.
+                        foreach(BNode bn in islandSegsB)
+                            bn.SetParent(null);
+
+                        return BoundingMode.LeftSurroundsRight;
+                    }
+                    else if (bm == BoundingMode.RightSurroundsLeft)
+                    {
+                        // Remove everything from the left out of existence, and 
+                        // move everything from the right island into the left;
+                        foreach (BNode bn in islandSegsA)
+                            bn.SetParent(null, false);
+
+                        foreach (BNode bn in islandSegsB)
+                            bn.SetParent(dst, false);
+
+                        return BoundingMode.RightSurroundsLeft;
+                    }
+
+                    if(mergeNonCol == true)
+                    {
+                        foreach (BNode bn in islandSegsB)
+                            bn.SetParent(dst, false);
+                    }
+
+                    return BoundingMode.NoCollision;
+                }
+
+                // Dump B into A, and if there's anything straggling, 
+                // we'll clip it as a loose end afterwards.
+                foreach (BNode bn in islandSegsB)
+                    bn.SetParent(dst, false);
+
                 Dictionary<Utils.NodeTPos, BNode.SubdivideInfo> colSlideInfo = SliceCollisionInfo(delCollisions);
 
                 Dictionary<Utils.NodeTPos, BNode> createdSubdivs = new Dictionary<Utils.NodeTPos, BNode>();
-                SplitCollection splitCol = new SplitCollection();
-                right.DumpInto(left); // Move everything in from the other loop
-
-                foreach (Utils.BezierSubdivSample bss in delCollisions)
-                { 
-                    Vector2 pos = bss.nodeA.CalculatetPoint(bss.lAEst);
-                    BNode newSubNode = new BNode(left, pos);
-                    left.nodes.Add(newSubNode);
-
-                    createdSubdivs.Add(bss.GetTPosA(), newSubNode);
-                    createdSubdivs.Add(bss.GetTPosB(), newSubNode);
-
-                    SplitInfo sia = splitCol.GetSplitInfo(bss.nodeA);
-                    sia.AddEntry(bss.lAEst, newSubNode);
-
-                    SplitInfo sib = splitCol.GetSplitInfo(bss.nodeB);
-                    sib.AddEntry(bss.lBEst, newSubNode);
-                }
+                SplitCollection splitCol = new SplitCollection(dst, delCollisions, createdSubdivs);
 
                 HashSet<BNode> looseEnds = new HashSet<BNode>();
 
@@ -252,6 +359,132 @@ namespace PxPre
                     BNode colNode = createdSubdivs[bss.GetTPosA()];
 
                     if (wind <= 0.0f)
+                    {
+                        // A CCW transition will go from A to B.
+                        BNode nA = splitCol.GetPreviousTo(bss.GetTPosA());
+                        BNode nB = splitCol.GetNextTo(bss.GetTPosB());
+
+                        nA.TanOut = sdiA.prevOut;
+                        nB.TanIn = sdiB.nextIn;
+
+                        colNode.UseTanIn = bss.nodeA.IsLine() == false;
+                        colNode.UseTanOut = bss.nodeB.IsLine() == false;
+                        colNode.TanIn = sdiA.subIn;
+                        colNode.TanOut = sdiB.subOut;
+
+                        nA.next = colNode;
+                        colNode.prev = nA;
+                        nB.prev = colNode;
+                        colNode.next = nB;
+
+                        looseEnds.Add(bss.nodeB);
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeA).origNext);
+
+                    }
+                    else
+                    {
+                        // A CW transition will go from the other to it.
+                        BNode nA = splitCol.GetNextTo(bss.GetTPosA());
+                        BNode nB = splitCol.GetPreviousTo(bss.GetTPosB());
+
+                        nA.TanIn = sdiA.nextIn;
+                        nB.TanOut = sdiB.prevOut;
+
+                        colNode.UseTanIn = bss.nodeB.IsLine() == false;
+                        colNode.UseTanOut = bss.nodeA.IsLine() == false;
+                        colNode.TanIn = sdiB.subIn;
+                        colNode.TanOut = sdiA.subOut;
+
+                        nB.next = colNode;
+                        colNode.prev = nB;
+                        nA.prev = colNode;
+                        colNode.next = nA;
+
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeB).origNext);
+                        looseEnds.Add(bss.nodeA);
+                    }
+                }
+
+                // Figure out what internal items need to be removed by 
+                // checking which nodes have unmatching connectivity.
+                ClipLooseEnds(looseEnds);
+
+                return BoundingMode.Collision;
+
+            }
+
+            public static void Difference(BLoop left, BLoop right)
+            { 
+                right.Reverse();
+
+                // we always remove B, which may contain extra stuff from 
+                // subtraction shapes that didn't find a target to remove.
+                PerIslandBoolean(left, right, Difference, true);
+            }
+
+            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB)
+            {
+                List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
+                GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
+                Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
+
+                if (delCollisions.Count == 0)
+                { 
+                    BoundingMode bm = GetLoopBoundingMode(islandSegsA, islandSegsB);
+
+                    if(bm == BoundingMode.NoCollision)
+                    { 
+                        // No overlap means nothing was subtracted out
+                        // The subtracted shape should be removed, but not 
+                        // at this level, we'll leave it to the caller to
+                        // detect the BoundingMode.NoCollision or just blindly
+                        // remove the contents of islandSegsB.
+
+                        return BoundingMode.NoCollision;
+                    }
+                    else if(bm == BoundingMode.RightSurroundsLeft)
+                    { 
+                        // Everything was subtracted out
+                        foreach(BNode bn in islandSegsB)
+                            bn.SetParent(null);
+
+                        foreach(BNode bn in islandSegsA)
+                            bn.SetParent(null);
+
+                        return BoundingMode.RightSurroundsLeft;
+                    }
+                    else if(bm == BoundingMode.LeftSurroundsRight)
+                    { 
+                        // Leave the reverse winding inside as a hollow cavity - and 
+                        // nothing needs to be changed.
+
+                        foreach(BNode bn in islandSegsB)
+                            bn.SetParent(dstloop);
+
+                        return BoundingMode.LeftSurroundsRight;
+                    }
+                }
+
+                foreach (BNode bn in islandSegsB)
+                    bn.SetParent(dstloop);
+
+                Dictionary<Utils.NodeTPos, BNode.SubdivideInfo> colSlideInfo = SliceCollisionInfo(delCollisions);
+                Dictionary<Utils.NodeTPos, BNode> createdSubdivs = new Dictionary<Utils.NodeTPos, BNode>();
+                SplitCollection splitCol = new SplitCollection(dstloop, delCollisions, createdSubdivs);
+                
+                HashSet<BNode> looseEnds = new HashSet<BNode>();
+
+                // Note that nothing from B will be tagged as a loose end. Instead, we're
+                // forcing the entire island of B to be removed after the Per-Island
+                // processing.
+                foreach (Utils.BezierSubdivSample bss in delCollisions)
+                {
+                    BNode.SubdivideInfo sdiA = colSlideInfo[bss.GetTPosA()];
+                    BNode.SubdivideInfo sdiB = colSlideInfo[bss.GetTPosB()];
+                    float wind = Utils.Vector2Cross(sdiA.subOut, sdiB.subOut);
+                    BNode colNode = createdSubdivs[bss.GetTPosA()];
+
+                    if (wind >= 0.0f)
                     {
                         // A CCW transition will go from A to B.
                         BNode nA = splitCol.GetPreviousTo(bss.GetTPosA());
@@ -302,454 +535,156 @@ namespace PxPre
                 // checking which nodes have unmatching connectivity.
                 ClipLooseEnds(looseEnds);
 
-                if(Utils.verboseDebug == true)
-                {
-                    if(right.nodes.Count != 0)
-                        Debug.Log("Boolean union didn't end up with an empty right loop as expected");
-                }
-
-                if(removeRight == true)
-                    RemoveLoop(right, true);
-            }
-
-            public static void Difference(BLoop left, BLoop right, bool removeRight)
-            {
-                if (left == right || left == null || right == null)
-                    return;
-
-                right.Reverse();
-
-                List<BNode> leftIsls = left.GetIslands();
-                List<BNode> rightIsls = right.GetIslands();
-
-                // For all island permutations between L and R
-                foreach (BNode islL in leftIsls)
-                {
-                    BNode.EndpointQuery eqL = islL.GetPathLeftmost();
-                    // Only closed loops count
-                    if (eqL.result == BNode.EndpointResult.SuccessfulEdge)
-                        continue;
-
-                    // For each other island
-                    foreach (BNode islR in rightIsls)
-                    {
-                        BNode.EndpointQuery eqR = islR.GetPathLeftmost();
-                        // Only closed loops count
-                        if (eqR.result == BNode.EndpointResult.SuccessfulEdge)
-                            continue;
-
-                        // We'll wait for the end to figure out what internals to clip
-                        HashSet<BNode> looseEnds = new HashSet<BNode>();
-
-                        // Test each BNode of ours, intersecting with theirs.
-                        // We need to get the left for every island, every time
-                        // because left is modified for every loop
-                        List<BNode> leftSegs = new List<BNode>(eqL.Enumerate());
-                        List<BNode> rightSegs = new List<BNode>(eqR.Enumerate());
-
-                        // Find all intersections and log them.
-                        Dictionary<BNode, List<Utils.BezierSubdivSample>> segIntersections =
-                            new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
-
-                        foreach (BNode nseg in leftSegs)
-                        {
-                            Utils.BezierSubdivRgn sdRgn = Utils.BezierSubdivRgn.FromNode(nseg);
-                            foreach (BNode noth in rightSegs)
-                            {
-                                Utils.BezierSubdivRgn sdOtherRgn = Utils.BezierSubdivRgn.FromNode(noth);
-
-                                List<Utils.BezierSubdivSample> lstInter = new List<Utils.BezierSubdivSample>();
-                                Utils.SubdivideSample(sdRgn, sdOtherRgn, 20, Mathf.Epsilon, lstInter);
-                                Utils.BezierSubdivSample.CleanIntersectionList(lstInter);
-
-                                if (lstInter.Count > 0)
-                                {
-                                    List<Utils.BezierSubdivSample> outLst;
-                                    if (segIntersections.TryGetValue(nseg, out outLst) == false)
-                                    {
-                                        outLst = new List<Utils.BezierSubdivSample>();
-                                        segIntersections.Add(nseg, outLst);
-                                    }
-                                    foreach (Utils.BezierSubdivSample bss in lstInter)
-                                        outLst.Add(bss);
-                                }
-                            }
-                        }
-
-                        // For all intersections, now process them
-                        foreach (KeyValuePair<BNode, List<Utils.BezierSubdivSample>> kvp in segIntersections)
-                        {
-                            List<Utils.BezierSubdivSample> cols = kvp.Value;
-                            cols.Sort(
-                                (x, y) =>
-                                {
-                                    if (x.lAEst < y.lAEst)
-                                        return -1;
-                                    else if (x.lAEst > y.lAEst)
-                                        return 1;
-                                    return 0;
-                                });
-
-                            for (int ii = 0; ii < cols.Count; ++ii)
-                            {
-                                Utils.BezierSubdivSample bss = cols[ii];
-
-                                BNode.SubdivideInfo sdiIt = cols[ii].nodeA.GetSubdivideInfo(cols[ii].lAEst);
-                                BNode.SubdivideInfo sdiOth = cols[ii].nodeB.GetSubdivideInfo(cols[ii].lBEst);
-
-                                Vector2 subPt;
-                                if (cols[ii].linearA == true)
-                                    subPt = Vector2.Lerp(cols[ii].nodeA.Pos, cols[ii].nodeA.next.Pos, cols[ii].lAEst);
-                                else
-                                    subPt = sdiIt.subPos;
-
-                                float wind =
-                                    Utils.Vector2Cross(
-                                        sdiIt.subOut,
-                                        sdiOth.subOut);
-
-                                BNode mid = new BNode(left, subPt);
-                                left.nodes.Add(mid);
-                                mid.tangentMode = BNode.TangentMode.Disconnected;
-                                mid.UseTanIn = true;
-                                mid.UseTanOut = true;
-
-                                if (wind >= 0.0f)
-                                {
-                                    // A CCW transition will go from the it to the other.
-                                    mid.TanIn = sdiIt.subIn;
-                                    mid.TanOut = sdiOth.subOut;
-
-                                    mid.prev = cols[ii].nodeA;
-                                    // 
-                                    // Create a loose end and record it
-                                    looseEnds.Add(cols[ii].nodeA.next);
-                                    //
-                                    cols[ii].nodeA.next = mid;
-                                    cols[ii].nodeA.tangentMode = BNode.TangentMode.Disconnected;
-                                    cols[ii].nodeA.UseTanOut = (cols[ii].linearA == false);
-                                    cols[ii].nodeA.TanOut = sdiIt.prevOut;
-
-                                    BNode redirPrev = cols[ii].nodeB.next;
-                                    //
-                                    // Create a loose end and record it
-                                    looseEnds.Add(redirPrev.prev);
-                                    //
-                                    mid.next = redirPrev;
-                                    redirPrev.prev = mid;
-                                    redirPrev.tangentMode = BNode.TangentMode.Disconnected;
-                                    redirPrev.UseTanIn = (cols[ii].linearB == false);
-                                    redirPrev.TanIn = sdiOth.nextIn;
-                                }
-                                else
-                                {
-                                    // A CW transition will go from the other to it.
-                                    mid.TanIn = sdiOth.subIn;
-                                    mid.TanOut = sdiIt.subOut;
-
-                                    mid.prev = cols[ii].nodeB;
-                                    //
-                                    looseEnds.Add(cols[ii].nodeB);
-                                    //
-                                    cols[ii].nodeB.next = mid;
-                                    cols[ii].nodeB.tangentMode = BNode.TangentMode.Disconnected;
-                                    cols[ii].nodeB.UseTanOut = (cols[ii].linearB == false);
-                                    cols[ii].nodeB.TanOut = sdiOth.prevOut;
-
-                                    BNode redirNext = cols[ii].nodeA.next;
-                                    //
-                                    looseEnds.Add(cols[ii].nodeA);
-                                    //
-                                    mid.next = redirNext;
-                                    redirNext.prev = mid;
-                                    redirNext.tangentMode = BNode.TangentMode.Disconnected;
-                                    redirNext.UseTanOut = (cols[ii].linearA == false);
-                                    redirNext.TanIn = sdiIt.nextIn;
-                                }
-
-                                // Since we subdivided the edge, the reference to nodeA or nodeB, and the
-                                // intersection parameters will no longer be correct. Modify to correct
-                                // as needed.
-                                for (int jj = ii + 1; jj < cols.Count; ++jj)
-                                {
-                                    Utils.BezierSubdivSample bssMod = cols[jj];
-
-                                    // Fixup references to nodeA and lAEst.
-                                    if (bssMod.lAEst >= cols[ii].lAEst)
-                                    {
-                                        bssMod.lAEst = Mathf.InverseLerp(cols[ii].lAEst, 1.0f, bssMod.lAEst);
-                                        bssMod.nodeA = mid;
-                                    }
-                                    else
-                                    {
-                                        bssMod.lAEst = Mathf.InverseLerp(0.0f, cols[ii].lAEst, bssMod.lAEst);
-                                    }
-
-                                    // Fixup references to nodeB and lBEst.
-                                    if (bssMod.lBEst >= cols[ii].lBEst)
-                                    {
-                                        bssMod.lBEst = Mathf.InverseLerp(cols[ii].lBEst, 1.0f, bssMod.lBEst);
-                                        bssMod.nodeB = mid;
-                                    }
-                                    else
-                                    {
-                                        bssMod.lBEst = Mathf.InverseLerp(0.0f, cols[ii].lBEst, bssMod.lBEst);
-                                    }
-
-                                    cols[jj] = bssMod;
-                                }
-                            }
-                        }
-
-                        // Figure out what internal items need to be removed by 
-                        // checking which nodes have unmatching connectivity.
-                        ClipLooseEnds(looseEnds);
-
-                        // Move everything in from the other loop
-                        foreach (BNode bn in rightSegs)
-                        {
-                            // If it's null, it was clipped
-                            if (bn.parent == null)
-                                continue;
-
-                            // Everything still remaining gets moved
-                            // to the endLoop.
-                            if (bn.parent != left)
-                                bn.parent.nodes.Remove(bn);
-
-                            bn.parent = left;
-                            bn.parent.nodes.Add(bn);
-                        }
-                    }
-                }
-
-                if (Utils.verboseDebug == true)
-                {
-                    if (right.nodes.Count != 0)
-                        Debug.Log("Boolean union didn't end up with an empty right loop as expected");
-                }
-
-                if (removeRight == true)
-                    RemoveLoop(right, true);
+                return BoundingMode.Collision;
             }
 
             public static void Intersection(BLoop left, BLoop right, bool removeRight)
-            {
-                if (left == right || left == null || right == null)
-                    return;
-
-                List<BNode> leftIsls = left.GetIslands();
-                List<BNode> rightIsls = right.GetIslands();
-
-                // For all island permutations between L and R
-                foreach (BNode islL in leftIsls)
-                {
-                    BNode.EndpointQuery eqL = islL.GetPathLeftmost();
-                    // Only closed loops count
-                    if (eqL.result == BNode.EndpointResult.SuccessfulEdge)
-                        continue;
-
-                    // For each other island
-                    foreach (BNode islR in rightIsls)
+            { 
+                List<BNode> rightIslands = right.GetIslands();
+                if(rightIslands.Count >= 2)
+                { 
+                    for(int i = 1; i < rightIslands.Count; ++i)
                     {
-                        BNode.EndpointQuery eqR = islR.GetPathLeftmost();
-                        // Only closed loops count
-                        if (eqR.result == BNode.EndpointResult.SuccessfulEdge)
-                            continue;
+                        List<BNode> RSegsA = new List<BNode>(rightIslands[0].Travel());
+                        List<BNode> RSegsB = new List<BNode>(rightIslands[i].Travel());
 
-                        // We'll wait for the end to figure out what internals to clip
-                        HashSet<BNode> looseEnds = new HashSet<BNode>();
-
-                        // Test each BNode of ours, intersecting with theirs.
-                        // We need to get the left for every island, every time
-                        // because left is modified for every loop
-                        List<BNode> leftSegs = new List<BNode>(eqL.Enumerate());
-                        List<BNode> rightSegs = new List<BNode>(eqR.Enumerate());
-
-                        // Find all intersections and log them.
-                        Dictionary<BNode, List<Utils.BezierSubdivSample>> segIntersections =
-                            new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
-
-                        foreach (BNode nseg in leftSegs)
-                        {
-                            Utils.BezierSubdivRgn sdRgn = Utils.BezierSubdivRgn.FromNode(nseg);
-                            foreach (BNode noth in rightSegs)
-                            {
-                                Utils.BezierSubdivRgn sdOtherRgn = Utils.BezierSubdivRgn.FromNode(noth);
-
-                                List<Utils.BezierSubdivSample> lstInter = new List<Utils.BezierSubdivSample>();
-                                Utils.SubdivideSample(sdRgn, sdOtherRgn, 20, Mathf.Epsilon, lstInter);
-                                Utils.BezierSubdivSample.CleanIntersectionList(lstInter);
-
-                                if (lstInter.Count > 0)
-                                {
-                                    List<Utils.BezierSubdivSample> outLst;
-                                    if (segIntersections.TryGetValue(nseg, out outLst) == false)
-                                    {
-                                        outLst = new List<Utils.BezierSubdivSample>();
-                                        segIntersections.Add(nseg, outLst);
-                                    }
-                                    foreach (Utils.BezierSubdivSample bss in lstInter)
-                                        outLst.Add(bss);
-                                }
-                            }
-                        }
-
-                        // For all intersections, now process them
-                        foreach (KeyValuePair<BNode, List<Utils.BezierSubdivSample>> kvp in segIntersections)
-                        {
-                            List<Utils.BezierSubdivSample> cols = kvp.Value;
-                            cols.Sort(
-                                (x, y) =>
-                                {
-                                    if (x.lAEst < y.lAEst)
-                                        return -1;
-                                    else if (x.lAEst > y.lAEst)
-                                        return 1;
-                                    return 0;
-                                });
-
-                            for (int ii = 0; ii < cols.Count; ++ii)
-                            {
-                                Utils.BezierSubdivSample bss = cols[ii];
-
-                                BNode.SubdivideInfo sdiIt = cols[ii].nodeA.GetSubdivideInfo(cols[ii].lAEst);
-                                BNode.SubdivideInfo sdiOth = cols[ii].nodeB.GetSubdivideInfo(cols[ii].lBEst);
-
-                                Vector2 subPt;
-                                if (cols[ii].linearA == true)
-                                    subPt = Vector2.Lerp(cols[ii].nodeA.Pos, cols[ii].nodeA.next.Pos, cols[ii].lAEst);
-                                else
-                                    subPt = sdiIt.subPos;
-
-                                float wind =
-                                    Utils.Vector2Cross(
-                                        sdiIt.subOut,
-                                        sdiOth.subOut);
-
-                                BNode mid = new BNode(left, subPt);
-                                left.nodes.Add(mid);
-                                mid.tangentMode = BNode.TangentMode.Disconnected;
-                                mid.UseTanIn = true;
-                                mid.UseTanOut = true;
-
-                                if (wind <= 0.0f)
-                                {
-                                    // A CCW transition will go from the it to the other.
-                                    mid.TanIn = sdiOth.subIn;
-                                    mid.TanOut = sdiIt.subOut;
-
-                                    mid.prev = cols[ii].nodeB;
-                                    // 
-                                    // Create a loose end and record it
-                                    looseEnds.Add(cols[ii].nodeB.next);
-                                    //
-                                    cols[ii].nodeB.next = mid;
-                                    cols[ii].nodeB.tangentMode = BNode.TangentMode.Disconnected;
-                                    cols[ii].nodeB.UseTanOut = (bss.linearB == false);
-                                    cols[ii].nodeB.TanOut = sdiOth.prevOut;
-
-                                    BNode redirNext = cols[ii].nodeA.next;
-                                    //
-                                    // Create a loose end and record it
-                                    looseEnds.Add(cols[ii].nodeA);
-                                    //
-                                    mid.next = redirNext;
-                                    redirNext.prev = mid;
-                                    redirNext.tangentMode = BNode.TangentMode.Disconnected;
-                                    redirNext.UseTanIn = (bss.linearA == false);
-                                    redirNext.TanIn = sdiIt.nextIn;
-                                }
-                                else
-                                {
-                                    // A CW transition will go from the other to it.
-                                    mid.TanIn = sdiIt.subIn;
-                                    mid.TanOut = sdiOth.subOut;
-
-                                    mid.prev = cols[ii].nodeA;
-                                    //
-                                    looseEnds.Add(cols[ii].nodeA.next);
-                                    //
-                                    cols[ii].nodeA.next = mid;
-                                    cols[ii].nodeA.tangentMode = BNode.TangentMode.Disconnected;
-                                    cols[ii].nodeA.UseTanOut = true;
-                                    cols[ii].nodeA.TanOut = sdiIt.prevOut;
-
-                                    BNode redirNext = cols[ii].nodeB.next;
-                                    //
-                                    looseEnds.Add(cols[ii].nodeB);
-                                    //
-                                    mid.next = redirNext;
-                                    redirNext.prev = mid;
-                                    redirNext.tangentMode = BNode.TangentMode.Disconnected;
-                                    redirNext.UseTanOut = true;
-                                    redirNext.TanIn = sdiOth.nextIn;
-                                }
-
-                                // Since we subdivided the edge, the reference to nodeA or nodeB, and the
-                                // intersection parameters will no longer be correct. Modify to correct
-                                // as needed.
-                                for (int jj = ii + 1; jj < cols.Count; ++jj)
-                                {
-                                    Utils.BezierSubdivSample bssMod = cols[jj];
-
-                                    // Fixup references to nodeA and lAEst.
-                                    if (bssMod.lAEst >= cols[ii].lAEst)
-                                    {
-                                        bssMod.lAEst = Mathf.InverseLerp(cols[ii].lAEst, 1.0f, bssMod.lAEst);
-                                        bssMod.nodeA = mid;
-                                    }
-                                    else
-                                    {
-                                        bssMod.lAEst = Mathf.InverseLerp(0.0f, cols[ii].lAEst, bssMod.lAEst);
-                                    }
-
-                                    // Fixup references to nodeB and lBEst.
-                                    if (bssMod.lBEst >= cols[ii].lBEst)
-                                    {
-                                        bssMod.lBEst = Mathf.InverseLerp(cols[ii].lBEst, 1.0f, bssMod.lBEst);
-                                        bssMod.nodeB = mid;
-                                    }
-                                    else
-                                    {
-                                        bssMod.lBEst = Mathf.InverseLerp(0.0f, cols[ii].lBEst, bssMod.lBEst);
-                                    }
-
-                                    cols[jj] = bssMod;
-                                }
-                            }
-                        }
-
-                        // Figure out what internal items need to be removed by 
-                        // checking which nodes have unmatching connectivity.
-                        ClipLooseEnds(looseEnds);
-
-                        // Move everything in from the other loop
-                        foreach (BNode bn in rightSegs)
-                        {
-                            // If it's null, it was clipped
-                            if (bn.parent == null)
-                                continue;
-
-                            // Everything still remaining gets moved
-                            // to the endLoop.
-                            if (bn.parent != left)
-                                bn.parent.nodes.Remove(bn);
-
-                            bn.parent = left;
-                            bn.parent.nodes.Add(bn);
-                        }
+                        Union(right, RSegsA, RSegsB, true);
                     }
                 }
 
-                if (Utils.verboseDebug == true)
-                {
-                    if (right.nodes.Count != 0)
-                        Debug.Log("Boolean union didn't end up with an empty right loop as expected");
+                List<BNode> leftIslands = left.GetIslands();
+                if(leftIslands.Count >= 2)
+                { 
+                    for(int i = 1; i < leftIslands.Count; ++i)
+                    {
+                        List<BNode> LSegsA = new List<BNode>(leftIslands[0].Travel());
+                        List<BNode> LSegsB = new List<BNode>(leftIslands[i].Travel());
+
+                        Union(right, LSegsA, LSegsB, true);
+                    }
                 }
+
+                // Collect EVERYTHING for each island for both params
+                leftIslands = left.GetIslands();
+                rightIslands = right.GetIslands();
+
+                List<BNode> allLeft = new List<BNode>();
+                foreach(BNode bn in leftIslands)
+                    allLeft.AddRange( bn.Travel());
+
+                List<BNode> allRight = new List<BNode>();
+                foreach(BNode bn in rightIslands)
+                    allRight.AddRange( bn.Travel());
+
+                Intersection(left, allLeft, allRight);
+
+                // TODO: For each island left, we need to see if there's 
+                // any shapes being fully contained by the other side.
 
                 if (removeRight == true)
                     RemoveLoop(right, true);
+            }
+
+            public static BoundingMode Intersection(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB)
+            {
+                List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
+                GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
+                Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
+
+                if (delCollisions.Count == 0)
+                {
+                    // For intersection, we don't currently handle any other detection.
+                    //
+                    // Implementation is a work in progress.
+                    return BoundingMode.NoCollision;
+                }
+
+                Dictionary<Utils.NodeTPos, BNode.SubdivideInfo> colSlideInfo = SliceCollisionInfo(delCollisions);
+                Dictionary<Utils.NodeTPos, BNode> createdSubdivs = new Dictionary<Utils.NodeTPos, BNode>();
+                SplitCollection splitCol = new SplitCollection(dst, delCollisions, createdSubdivs);
+
+                //left.nodes.Clear();
+                foreach(BNode bn in islandSegsA)
+                    bn.SetParent(null, false);
+
+                //right.DumpInto(dst); // Move everything in from the other loop
+                foreach(BNode bn in islandSegsB)
+                    bn.SetParent(dst, false);
+
+                foreach (Utils.BezierSubdivSample bss in delCollisions)
+                {
+                    Vector2 pos = bss.nodeA.CalculatetPoint(bss.lAEst);
+                    BNode newSubNode = new BNode(dst, pos);
+                    dst.nodes.Add(newSubNode);
+
+                    createdSubdivs.Add(bss.GetTPosA(), newSubNode);
+                    createdSubdivs.Add(bss.GetTPosB(), newSubNode);
+
+                    SplitInfo sia = splitCol.GetSplitInfo(bss.nodeA);
+                    sia.AddEntry(bss.lAEst, newSubNode);
+
+                    SplitInfo sib = splitCol.GetSplitInfo(bss.nodeB);
+                    sib.AddEntry(bss.lBEst, newSubNode);
+                }
+
+                HashSet<BNode> looseEnds = new HashSet<BNode>();
+
+                foreach (Utils.BezierSubdivSample bss in delCollisions)
+                {
+                    BNode.SubdivideInfo sdiA = colSlideInfo[bss.GetTPosA()];
+                    BNode.SubdivideInfo sdiB = colSlideInfo[bss.GetTPosB()];
+                    float wind = Utils.Vector2Cross(sdiA.subOut, sdiB.subOut);
+                    BNode colNode = createdSubdivs[bss.GetTPosA()];
+
+                    if (wind <= 0.0f)
+                    {
+                        BNode nA = splitCol.GetNextTo(bss.GetTPosA());
+                        BNode nB = splitCol.GetPreviousTo(bss.GetTPosB());
+
+                        nA.TanIn = sdiA.nextIn;
+                        nB.TanOut = sdiB.prevOut;
+
+                        colNode.UseTanIn = bss.nodeB.IsLine() == false;
+                        colNode.UseTanOut = bss.nodeA.IsLine() == false;
+                        colNode.TanIn = sdiB.subIn;
+                        colNode.TanOut = sdiA.subOut;
+
+                        nB.next = colNode;
+                        colNode.prev = nB;
+                        nA.prev = colNode;
+                        colNode.next = nA;
+
+                        looseEnds.Add(bss.nodeA);
+                        //looseEnds.Add(bss.nodeB);
+
+                    }
+                    else
+                    {
+                        BNode nA = splitCol.GetPreviousTo(bss.GetTPosA());
+                        BNode nB = splitCol.GetNextTo(bss.GetTPosB());
+
+                        nA.TanOut = sdiA.prevOut;
+                        nB.TanIn = sdiB.nextIn;
+
+                        colNode.UseTanIn = bss.nodeA.IsLine() == false;
+                        colNode.UseTanOut = bss.nodeB.IsLine() == false;
+                        colNode.TanIn = sdiA.subIn;
+                        colNode.TanOut = sdiB.subOut;
+
+                        nA.next = colNode;
+                        colNode.prev = nA;
+                        nB.prev = colNode;
+                        colNode.next = nB;
+
+                        looseEnds.Add(bss.nodeA);
+                        //looseEnds.Add(bss.nodeB);
+                    }
+                }
+
+                // Figure out what internal items need to be removed by 
+                // checking which nodes have unmatching connectivity.
+                ClipLooseEnds(looseEnds);
+                return BoundingMode.Collision;
             }
 
             public static void Exclusion(BLoop left, BLoop right, bool removeRight)
@@ -862,12 +797,12 @@ namespace PxPre
                 BLoop loopA, 
                 BLoop loopB)
             { 
-                List<BNode> islsA = loopA.GetIslands();
-                List<BNode> islsB = loopB.GetIslands();
+                List<BNode> islandsA = loopA.GetIslands();
+                List<BNode> islandsB = loopB.GetIslands();
 
                 List<Utils.BezierSubdivSample> collisions = new List<Utils.BezierSubdivSample>();
                 
-                foreach (BNode isA in islsA)
+                foreach (BNode isA in islandsA)
                 { 
                     BNode.EndpointQuery eqA = isA.GetPathLeftmost();
                     // Only closed loops count
@@ -875,7 +810,7 @@ namespace PxPre
                         continue;
 
                     List<BNode> segsA = new List<BNode>(eqA.Enumerate());
-                    foreach (BNode isB in islsB)
+                    foreach (BNode isB in islandsB)
                     { 
                         BNode.EndpointQuery eqB = isB.GetPathLeftmost();
                         // Only closed loops count
@@ -884,18 +819,27 @@ namespace PxPre
 
                         List<BNode> segsB = new List<BNode>(eqB.Enumerate());
 
-                        foreach (BNode na in segsA)
-                        { 
-                            foreach(BNode nb in segsB)
-                            {
-                                Utils.NodeIntersections(na, nb, 20, Mathf.Epsilon, collisions);
-                            }
-                        }
+                        GetLoopCollisionInfo(segsA, segsB, collisions);
                     }
                 }
 
                 Utils.BezierSubdivSample.CleanIntersectionList(collisions);
                 return collisions;
+            }
+
+            // This function should probably be moved from Boolean to Utils
+            public static void GetLoopCollisionInfo(
+                List<BNode> islAs, 
+                List<BNode> islBs, 
+                List<Utils.BezierSubdivSample> lstOut)
+            {
+                foreach (BNode na in islAs)
+                {
+                    foreach (BNode nb in islBs)
+                    {
+                        Utils.NodeIntersections(na, nb, 20, Mathf.Epsilon, lstOut);
+                    }
+                }
             }
 
             public static Dictionary<Utils.NodeTPos, BNode.SubdivideInfo> SliceCollisionInfo(List<Utils.BezierSubdivSample> collisions)
@@ -1022,6 +966,147 @@ namespace PxPre
                 }
 
                 return ret;
+            }
+
+            public static BoundingMode GetLoopBoundingMode(BNode leftIsl, BNode rightIsl, bool recheck)
+            {
+                // The basic algorithm works by taking a point on the path at a most extreme 
+                // (e.g., minx, miny, maxx, maxy - in this case we're doing maxx) and moving farther
+                // in that direction to test intersection with the other island.
+                //
+                // Even though we're focused on rightward movement and ray casting, keep in mind
+                // the leftIsl and rightIsl are just two separate islands - it's not to be implied that
+                // leftIsl is to the left of rightIsl - that kind of information is unknown going
+                // in (and because of the arbitrary shapes of these islands, it's actually impossible
+                // to define such things).
+                if(recheck == true)
+                {
+                    BNode.EndpointQuery eqL = leftIsl.GetPathLeftmost();
+                    BNode.EndpointQuery eqR = rightIsl.GetPathLeftmost();
+
+                    if(eqL.result == BNode.EndpointResult.SuccessfulEdge)
+                        return BoundingMode.NoCollision;
+
+                    if(eqR.result == BNode.EndpointResult.SuccessfulEdge)
+                        return BoundingMode.NoCollision;
+
+                    leftIsl = eqL.node;
+                    rightIsl = eqL.node;
+                }
+
+                List<BNode> leftNodes = new List<BNode>(leftIsl.Travel());
+                List<BNode> righttNodes = new List<BNode>(rightIsl.Travel());
+
+                return GetLoopBoundingMode(leftNodes, righttNodes);
+            }
+
+            public static BoundingMode GetLoopBoundingMode(List<BNode> islandSegsA, List<BNode> islandSegsB)
+            { 
+
+                // Check if the right most point of the left collides with anything on 
+                // a ray moving further to the right. If so, how many intersect points are there?
+                //
+                ////////////////////////////////////////////////////////////////////////////////
+                
+                Vector2 mptL = islandSegsA[0].Pos;
+                BNode maxXLeft = islandSegsA[0];
+                float filler = 0.0f;
+                foreach(BNode bn in islandSegsA)
+                { 
+                    if(bn.GetMaxPoint(ref mptL, ref filler, 0) == true)
+                        maxXLeft = bn;
+                }
+
+                Vector2 rayEnd = mptL + new Vector2(1.0f, 0.0f);
+                List<float> interCurve = new List<float>();     
+                List<float> interLine = new List<float>();      
+                foreach(BNode nOth in islandSegsB)
+                    nOth.ProjectSegment(mptL, rayEnd, interCurve, interLine);
+                
+                int leftcols = 0;
+                for(int i = 0; i < interLine.Count; ++i)
+                {
+                    float l = interLine[i];
+                    if (l <= 0.0f)
+                        continue;
+
+                    float c = interCurve[i];
+                    if(c < 0.0f || c > 1.0f)
+                        continue;
+
+                    ++leftcols;
+                }
+                // If the right loop is physically more to the right, it could still be untouching - but only if for
+                // every entry, there's an exit. Meaning if there's an odd number of collisions, the left is completely
+                // inside the right.
+                //
+                // Keep in mind this logic only works because of the constraint that left and right should not intersect.
+                if(leftcols > 0)
+                { 
+                    if((leftcols % 2) == 1)
+                        return BoundingMode.RightSurroundsLeft;
+
+                    return BoundingMode.NoCollision;
+                }
+
+                // Now we do the same for the right.
+                //
+                ////////////////////////////////////////////////////////////////////////////////
+
+                // Check if the right most point on the right collides with anything on
+                // a ray moving further to the right. If so, how many intersect points are there?
+                Vector2 mptR = islandSegsB[0].Pos;
+                BNode maxXRight = islandSegsB[0];
+                foreach(BNode bn in islandSegsB)
+                { 
+                    if(bn.GetMaxPoint(ref mptR, ref filler, 0) == true)
+                        maxXRight = bn;
+                }
+
+                rayEnd = mptR + new Vector2(1.0f, 0.0f);
+                interCurve.Clear();
+                interLine.Clear();
+                foreach(BNode nOth in islandSegsA)
+                { 
+                    BNode.PathBridge pb = nOth.GetPathBridgeInfo();
+
+                    if(pb.pathType == BNode.PathType.Line)
+                    { 
+                        float s, t;
+                        if(Utils.ProjectSegmentToSegment(mptR, rayEnd, nOth.Pos, nOth.next.Pos, out s, out t) == true)
+                        { 
+                            interLine.Add(s);
+                            interCurve.Add(t);
+                        }
+                    }
+                    else
+                    {
+                        Vector2 pt0 = nOth.Pos;
+                        Vector2 pt1 = nOth.Pos + pb.prevTanOut;
+                        Vector2 pt2 = nOth.next.Pos + pb.nextTanIn;
+                        Vector2 pt3 = nOth.next.Pos;
+
+                        Utils.IntersectLine(interCurve, interLine, pt0, pt1, pt2, pt3, mptR, rayEnd, false);
+                    }
+                }
+                int rightcols = 0;
+                for(int i = 0; i < interLine.Count; ++i)
+                { 
+                    float l = interLine[i];
+                    if(l <= 0.0f)
+                        continue;
+
+                    float c = interCurve[i];
+                    if(c < 0.0f || c > 1.0f)
+                        continue;
+
+                    ++rightcols;
+                }
+
+                if((rightcols % 2) == 1)
+                    return BoundingMode.LeftSurroundsRight;
+
+                return BoundingMode.NoCollision;
             }
         }
     }

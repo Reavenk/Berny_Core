@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace PxPre 
 { 
@@ -74,6 +75,74 @@ namespace PxPre
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
                 this.debugCtr = Utils.RegisterCounter();
 #endif
+            }
+
+            public FillSegment(Vector2 v2)
+            {
+                this.pos = v2;
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                this.debugCtr = Utils.RegisterCounter();
+#endif
+            }
+
+            public Vector2 InflateDir()
+            {
+                if (this.prev == null)
+                {
+                    Vector2 v = this.next.pos - this.pos;
+                    return new Vector2(-v.y, v.x).normalized;
+                }
+                else if (this.next == null)
+                {
+                    Vector2 v = this.prev.pos - this.pos;
+                    return new Vector2(v.y, -v.x).normalized;
+                }
+                else
+                {
+                    Vector2 vp = this.next.pos - this.pos;
+                    Vector2 vn = this.prev.pos - this.pos;
+
+                    if (vp.SqrMagnitude() <= Mathf.Epsilon)
+                        return new Vector2(-vn.y, vn.x).normalized;
+                    else if (vn.SqrMagnitude() <= Mathf.Epsilon)
+                        return new Vector2(vp.y, -vp.x).normalized;
+
+                    vp.Normalize();
+                    vn.Normalize();
+                    vp = new Vector2(-vp.y, vp.x);
+                    vn = new Vector2(vn.y, -vn.x);
+                    Vector2 mid = (vp + vn).normalized;
+
+                    float dot = Vector2.Dot(vp, mid);
+                    return (1.0f / dot) * mid;
+                }
+            }
+
+            public FillSegment Clone(bool copyLinks)
+            { 
+                FillSegment fs = new FillSegment();
+                fs.pos = this.pos;
+
+                if(copyLinks == true)
+                { 
+                    fs.prev = this.prev;
+                    fs.next = this.next;
+                }
+                return fs;
+            }
+
+            public IEnumerable<FillSegment> Travel()
+            { 
+                FillSegment it = this;
+                while(true)
+                { 
+                    yield return it;
+                    it = it.next;
+
+                    if(it == null || it == this)
+                        yield break;
+                }
             }
         }
     }

@@ -40,7 +40,7 @@ namespace PxPre
             /// The islands to process filling geometry for. These 
             /// </summary>
             /// <remarks>XORing internals is not finished or tested.</remarks>
-            HashSet<FillIsland> islands = new HashSet<FillIsland>();
+            public HashSet<FillIsland> islands = new HashSet<FillIsland>();
 
             /// <summary>
             /// Clear all contents of the fill session.
@@ -49,6 +49,16 @@ namespace PxPre
             { 
                 // Forget everything
                 this.islands.Clear();
+            }
+
+            public FillSession Clone()
+            { 
+                FillSession ret = new FillSession();
+
+                foreach(FillIsland fi in this.islands)
+                    ret.islands.Add(fi.Clone());
+
+                return ret;
             }
 
             /// <summary>

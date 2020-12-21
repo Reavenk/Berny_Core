@@ -47,6 +47,98 @@ namespace PxPre
             /// </summary>
             public HashSet<FillSegment> segments = new HashSet<FillSegment>();
 
+            public static FillIsland CreateEdged(IEnumerable<Vector2> ie, float pushin, float pushout)
+            { 
+                List<FillSegment> segA = new List<FillSegment>();
+                List<FillSegment> segB = new List<FillSegment>();
+
+                FillIsland fiRet = new FillIsland();
+                foreach(Vector2 vs2 in ie)
+                { 
+                    FillSegment fsA = new FillSegment(vs2);
+                    FillSegment fsB = new FillSegment(vs2);
+
+                    segA.Add(fsA);
+                    segB.Add(fsB);
+
+                    fiRet.segments.Add(fsA);
+                    fiRet.segments.Add(fsB);
+                }
+
+                for(int i = 0; i < segA.Count - 1; ++i)
+                { 
+                    FillSegment a = segA[i];
+                    FillSegment b = segA[i + 1];
+
+                    a.next = b;
+                    b.prev = a;
+                }
+
+                for(int i = 1; i < segB.Count; ++i)
+                { 
+                    FillSegment a = segB[i - 1];
+                    FillSegment b = segB[i];
+
+                    a.prev = b;
+                    b.next = a;
+                }
+
+                List<Vector2> pushes = new List<Vector2>();
+                for(int i = 0; i < segA.Count; ++i)
+                    pushes.Add(segA[i].InflateDir());
+
+                for(int i = 0; i < segA.Count; ++i)
+                { 
+                    Vector2 d = pushes[i];
+
+                    segA[i].pos += d * pushout;
+                    segB[i].pos -= d * pushin;
+                }
+
+                FillSegment stA = segA[0];
+                FillSegment edA = segA[segA.Count - 1];
+                FillSegment stB = segB[0];
+                FillSegment edB = segB[segB.Count - 1];
+
+                stA.prev = stB;
+                stB.next = stA;
+
+                edA.next = edB;
+                edB.prev = edA;
+
+                return fiRet;
+            }
+
+            public static FillIsland CreateLooped(IEnumerable<Vector2> ie)
+            { 
+                FillIsland fiRet = new FillIsland();
+
+                List<FillSegment> lst = new List<FillSegment>();
+                foreach(Vector2 v2 in ie)
+                { 
+                    FillSegment fs = new FillSegment(v2);
+                    lst.Add(fs);
+                    fiRet.segments.Add(fs);
+                }
+
+                for(int i = 1; i < lst.Count; ++i)
+                { 
+                    FillSegment fsP = lst[i - 1];
+                    FillSegment fsC = lst[i];
+
+                    fsP.next = fsC;
+                    fsC.prev = fsP;
+                }
+
+                FillSegment fsF = lst[0];
+                FillSegment fsL = lst[lst.Count - 1];
+                fsF.prev = fsL;
+                fsL.next = fsF;
+
+                return fiRet;
+            }
+            
+
             /// <summary>
             /// Calculates and caches the winding value. 
             /// </summary>
@@ -225,6 +317,21 @@ namespace PxPre
                 }
             }
 
+            public void ConsumeIntoOulineTriangles(float width, List<int> triangles, Vector2Repo vectors)
+            {
+                this.MakeOutlineBridged(width);
+                this.ConsumeIntoTriangles(triangles, vectors);
+            }
+
+            public void ConsumeIntoTrianglesWithOutline(
+                float width, 
+                List<int> fillTris, 
+                List<int> strokeTris, 
+                Vector2Repo vectors)
+            { 
+                
+            }
+
             /// <summary>
             /// Create a deep copy of the object.
             /// </summary>
@@ -243,11 +350,7 @@ namespace PxPre
 
                 while(true)
                 { 
-                    FillSegment itCpy = new FillSegment();
-                    itCpy.next  = it.next;
-                    itCpy.prev  = it.prev;
-                    itCpy.pos   = it.pos;
-
+                    FillSegment itCpy = it.Clone(true);;
                     fiNew.segments.Add(itCpy);
                     cloneLookup.Add(it, itCpy);
 
@@ -345,6 +448,117 @@ namespace PxPre
 
                 return ret;
             }
+
+            public void MakeOutlineBridged(float inflate)
+            {
+                FillSegment first = null;
+                FillSegment last = null;
+
+                List<FillSegment> lst = new List<FillSegment>();
+
+                foreach(FillSegment fs in this.Travel())
+                { 
+                    FillSegment fsNew = new FillSegment(fs.pos);
+                    this.segments.Add(fsNew);
+                    lst.Add(fsNew);
+
+                    if (first == null)
+                        first = fs;
+
+                    last = fs;
+                }
+
+                for(int i = 1; i < lst.Count; ++i)
+                { 
+                    // Create as reverse winding
+                    FillSegment fsP = lst[i - 1];
+                    FillSegment fsC = lst[i];
+
+                    fsP.prev = fsC;
+                    fsC.next = fsP;
+                }
+
+                // After we created the duplicate (in a reverse winding) as the 
+                // inside, inflate the original. We inflate the original because
+                // it already has the correct winding.
+
+                List<Vector2> inflated = new List<Vector2>();
+                foreach (FillSegment fs in first.Travel())
+                    inflated.Add(fs.InflateDir());
+
+                int j = 0;
+                foreach (FillSegment fs in first.Travel())
+                {
+                    fs.pos += inflated[j] * inflate;
+                    ++j;
+                }
+
+                FillSegment fsNewFirst = lst[0];
+                FillSegment fsNewLast = lst[lst.Count - 1];
+
+                // Stitch things up, since we iterated through everything, we didn't double the first
+                // item up to simulate a closed shaped.
+                FillSegment newLast = new FillSegment(first.pos);
+                last.next = newLast;
+                newLast.prev = last;
+                last = newLast;
+                this.segments.Add(newLast);
+
+                FillSegment newInLast = new FillSegment(fsNewFirst.pos);
+                fsNewLast.prev = newInLast;
+                newInLast.next = fsNewLast;
+                fsNewLast = newInLast;
+                this.segments.Add(newInLast);
+
+                // correct paths.
+                first.prev = fsNewFirst;
+                fsNewFirst.next = first;
+                last.next = fsNewLast;
+                fsNewLast.prev = last;
+            }
+
+            public void Inflate(float f)
+            { 
+                List<Vector2> infs = new List<Vector2>();
+                FillSegment travelStart = Utils.GetFirstInHash(this.segments);
+                foreach(FillSegment fs in travelStart.Travel())
+                    infs.Add(fs.InflateDir());
+
+                int i = 0;
+                foreach(FillSegment fs in travelStart.Travel())
+                {
+                    fs.pos += infs[i] * f;
+                    ++i;
+                }
+            }
+
+            IEnumerable<FillSegment> Travel()
+            { 
+                FillSegment first = Utils.GetFirstInHash(this.segments);
+                FillSegment it = first;
+
+                while(it != null)
+                { 
+                    yield return it;
+
+                    it = it.next;
+                    if(it == first)
+                        yield break;
+                }
+
+                yield break;
+            }
+
+            //public static void ConsumeTubeIntoTriangles(
+            //    FillIsland fsA, 
+            //    float zA,
+            //    FillIsland fsB, 
+            //    float zB,
+            //    bool reverseWinding,
+            //    List<int> triangles, 
+            //    Vector2Repo vectors)
+            //{ 
+            //}
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>

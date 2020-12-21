@@ -120,17 +120,7 @@ namespace PxPre
 
                 public IEnumerable<BNode> Enumerate()
                 { 
-                    BNode it = this.node;
-                    while(it != null)
-                    {
-                        yield return it;
-                        it = it.next;
-
-                        // If we've come full circle, we're done.
-                        if(it == this.node)
-                            yield break;
-
-                    }
+                    return this.node.Travel();
                 }
             }
 
@@ -228,6 +218,20 @@ namespace PxPre
                 /// The tangent mode of the node.
                 /// </summary>
                 public TangentMode tangentMode;
+
+                public BezierInfo(float fx, float fy)
+                {
+                    this.pos = new Vector2(fx, fy);
+
+                    // Defaults for everything else.
+                    this.tanIn = Vector2.zero;
+                    this.tanOut = Vector2.zero;
+                    //
+                    this.tangentMode = TangentMode.Disconnected;
+                    this.useTanIn = false;
+                    this.useTanOut = false;
+
+                }
 
                 /// <summary>
                 /// Constructor of a tangentless node.
@@ -525,6 +529,13 @@ namespace PxPre
 #endif
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="parent"></param>
+            /// <param name="reference"></param>
+            /// <param name="copyLinks"></param>
+            /// <param name="reverse"></param>
             public BNode(BLoop parent, BNode reference, bool copyLinks, bool reverse)
             { 
                 this.parent = parent;
@@ -993,6 +1004,33 @@ namespace PxPre
             }
 
             /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="newParent"></param>
+            /// <param name="formal"></param>
+            /// <returns></returns>
+            public bool SetParent(BLoop newParent, bool formal = false)
+            { 
+                if(newParent == this.parent)
+                    return false;
+
+                if(this.parent != null)
+                {
+                    if(formal == true)
+                        this.parent.RemoveNode(this);
+                    else
+                        this.parent.nodes.Remove(this);
+                }
+
+                this.parent = newParent;
+
+                if(this.parent != null)
+                    this.parent.nodes.Add(this);
+
+                return true;
+            }
+
+            /// <summary>
             /// Approximate the arclength by flatting the curve and summing 
             /// the lengths of those segments.
             /// 
@@ -1164,23 +1202,19 @@ namespace PxPre
                 BNode it = eq.node.next;
 
                 BNode tmp = eq.node.prev;
-                eq.node.prev = eq.node.next;
-                eq.node.next = tmp;
-                eq.node.SwapTangents();
+                eq.node._Invert();
        
                 while(it != null && it != eq.node)
                 { 
                     BNode next = it.next;
-
-                    tmp = it.prev;
-                    it.prev = it.next;
-                    it.next = tmp;
-                    it.SwapTangents();
-
+                    it._Invert();
                     it = next;
                 }
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
             internal void _Invert()
             { 
                 BNode n = this.prev;
@@ -1480,7 +1514,13 @@ namespace PxPre
                 return Utils.GetBoundingBoxCubic(p0, p1, p2, p3);
             }
 
-            // When inflating, how much to move out per unit inflation amount.
+            /// <summary>
+            /// When inflating, how much to move out per unit inflation amount. 
+            /// </summary>
+            /// <param name="vA"></param>
+            /// <param name="vB"></param>
+            /// <param name="vC"></param>
+            /// <returns></returns>
             public Vector2 GetInflateDirection(Vector2 vA, Vector2 vB, Vector2 vC)
             {
                 Vector2 atb = (vB - vA);
@@ -1516,11 +1556,22 @@ namespace PxPre
                 return avg * (1.0f / dot);
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="v2"></param>
+            /// <returns></returns>
             public Vector2 RotateEdge90CCW(Vector2 v2)
             {
                 return new Vector2(-v2.y, v2.x);
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="selfInf"></param>
+            /// <param name="inInf"></param>
+            /// <param name="outInf"></param>
             public void GetInflateDirection(out Vector2 selfInf, out Vector2 inInf, out Vector2 outInf)
             {
                 PathBridge pb = this.GetPathBridgeInfo();
@@ -1571,6 +1622,11 @@ namespace PxPre
 
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="comp"></param>
+            /// <returns></returns>
             public BNode GetMinOnIsland(int comp)
             { 
                 EndpointQuery eq = this.GetPathLeftmost();
@@ -1615,86 +1671,11 @@ namespace PxPre
                 return ret;
             }
 
-            public BNode GetMaxOnIsland(int comp)
-            {
-                EndpointQuery eq = this.GetPathLeftmost();
-                if (eq.node.next == null)
-                    return eq.node;
-
-                PathBridge pb = eq.node.GetPathBridgeInfo();
-                BNode ret = eq.node;
-
-                float min =
-                    Mathf.Max(
-                        eq.node.pos[comp],
-                        (eq.node.pos + pb.prevTanOut)[comp],
-                        (eq.node.next.pos + pb.nextTanIn)[comp]);
-
-                BNode it = eq.node.next;
-                while (it != null && it != eq.node)
-                {
-                    pb = it.GetPathBridgeInfo();
-                    float itMin =
-                        Mathf.Max(
-                            it.pos[comp],
-                            (it.pos + pb.prevTanOut)[comp]);
-
-
-                    if (it.next != null)
-                    {
-                        itMin =
-                            Mathf.Max(
-                                itMin,
-                                (it.next.pos + pb.nextTanIn)[comp]);
-                    }
-
-                    if (itMin < min)
-                    {
-                        min = itMin;
-                        ret = it;
-                    }
-
-                    it = it.next;
-                }
-                return ret;
-            }
-
-            public bool MinTest(int comp, ref float minimum, ref BNode ret)
-            { 
-                float m = this.pos[comp];
-                if(this.useTanIn == true)
-                    m = Mathf.Min( m, this.pos[comp] + this.tanIn[comp]);
-                
-                if(this.useTanOut == true)
-                    m = Mathf.Max( m, this.pos[comp] + this.tanOut[comp]);
-
-                if(ret == null || m < minimum)
-                { 
-                    minimum = m;
-                    ret = this;
-                    return true;
-                }
-                return false;
-            }
-
-            public bool MaxTest(int comp, ref float maximum, ref BNode ret)
-            { 
-                float m = this.pos[comp];
-                if(this.UseTanIn == true)
-                    m = Mathf.Max(m, this.pos[comp] + this.TanIn[comp]);
-
-                if(this.useTanOut == true)
-                    m = Mathf.Max(m, this.pos[comp] + this.tanOut[comp]);
-
-                if(ret == null || m > maximum)
-                { 
-                    maximum = m;
-                    ret = this;
-                    return true;
-                }
-                return false;
-            }
-
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="t"></param>
+            /// <returns></returns>
             public SubdivideInfo GetSubdivideInfo(float t)
             { 
                 // TODO: Handle linear also
@@ -1727,6 +1708,11 @@ namespace PxPre
                 return ret;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="t"></param>
+            /// <returns></returns>
             public Vector2 CalculatetPoint(float t)
             {
                 if(this.next == null)
@@ -1747,6 +1733,10 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <returns></returns>
             public bool IsLine()
             { 
                 if(this.next == null)
@@ -1757,9 +1747,320 @@ namespace PxPre
                     this.next.useTanIn == false;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <returns></returns>
             public bool IsSegment()
             { 
                 return this.next != null;
+            }
+
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="val"></param>
+            /// <param name="t"></param>
+            /// <param name="comp"></param>
+            /// <returns></returns>
+            public bool GetMaxPoint(ref Vector2 val, ref float t, int comp)
+            {
+                // UNTESTED: Was going to be used for an algorithm,
+                // but then that plan changed.
+                PathBridge pb = this.GetPathBridgeInfo();
+                
+                if(pb.pathType == PathType.None)
+                    return false;
+
+                bool ret = false;
+                if ( this.pos[comp] > val[comp])
+                {
+                    val = this.pos;
+                    t = 0.0f;
+                    ret = true;
+                }
+
+                if(this.next.pos[comp] > val[comp])
+                { 
+                    val = this.next.pos;
+                    t = 1.0f;
+                    ret = true;
+                }
+
+                if (pb.pathType == PathType.Line)
+                    return ret;   
+
+
+                Vector2 pt0 = this.pos;
+                Vector2 pt1 = this.pos + pb.prevTanOut;
+                Vector2 pt2 = this.next.pos + pb.nextTanIn;
+                Vector2 pt3 = this.next.pos;
+
+                float r0, r1;
+                int roots = 
+                    Utils.GetRoots1DCubic(
+                        pt0[comp], 
+                        pt1[comp], 
+                        pt2[comp], 
+                        pt3[comp], 
+                        out r0, 
+                        out r1);
+
+                for(int i = 0; i < roots; ++i)
+                { 
+                    float r = (i == 0) ? r0 : r1;
+                    float a, b, c, d;
+                    Utils.GetBezierWeights(r, out a, out b, out c, out d);
+
+                    Vector2 ptR = a * pt0 + b * pt1 + c * pt2 + d * pt3;
+
+                    if(ptR[comp] > val[comp])
+                    { 
+                        val = ptR;
+                        t = r;
+                        ret = true;
+                    }
+                }
+                return ret;
+
+            }
+
+            public static bool GetMaxPoint(IEnumerable<BNode> nodes, out BNode node, out Vector2 val, out float t, int comp)
+            { 
+                node = null;
+                val = Vector2.zero;
+                t = 0.0f;
+
+                IEnumerator<BNode> ie = nodes.GetEnumerator();
+
+                if(ie.MoveNext() == false)
+                    return false;
+
+                BNode first = ie.Current;
+                node = first;
+                val = first.pos;
+                first.GetMaxPoint(ref val, ref t, comp);
+
+                while(ie.MoveNext() == true)
+                { 
+                    BNode n = ie.Current;
+                    if(n.GetMaxPoint(ref val, ref t, comp) == true)
+                        node = n;
+                }
+
+                return true;
+            }
+
+            public IEnumerable<BNode> Travel()
+            {
+                BNode it = this;
+                while (it != null)
+                {
+                    yield return it;
+                    it = it.next;
+
+                    // If we've come full circle, we're done.
+                    if (it == this)
+                        yield break;
+
+                }
+            }
+
+            public static void MakeBridge(BNode bnIn, float inT, BNode bnOut, float outT)
+            {
+                if (inT >= 1.0f)
+                    bnIn = bnIn.next;
+                else if (inT <= 0.0f)
+                { } // Do nothing
+                else
+                    bnIn = bnIn.Subdivide(inT); // Subdivide
+
+                if (outT >= 1.0f)
+                    bnOut = bnOut.next;
+                else if (inT <= 0.0f)
+                { }
+                else
+                    bnOut = bnOut.Subdivide(outT);
+
+                BNode otherIn = bnIn.Clone(bnIn.parent);
+                BNode otherOut = bnOut.Clone(bnIn.parent);
+                bnIn.parent.nodes.Add(otherIn);
+                bnIn.parent.nodes.Add(otherOut);
+                
+                bnOut.next.prev = otherOut;
+                bnIn.prev.next = otherIn;
+                
+                bnOut.next = bnIn;
+                bnOut.UseTanOut = false;
+                bnIn.prev = bnOut;
+                bnIn.UseTanIn = false;
+                
+                otherIn.next = otherOut;
+                otherIn.UseTanOut = false;
+                otherOut.prev = otherIn;
+                otherOut.UseTanIn = false;
+            }
+
+            public static float CalculateWinding(IEnumerable<BNode> ie)
+            { 
+                float acc = 0.0f;
+                Vector2 avg = Vector2.zero;
+                int ct = 0;
+                foreach(BNode bn in ie)
+                { 
+                    avg += bn.pos;
+                    ++ct;
+                }
+
+                avg /= (float)ct;
+
+                foreach(BNode bn in ie)
+                { 
+                    if(bn.next == null)
+                        continue;
+
+                    if(bn.IsLine() == true)
+                    { 
+                        Vector2 a = bn.pos - avg;
+                        Vector2 b = bn.next.pos - avg;
+                        acc += Utils.Vector2Cross(a, b);
+                    }
+                    else
+                    { 
+                        PathBridge pb = bn.GetPathBridgeInfo();
+                        Vector2 pt0 = bn.pos;
+                        Vector2 pt1 = bn.pos + pb.prevTanOut;
+                        Vector2 pt2 = bn.next.pos + pb.nextTanIn;
+                        Vector2 pt3 = bn.next.pos;
+
+                        pt0 -= avg;
+                        pt1 -= avg;
+                        pt2 -= avg;
+                        pt3 -= avg;
+
+                        acc += Utils.Vector2Cross(pt0, pt1);
+                        acc += Utils.Vector2Cross(pt1, pt2);
+                        acc += Utils.Vector2Cross(pt2, pt3);
+                    }
+                }
+
+                return acc;
+            }
+
+            /// <summary>
+            /// If the cubic node has an S-shaped inflection, subdivide it
+            /// to be two U-shaped segments.
+            /// </summary>
+            /// <returns>
+            /// If true, a subdivision was performed, else it wasn't an S-shaped inflection
+            /// and no work needed to be performed.</returns>
+            public bool Deinflect()
+            { 
+                PathBridge pb = this.GetPathBridgeInfo();
+
+                if(
+                    pb.pathType == PathType.None ||
+                    pb.pathType == PathType.Line)
+                {
+                    return false;
+                }
+
+                Vector2 p0 = this.pos;
+                Vector2 p1 = this.pos + pb.prevTanOut;
+                Vector2 p2 = this.next.pos + pb.nextTanIn;
+                Vector2 p3 = this.next.pos;
+
+                // We need to check both the X and Y components for multiple roots.
+                // If we find one, we just subdivide in the middle interpolation
+                // between them.
+
+                float s, t;
+                if(Utils.GetRoots1DCubic(p0.x, p1.x, p2.x, p3.x, out s, out t) == 2)
+                { 
+                    this.Subdivide( (s + t)/2.0f);
+                    return true;
+                }
+
+                if(Utils.GetRoots1DCubic(p0.y, p1.y, p2.y, p3.y, out s, out t) == 2)
+                { 
+                    this.Subdivide( (s + t)/2.0f);
+                    return true;
+                }
+
+                return false;
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="rayStart"></param>
+            /// <param name="rayControl"></param>
+            /// <param name="interCurve"></param>
+            /// <param name="interLine"></param>
+            /// <param name="nodes"></param>
+            /// <returns></returns>
+            public int ProjectSegment(Vector2 rayStart, Vector2 rayControl, List<float> interCurve, List<float> interLine, List<BNode> nodes)
+            { 
+                int cols = ProjectSegment(rayStart, rayControl, interCurve, interLine);
+                for(int i = 0; i < cols; ++i)
+                    nodes.Add(this);
+
+                return cols;
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="rayStart"></param>
+            /// <param name="rayControl"></param>
+            /// <param name="interCurve"></param>
+            /// <param name="interLine"></param>
+            /// <returns></returns>
+            public int ProjectSegment(Vector2 rayStart, Vector2 rayControl, List<float> interCurve, List<float> interLine)
+            {
+                if(this.next == null)
+                    return 0;
+
+                PathBridge pb = this.GetPathBridgeInfo();
+
+                if (pb.pathType == BNode.PathType.Line)
+                {
+                    float s, t;
+                    if (Utils.ProjectSegmentToSegment(
+                        rayStart, 
+                        rayControl, 
+                        this.Pos, 
+                        this.next.Pos, 
+                        out s, 
+                        out t) == true)
+                    {
+                        interLine.Add(s);
+                        interCurve.Add(t);
+                        return 1;
+                    }
+                }
+                else if (pb.pathType == BNode.PathType.BezierCurve)
+                {
+                    Vector2 pt0 = this.Pos;
+                    Vector2 pt1 = this.Pos + pb.prevTanOut;
+                    Vector2 pt2 = this.next.Pos + pb.nextTanIn;
+                    Vector2 pt3 = this.next.Pos;
+
+                    return 
+                        Utils.IntersectLine(
+                            interCurve, 
+                            interLine, 
+                            pt0, 
+                            pt1, 
+                            pt2, 
+                            pt3, 
+                            rayStart, 
+                            rayControl, 
+                            false);
+                }
+
+                return 0;
             }
         }
     }

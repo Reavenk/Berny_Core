@@ -81,8 +81,7 @@ namespace PxPre
             {
                 foreach (BShape bs in this.shapes)
                 {
-                    foreach (BLoop bl in bs.loops)
-                        bl.FlushDirty();
+                    bs.FlushDirty();
                 }
 
                 this.dirty = false;
@@ -135,6 +134,66 @@ namespace PxPre
                     this.shapes.Add(shape.Clone(this));
 
                 return new Layer(this.document);
+            }
+
+            public BShapeGenCircle AddCircle(Vector2 center, float radius)
+            { 
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                bs.layer = this;
+                this.shapes.Add(bs);
+
+                BShapeGenCircle gen = new BShapeGenCircle(bs, center, radius);
+                bs.shapeGenerator = gen;
+                gen.FlagDirty();
+                return gen;
+            }
+
+            public BShapeGenEllipse AddEllipse(Vector2 center, Vector2 radius)
+            {
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                bs.layer = this;
+                this.shapes.Add(bs);
+
+                BShapeGenEllipse gen = new BShapeGenEllipse(bs, center, radius);
+                bs.shapeGenerator = gen;
+                gen.FlagDirty();
+                return gen;
+            }
+
+            public BShapeGenRect AddRect(Vector2 pos, Vector2 dim, Vector2 ? round = null)
+            {
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                bs.layer = this;
+                this.shapes.Add(bs);
+
+                BShapeGenRect gen = new BShapeGenRect(bs, pos, dim, round);
+                bs.shapeGenerator = gen;
+                gen.FlagDirty();
+                return gen;
+            }
+
+            public BShapeGenPolygon AddPolygon(params Vector2 [] points)
+            {
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                bs.layer = this;
+                this.shapes.Add(bs);
+
+                BShapeGenPolygon gen = new BShapeGenPolygon(bs, points);
+                bs.layer = this;
+                gen.FlagDirty();
+                return gen;
+            }
+
+            public BShapeGenPolyline AddPolyline(params Vector2 [] points)
+            {
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                bs.layer = this;
+                this.shapes.Add(bs);
+
+                BShapeGenPolyline gen = new BShapeGenPolyline(bs, points);
+                bs.layer = this;
+                gen.FlagDirty();
+                return gen;
             }
         }
     }

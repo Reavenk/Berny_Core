@@ -32,7 +32,9 @@ namespace PxPre
         /// </summary>
         public static class Utils
         {
-            // Currently unused, the blend types supported in SVG
+            /// <summary>
+            /// Currently unused, the blend types supported in SVG.
+            /// </summary>
             public enum BlendMode
             { 
                 Normal,
@@ -53,7 +55,9 @@ namespace PxPre
                 Luminosity
             }
 
-            // The unit type supported in SVG
+            /// <summary>
+            /// The unit type supported in SVG
+            /// </summary>
             public enum LengthUnit
             { 
                 Unlabled,
@@ -66,11 +70,26 @@ namespace PxPre
                 Pixels
             }
 
+            /// <summary>
+            /// A pairing of a BNode and an interpolation point in that node.
+            /// </summary>
             public struct NodeTPos
             {
+                /// <summary>
+                /// The node.
+                /// </summary>
                 public BNode node;
+
+                /// <summary>
+                /// The interpolation point on the node.
+                /// </summary>
                 public float t;
 
+                /// <summary>
+                /// Constructor.
+                /// </summary>
+                /// <param name="node">The node.</param>
+                /// <param name="t">The interpolation point on the node.</param>
                 public NodeTPos(BNode node, float t)
                 {
                     this.node = node;
@@ -128,6 +147,11 @@ namespace PxPre
                     this.linearB = false;
                 }
 
+                /// <summary>
+                /// 
+                /// </summary>
+                /// <param name="lst"></param>
+                /// <param name="eps"></param>
                 public static void CleanIntersectionList(List<Utils.BezierSubdivSample> lst, float eps = 0.00001f)
                 {
                     for (int i = 0; i < lst.Count; ++i)
@@ -152,7 +176,16 @@ namespace PxPre
                     }
                 }
 
+                /// <summary>
+                /// Get the A side node and interpolation as a NodeTPos.
+                /// </summary>
+                /// <returns>The A side as a NodeTPos.</returns>
                 public NodeTPos GetTPosA() => new NodeTPos(this.nodeA, this.lAEst);
+
+                /// <summary>
+                /// Get the B side node and interpolation as a NodeTPos.
+                /// </summary>
+                /// <returns>The B side as a NodeTPos.</returns>
                 public NodeTPos GetTPosB() => new NodeTPos(this.nodeB, this.lBEst);
             }
 
@@ -246,6 +279,11 @@ namespace PxPre
                     this.bounds = GetBoundingBoxCubic(sdpt0, sdpt1, sdpt2, sdpt3);
                 }
 
+                /// <summary>
+                /// 
+                /// </summary>
+                /// <param name="node"></param>
+                /// <returns></returns>
                 public static BezierSubdivRgn FromNode(BNode node)
                 {
                     Utils.BezierSubdivRgn ret = new Utils.BezierSubdivRgn();
@@ -261,6 +299,13 @@ namespace PxPre
                     return ret;
                 }
 
+                /// <summary>
+                /// 
+                /// </summary>
+                /// <param name="node"></param>
+                /// <param name="leftLam"></param>
+                /// <param name="rightLam"></param>
+                /// <returns></returns>
                 public static BezierSubdivRgn FromNode(BNode node, float leftLam, float rightLam)
                 {
                     Utils.BezierSubdivRgn ret = new Utils.BezierSubdivRgn();
@@ -574,6 +619,206 @@ namespace PxPre
                     ((int)Mathf.Clamp(c.a * 255.0f, 0.0f, 255.0f)).ToString("x2");
             }
 
+            public static void ColorNamesHexMap(
+                out Dictionary<string,string> outNameToHex,
+                out Dictionary<string, string> outHexToName )
+            { 
+                https://www.december.com/html/spec/colorsvghex.html
+                outNameToHex = new Dictionary<string, string>();
+                outHexToName = new Dictionary<string, string>();
+
+                outNameToHex.Add("black",                   "#000000");
+                outNameToHex.Add("navy",                    "#000080");
+                outNameToHex.Add("darkblue",                "#00008B");
+                outNameToHex.Add("mediumblue",              "#0000CD");
+ 	            outNameToHex.Add("blue",                    "#0000FF");
+                outNameToHex.Add("darkgreen",               "#006400");
+                outNameToHex.Add("green",                   "#008000");
+ 	            outNameToHex.Add("teal",                    "#008080");
+                outNameToHex.Add("darkcyan",                "#008B8B");
+                outNameToHex.Add("deepskyblue",             "#00BFFF");
+ 	            outNameToHex.Add("darkturquoise",           "#00CED1");
+                outNameToHex.Add("mediumspringgreen",       "#00FA9A");	
+                outNameToHex.Add("lime",                    "#00FF00");	
+ 	            outNameToHex.Add("springgreen",             "#00FF7F");		
+                outNameToHex.Add("cyan",                    "#00FFFF");	
+                outNameToHex.Add("aqua",                    "#00FFFF");	
+ 	            outNameToHex.Add("midnightblue",            "#191970");		
+                outNameToHex.Add("dodgerblue",              "#1E90FF");	
+                outNameToHex.Add("lightseagreen",           "#20B2AA");	
+ 	            outNameToHex.Add("forestgreen",             "#228B22");		
+                outNameToHex.Add("seagreen",                "#2E8B57");	
+                outNameToHex.Add("darkslategray",           "#2F4F4F");	
+ 	            outNameToHex.Add("darkslategrey",           "#2F4F4F");		
+                outNameToHex.Add("limegreen",               "#32CD32");	
+                outNameToHex.Add("mediumseagreen",          "#3CB371");	
+ 	            outNameToHex.Add("turquoise",               "#40E0D0");		
+                outNameToHex.Add("royalblue",               "#4169E1");	
+                outNameToHex.Add("steelblue",               "#4682B4");	
+ 	            outNameToHex.Add("darkslateblue",           "#483D8B");		
+                outNameToHex.Add("mediumturquoise",         "#48D1CC");	
+                outNameToHex.Add("indigo",                  "#4B0082");	
+ 	            outNameToHex.Add("darkolivegreen",          "#556B2F");		
+                outNameToHex.Add("cadetblue",               "#5F9EA0");	
+                outNameToHex.Add("cornflowerblue",          "#6495ED");	
+ 	            outNameToHex.Add("mediumaquamarine",        "#66CDAA");		
+                outNameToHex.Add("dimgrey",                 "#696969");	
+                outNameToHex.Add("dimgray",                 "#696969");	
+ 	            outNameToHex.Add("slateblue",               "#6A5ACD");		
+                outNameToHex.Add("olivedrab",               "#6B8E23");	
+                outNameToHex.Add("slategrey",               "#708090");	
+ 	            outNameToHex.Add("slategray",               "#708090");		
+                outNameToHex.Add("lightslategray",          "#778899");	
+                outNameToHex.Add("lightslategrey",          "#778899");	
+ 	            outNameToHex.Add("mediumslateblue",         "#7B68EE");		
+                outNameToHex.Add("lawngreen",               "#7CFC00");	
+                outNameToHex.Add("chartreuse",              "#7FFF00");	
+ 	            outNameToHex.Add("aquamarine",              "#7FFFD4");		
+                outNameToHex.Add("maroon",                  "#800000");	
+                outNameToHex.Add("purple",                  "#800080");	
+ 	            outNameToHex.Add("olive",                   "#808000");		
+                outNameToHex.Add("gray",                    "#808080");	
+                outNameToHex.Add("grey",                    "#808080");	
+ 	            outNameToHex.Add("skyblue",                 "#87CEEB");		
+                outNameToHex.Add("lightskyblue",            "#87CEFA");	
+                outNameToHex.Add("blueviolet",              "#8A2BE2");	
+ 	            outNameToHex.Add("darkred",                 "#8B0000");
+                outNameToHex.Add("darkmagenta",             "#8B008B");
+                outNameToHex.Add("saddlebrown",             "#8B4513");
+ 	            outNameToHex.Add("darkseagreen",            "#8FBC8F");
+                outNameToHex.Add("lightgreen",              "#90EE90");
+                outNameToHex.Add("mediumpurple",            "#9370DB");
+ 	            outNameToHex.Add("darkviolet",              "#9400D3");
+                outNameToHex.Add("palegreen",               "#98FB98");
+                outNameToHex.Add("darkorchid",              "#9932CC");
+ 	            outNameToHex.Add("yellowgreen",             "#9ACD32");
+                outNameToHex.Add("sienna",                  "#A0522D");
+                outNameToHex.Add("brown",                   "#A52A2A");
+ 	            outNameToHex.Add("darkgray",                "#A9A9A9");
+                outNameToHex.Add("darkgrey",                "#A9A9A9");
+                outNameToHex.Add("lightblue",               "#ADD8E6");
+ 	            outNameToHex.Add("greenyellow",             "#ADFF2F");
+                outNameToHex.Add("paleturquoise",           "#AFEEEE");
+                outNameToHex.Add("lightsteelblue",          "#B0C4DE");
+ 	            outNameToHex.Add("powderblue",              "#B0E0E6");
+                outNameToHex.Add("firebrick",               "#B22222");
+                outNameToHex.Add("darkgoldenrod",           "#B8860B");
+ 	            outNameToHex.Add("mediumorchid",            "#BA55D3");	
+                outNameToHex.Add("rosybrown",               "#BC8F8F");
+                outNameToHex.Add("darkkhaki",               "#BDB76B");
+ 	            outNameToHex.Add("silver",                  "#C0C0C0");	
+                outNameToHex.Add("mediumvioletred",         "#C71585");
+                outNameToHex.Add("indianred",               "#CD5C5C");
+ 	            outNameToHex.Add("peru",                    "#CD853F");	
+                outNameToHex.Add("chocolate",               "#D2691E");
+                outNameToHex.Add("tan",                     "#D2B48C");
+ 	            outNameToHex.Add("lightgray",               "#D3D3D3");	
+                outNameToHex.Add("lightgrey",               "#D3D3D3");
+                outNameToHex.Add("thistle",                 "#D8BFD8");
+ 	            outNameToHex.Add("orchid",                  "#DA70D6");	
+                outNameToHex.Add("goldenrod",               "#DAA520");
+                outNameToHex.Add("palevioletred",           "#DB7093");
+ 	            outNameToHex.Add("crimson",                 "#DC143C");	
+                outNameToHex.Add("gainsboro",               "#DCDCDC");
+                outNameToHex.Add("plum",                    "#DDA0DD");
+ 	            outNameToHex.Add("burlywood",               "#DEB887");	
+                outNameToHex.Add("lightcyan",               "#E0FFFF");
+                outNameToHex.Add("lavender",                "#E6E6FA");
+ 	            outNameToHex.Add("darksalmon",              "#E9967A");	
+                outNameToHex.Add("violet",                  "#EE82EE");
+                outNameToHex.Add("palegoldenrod",           "#EEE8AA");
+ 	            outNameToHex.Add("lightcoral",              "#F08080");	
+                outNameToHex.Add("khaki",                   "#F0E68C");
+                outNameToHex.Add("aliceblue",               "#F0F8FF");
+ 	            outNameToHex.Add("honeydew",                "#F0FFF0");	
+                outNameToHex.Add("azure",                   "#F0FFFF");
+                outNameToHex.Add("sandybrown",              "#F4A460");
+ 	            outNameToHex.Add("wheat",                   "#F5DEB3");		
+                outNameToHex.Add("beige",                   "#F5F5DC");	
+                outNameToHex.Add("whitesmoke",              "#F5F5F5");	
+ 	            outNameToHex.Add("mintcream",               "#F5FFFA");		
+                outNameToHex.Add("ghostwhite",              "#F8F8FF");	
+                outNameToHex.Add("salmon",                  "#FA8072");	
+ 	            outNameToHex.Add("antiquewhite",            "#FAEBD7");		
+                outNameToHex.Add("linen",                   "#FAF0E6");	
+                outNameToHex.Add("lightgoldenrodyellow",    "#FAFAD2");	
+ 	            outNameToHex.Add("oldlace",                 "#FDF5E6");		
+                outNameToHex.Add("red",                     "#FF0000");	
+                outNameToHex.Add("fuchsia",                 "#FF00FF");	
+ 	            outNameToHex.Add("magenta",                 "#FF00FF");		
+                outNameToHex.Add("deeppink",                "#FF1493");	
+                outNameToHex.Add("orangered",               "#FF4500");	
+ 	            outNameToHex.Add("tomato",                  "#FF6347");		
+                outNameToHex.Add("hotpink",                 "#FF69B4");	
+                outNameToHex.Add("coral",                   "#FF7F50");	
+ 	            outNameToHex.Add("darkorange",              "#FF8C00");		
+                outNameToHex.Add("lightsalmon",             "#FFA07A");	
+                outNameToHex.Add("orange",                  "#FFA500");	
+ 	            outNameToHex.Add("lightpink",               "#FFB6C1");		
+                outNameToHex.Add("pink",                    "#FFC0CB");	
+                outNameToHex.Add("gold",                    "#FFD700");	
+ 	            outNameToHex.Add("peachpuff",               "#FFDAB9");		
+                outNameToHex.Add("navajowhite",             "#FFDEAD");	
+                outNameToHex.Add("moccasin",                "#FFE4B5");	
+ 	            outNameToHex.Add("bisque",                  "#FFE4C4");		
+                outNameToHex.Add("mistyrose",               "#FFE4E1");	
+                outNameToHex.Add("blanchedalmond",          "#FFEBCD");	
+ 	            outNameToHex.Add("papayawhip",              "#FFEFD5");		
+                outNameToHex.Add("lavenderblush",           "#FFF0F5");	
+                outNameToHex.Add("seashell",                "#FFF5EE");	
+ 	            outNameToHex.Add("cornsilk",                "#FFF8DC");		
+                outNameToHex.Add("lemonchiffon",            "#FFFACD");	
+                outNameToHex.Add("floralwhite",             "#FFFAF0");	
+ 	            outNameToHex.Add("snow",                    "#FFFAFA");		
+                outNameToHex.Add("yellow",                  "#FFFF00");	
+                outNameToHex.Add("lightyellow",             "#FFFFE0");	
+ 	            outNameToHex.Add("ivory",                   "#FFFFF0");		
+                outNameToHex.Add("white",                   "#FFFFFF");
+
+                foreach (KeyValuePair<string, string> kvp in outNameToHex)
+                {
+                    if(outHexToName.ContainsKey(kvp.Value) == true)
+                        continue;
+
+                    outHexToName.Add(kvp.Value, kvp.Key);
+                }
+            }
+
+            private static Dictionary<string,string> _colorNameToHex = null;
+            private static Dictionary<string,string> _colorHexToName = null;
+
+            public static Dictionary<string, string> GetNamesToHexColorMap()
+            { 
+                if(_colorNameToHex == null)
+                    ColorNamesHexMap(out _colorNameToHex, out _colorHexToName);
+
+                return _colorNameToHex;
+            }
+
+            public static Dictionary<string, string> GetHexToNamesColorMap()
+            {
+                if (_colorHexToName == null)
+                    ColorNamesHexMap(out _colorNameToHex, out _colorHexToName);
+
+                return _colorHexToName;
+            }
+
+            public static Color ConvertSVGStringToColor(string str)
+            {
+                if(string.IsNullOrEmpty(str) == true)
+                    return Color.black;
+
+                Dictionary<string,string> map = GetNamesToHexColorMap();
+                string conv;
+                if(map.TryGetValue(str, out conv) == true)
+                    str = conv;
+
+                if (str[0] == '#')
+                    return Utils.ConvertHexStringToColor(str);
+
+                return Color.black;
+            }
+
             /// <summary>
             /// Convert a string in form "#XXXXXX" or "#XXXXXXXX" to a Unity color,
             /// where X is a hex character.
@@ -871,8 +1116,8 @@ namespace PxPre
             /// <returns></returns>
             public static bool GetRoot1DQuat(float f0, float f1, float f2, out float ret)
             {
-                ret = Mathf.Clamp01((f0 - f1) / (f0 - 2.0f * f1 + f2));
-                return ret >= f0 && ret <= f2;
+                ret = (f0 - f1) / (f0 - 2.0f * f1 + f2);
+                return ret >= 0.0f && ret <= 1.0f;
             }
 
             /// <summary>
@@ -1243,7 +1488,7 @@ namespace PxPre
                     BNode curve;
                     BNode line;
 
-                    if(isLineA == true)
+                    if (isLineA == true)
                     { 
                         line = nodeA;
                         curve = nodeB;
@@ -1253,8 +1498,7 @@ namespace PxPre
                         line = nodeB;
                         curve = nodeA;
                     }
-
-                    BNode.PathBridge pb = nodeB.GetPathBridgeInfo();
+                    BNode.PathBridge pb = curve.GetPathBridgeInfo();
 
                     List<float> intersectCurve = new List<float>();
                     List<float> intersectLine = new List<float>();
@@ -2158,6 +2402,12 @@ namespace PxPre
                 // Ax + By + C0
                 float A = l1.y - l0.y;
                 float B = l0.x - l1.x;
+
+                if(Mathf.Abs(A) <= Mathf.Epsilon || Mathf.Abs(B) <= Mathf.Epsilon)
+                { 
+                    // If the 
+                }
+
                 float C =
                     l0.x * (l0.y - l1.y) +
                     l0.y * (l1.x - l0.x);
@@ -2182,6 +2432,8 @@ namespace PxPre
                 for (int i = 0; i < roots; ++i)
                 {
                     float t = r[i];
+                    if(float.IsNaN(t) == true)
+                        continue;
 
                     float t2 = t*t;
                     float t3 = t2 * t;
@@ -2197,6 +2449,9 @@ namespace PxPre
                     else
                         s = (X[1] - l0.y) / (l1.y - l0.y);
 
+                    if(float.IsNaN(s) == true)
+                        continue;
+
                     // Make sure the collision point is in bounds of our
                     // line and path segment
                     //
@@ -2204,7 +2459,7 @@ namespace PxPre
                     // parameter to decide if we want to check for that, if not, the
                     // line rejection turns off and anything on the unbounded line
                     // will be added.
-                    if (t < 0.0f || t > 1.0f || (lineBounds == true && (s < 0.0f || s > 1.0f)))
+                        if (t < 0.0f || t > 1.0f || (lineBounds == true && (s < 0.0f || s > 1.0f)))
                         continue;
 
                     if(intersectCurveTs != null)
@@ -2218,13 +2473,24 @@ namespace PxPre
                 return ret;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="a"></param>
+            /// <param name="b"></param>
+            /// <param name="clean"></param>
             public static void TestIntersection(BNode a, BNode b, bool clean)
             {
                 List<Utils.BezierSubdivSample> inter = new List<Utils.BezierSubdivSample>();
             }
 
             
-
+            public static void Swap<ty>(ref ty x, ref ty y)
+            { 
+                ty tmp = x;
+                x = y;
+                y = tmp;
+            }
         }
     }
 }

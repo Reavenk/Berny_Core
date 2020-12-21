@@ -106,8 +106,12 @@ namespace PxPre
 
                     foreach(BShape shape in layer.shapes)
                     {
-                        System.Xml.XmlElement elePath = xmldoc.CreateElement("path");
-                        xmlLayer.AppendChild(elePath);
+                        string shapetype = "path";
+                        if(shape.shapeGenerator != null)
+                            shapetype = shape.shapeGenerator.GetSVGXMLName;
+
+                        System.Xml.XmlElement eleShape = xmldoc.CreateElement(shapetype);
+                        xmlLayer.AppendChild(eleShape);
                         {
                             string styleAttrib = "";
                             if(shape.fill == true)
@@ -136,7 +140,15 @@ namespace PxPre
                             { 
                                 styleAttrib += "stroke: none; ";
                             }
-                            elePath.SetAttribute("style", styleAttrib);
+                            eleShape.SetAttribute("style", styleAttrib);
+
+                            // If we're a generated shape, ignore our explicit path data and just let the generate
+                            // save the SVG stuff - if not, it's a path and we'll fallback on saving the explicit path.
+                            if(shape.shapeGenerator != null)
+                            { 
+                                shape.shapeGenerator.SaveToSVGXML(eleShape);
+                                continue;
+                            }
 
                             // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
                             // SVG defines 6 types of path commands, for a total of 20 commands:
@@ -263,16 +275,36 @@ namespace PxPre
                         docSz.y = Utils.ConvertMetersToUnit(num, lu);
                 }
 
+                System.Xml.XmlAttribute attrView = root.Attributes["viewBox"];
+                if(attrView != null && string.IsNullOrEmpty(attrView.Value) == false)
+                { 
+                    string [] strs = attrView.Value.Trim().Split(new char[]{' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+                    if(strs.Length == 4)
+                    { 
+                        // TODO: Do something with X and Y ([0] and [1]).
+                        float.TryParse( strs[2], out docSz.x);
+                        float.TryParse( strs[3], out docSz.y);
+                        doc.documentSize = docSz;
+                    }
+                }
+
                 doc.documentSize = docSz;
 
                 List<System.Xml.XmlElement> graphicEles = new List<System.Xml.XmlElement>();
 
-                foreach (System.Xml.XmlElement ele in root)
+                foreach (System.Xml.XmlElement ele in EnumerateChildElements(root))
                 {
                     if (ele.Name == "defs")
                     {}
                     else if (ele.Name == "g")
                         graphicEles.Add(ele);
+                    else
+                    {
+                        // It could just be a shape at the root level.
+                        // If not, CreateShapeFromXML will silently and gracefully do nothing.
+                        // but the return value can be checked if it's non-null.
+                        CreateShapeFromXML(ele, doc, null);
+                    }
                 }
 
                 foreach(System.Xml.XmlElement eleLayer in graphicEles)
@@ -309,409 +341,112 @@ namespace PxPre
                         }
                     }
 
+                    //"stroke"
+                    //"fill"
+                    //"stroke-width"
+                    //"opacity"
+
                     System.Xml.XmlAttribute attriLock = GetAttributeFromXMLElement(eleLayer, "insensitive", "sodipodi");
                     if(attriLock != null && attriLock.Value == "true")
                         layer.Locked = true;
 
-                    foreach(System.Xml.XmlElement eleLE in eleLayer)
-                    { 
-                        if(eleLE.Name == "path")
-                        { 
-                            BShape bs = new BShape(Vector2.zero, 0.0f);
-                            layer.shapes.Add(bs);
-                            bs.layer = layer;
-
-                            System.Xml.XmlAttribute attrPathID = eleLE.Attributes["id"];
-                            if(attrPathID != null)
-                                bs.name = attrPathID.Value;
-
-                            System.Xml.XmlAttribute attrPathStyle = eleLE.Attributes["style"];
-                            if(attrPathStyle != null)
-                            { 
-                                Dictionary<string,string> styles = Utils.SplitProperties(attrPathStyle.Value);
-                                string fill;
-                                if(styles.TryGetValue("fill", out fill) == true)
-                                { 
-                                    if(fill == "none")
-                                        bs.fill = false;
-                                    else
-                                    {
-                                        bs.fill = true;
-                                        if(fill.Length == 0)
-                                            bs.fillColor = Color.black;
-                                        else if(fill[0] == '#')
-                                            bs.fillColor = Utils.ConvertHexStringToColor(fill);
-                                    }
-                                }
-
-                                string fillopacity;
-                                if(styles.TryGetValue("fill-opacity", out fillopacity) == true)
-                                { 
-                                    float opacity;
-                                    if(float.TryParse(fillopacity, out opacity) == true)
-                                        bs.fillColor.a = opacity;
-                                }
-
-                                string stroke;
-                                if(styles.TryGetValue("stroke", out stroke) == true)
-                                { 
-                                    if(stroke == "none")
-                                        bs.stroke = false;
-                                    else
-                                    {
-                                        bs.stroke = true;
-                                        if (stroke.Length == 0)
-                                            bs.strokeColor = Color.black;
-                                        else if (stroke[0] == '#')
-                                            bs.strokeColor = Utils.ConvertHexStringToColor(stroke);
-                                    }
-                                }
-
-                                string strokeopacity;
-                                if(styles.TryGetValue("stroke-opacity", out strokeopacity) == true)
-                                { 
-                                    float opacity;
-                                    if(float.TryParse(strokeopacity, out opacity) == true)
-                                        bs.strokeColor.a = opacity;
-                                }
-
-                                string strokewidth;
-                                if(styles.TryGetValue("stroke-width", out strokewidth) == true)
-                                {
-                                    float num;
-                                    Utils.LengthUnit unit;
-                                    if(Utils.ExtractLengthString(strokewidth, out num, out unit) == true)
-                                        bs.strokeWidth = Utils.ConvertUnitsToMeters(num, unit);
-                                }
-
-
-                                string strokecap;
-                                if(styles.TryGetValue("stroke-linecap", out strokecap) == true)
-                                    bs.cap = BShape.StringToCap(strokecap);
-
-                                string strokejoin;
-                                if(styles.TryGetValue("stroke-linejoin", out strokejoin) == true)
-                                    bs.corner = BShape.StringToCorner(strokejoin);
-
-                            }
-
-                            SVGMat mat = SVGMat.Identity();
-
-                            System.Xml.XmlAttribute attrTrans = eleLE.Attributes["transform"];
-                            if(attrTrans != null)
-                            { 
-                                string strTrans = attrTrans.Value;
-                                if(strTrans.StartsWith("matrix(") == true)
-                                { 
-                                    int matlen = "matrix(".Length;
-                                    // Not exactly robust parsing - an extra -1 for the closing parenthesis
-                                    string matValues = strTrans.Substring(matlen, strTrans.Length - matlen - 1); 
-                                    string [] vals = matValues.Split(new char[]{',' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-                                    float.TryParse(vals[0].Trim(), out mat.x.x);
-                                    float.TryParse(vals[1].Trim(), out mat.x.y);
-                                    float.TryParse(vals[2].Trim(), out mat.y.x);
-                                    float.TryParse(vals[3].Trim(), out mat.y.y);
-                                    float.TryParse(vals[4].Trim(), out mat.t.x);
-                                    float.TryParse(vals[5].Trim(), out mat.t.y);
-                                }
-                            }
-
-                            System.Xml.XmlAttribute attrPathDraw = eleLE.Attributes["d"];
-                            if(attrPathDraw != null)
-                            { 
-                                BLoop curLoop = null;
-                                BNode prevNode = null;
-                                BNode firstNode = null;
-                                Vector2 lastPos = Vector2.zero;
-
-                                List<string> parts = SplitDrawCommand(attrPathDraw.Value);
-                                int i = 0;
-
-                                char lastCmd = (char)0;
-                                while(i < parts.Count)
-                                { 
-                                    // Did we parse the command on this loop iter?
-                                    bool parsedLetter = false;
-                                    if(parts[i].Length == 1 && char.IsLetter(parts[i][0]) == true)
-                                    {
-                                        lastCmd = parts[i][0];
-                                        parsedLetter = true;
-                                        ++i;
-                                    }
-                                        
-                                    if(lastCmd == 'm') // Relative Move To
-                                    {
-                                        Vector2 v;
-                                        if(ConsumeVector2(parts, ref i, out v) == false)
-                                            break; // Aborting
-
-                                        v = lastPos + v;
-
-                                        if(parsedLetter == false)
-                                        {
-                                            EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-                                            BNode node = new BNode(curLoop, mat.Mul(v));
-                                            prevNode.next = node;
-                                            node.prev = prevNode;
-                                            node.UseTanOut = false;
-                                            node.UseTanIn = false;
-                                            curLoop.nodes.Add(node);
-                                            prevNode = node;
-                                        }
-
-                                        lastPos = v;
-
-
-                                    }
-                                    else if(lastCmd == 'M') // Global Move To
-                                    { 
-                                        Vector2 v;
-                                        if(ConsumeVector2(parts, ref i, out v) == false)
-                                            break; //Aborting
-
-                                        if(parsedLetter == false)
-                                        {
-                                            EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-                                            BNode node = new BNode(curLoop, mat.Mul(v));
-                                            prevNode.next = node;
-                                            node.prev = prevNode;
-                                            node.UseTanOut = false;
-                                            node.UseTanIn = false;
-                                            curLoop.nodes.Add(node);
-                                            prevNode = node;
-                                        }
-
-                                        lastPos = v;
-                                    }
-                                    else if(lastCmd == 'l' || lastCmd == 'L') // Relative and Global Line To
-                                    { 
-                                        Vector2 v;
-                                        if(ConsumeVector2(parts, ref i, out v) == false)
-                                            break; //Aborting
-
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-
-                                        if(lastCmd == 'l') // if relative
-                                            v += lastPos;
-
-                                        BNode node = new BNode(curLoop, mat.Mul(v));
-                                        curLoop.nodes.Add(node);
-                                        node.prev = prevNode;
-                                        prevNode.next = node;
-                                        prevNode.UseTanOut = false;
-                                        node.UseTanIn = false;
-
-                                        prevNode = node;
-                                        lastPos  = v;
-                                    }
-                                    else if(lastCmd == 'h' || lastCmd == 'H') // Relative or Global Horizontal Line
-                                    {
-                                        float f;
-                                        if(ConsumeFloat(parts, ref i, out f) == false)
-                                            break; // Aborting
-
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-
-                                        Vector2 v = lastPos;
-                                        if(lastCmd == 'h') 
-                                            v.x += f; // Relative
-                                        else
-                                            v.x = f; // Global
-
-                                        BNode node = new BNode(curLoop, mat.Mul(v));
-                                        curLoop.nodes.Add(node);
-                                        node.prev = prevNode;
-                                        prevNode.next = node;
-                                        prevNode.UseTanOut = false;
-                                        node.UseTanIn = false;
-
-                                        prevNode = node;
-                                        lastPos = v;
-                                    }
-                                    else if(lastCmd == 'v' | lastCmd == 'V') // Relative or Global Vertical Line
-                                    { 
-                                        float f;
-                                        if(ConsumeFloat(parts, ref i, out f) == false)
-                                            break;
-
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-
-                                        Vector2 v = lastPos;
-                                        if(lastCmd == 'v') 
-                                            v.y += f; // Relative
-                                        else
-                                            v.y = f; // Global
-
-                                        BNode node = new BNode(curLoop, mat.Mul(v));
-                                        curLoop.nodes.Add(node);
-                                        node.prev = prevNode;
-                                        prevNode.next = node;
-                                        prevNode.UseTanOut = false;
-                                        node.UseTanIn = false;
-
-                                        prevNode = node;
-                                        lastPos = v;
-                                    }
-                                    else if(lastCmd == 'c' || lastCmd == 'C') // Relative or Global Cubic
-                                    {
-                                        Vector2 tcurout, tnxtin, v;
-                                        if (
-                                            ConsumeVector2(parts, ref i, out tcurout) == false ||
-                                            ConsumeVector2(parts, ref i, out tnxtin) == false ||
-                                            ConsumeVector2(parts, ref i, out v) == false)
-                                        {
-                                            break; //Aborting
-                                        }
-
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-
-                                        // Relative
-                                        if (lastCmd == 'c')
-                                        { 
-                                            tcurout += lastPos;
-                                            tnxtin += lastPos;
-                                            v += lastPos;
-                                        }
-
-                                        BNode node = new BNode(curLoop, mat.Mul(v));
-                                        curLoop.nodes.Add(node);
-                                        //
-                                        node.prev = prevNode;
-                                        prevNode.next = node;
-                                        //
-                                        prevNode.UseTanOut = true;
-                                        prevNode.TanOut = mat.Mul(tcurout) - prevNode.Pos;
-                                        node.UseTanIn = true;
-                                        node.TanIn = mat.Mul(tnxtin) - node.Pos;
-
-                                        prevNode = node;
-                                        lastPos = v;
-                                    }
-                                    else if(lastCmd == 's' || lastCmd == 'S') // Relative Cubic Smooth
-                                    {
-                                        Vector2 t, v;
-                                        if (
-                                            ConsumeVector2(parts, ref i, out t) == false ||
-                                            ConsumeVector2(parts, ref i, out v) == false)
-                                        { 
-                                            break; // Aborting
-                                        }
-
-                                        EnsureLoopAndNode(bs, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
-
-                                        // Relative
-                                        if (lastCmd == 'S')
-                                        { 
-                                            t += lastPos;
-                                            v += lastPos;
-                                        }
-
-                                        BNode node = new BNode(curLoop, mat.Mul(v));
-                                        curLoop.nodes.Add(node);
-                                        node.prev = prevNode;
-                                        prevNode.next = node;
-                                        prevNode.UseTanOut = true;
-                                        prevNode.TanOut = mat.Mul(t) - prevNode.Pos;
-                                        node.UseTanOut = true;
-                                        node.TanIn = mat.Mul(t) - node.Pos;
-
-                                        prevNode = node;
-                                        lastPos = v;
-                                    }
-                                    else if(lastCmd == 'q') // Relative Quadratic
-                                    {
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 'Q') // Global Quadratic
-                                    {
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 't') // Relative Quadratic Smooth
-                                    {
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 'T') // Global Quadratic Smooth
-                                    {
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 'a') // Relative elliptical arc curve
-                                    { 
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 'A') // Global elliptical arc curve
-                                    {
-                                        // UNIMPLEMENTED:
-                                    }
-                                    else if(lastCmd == 'z' || lastCmd == 'Z') 
-                                    {
-                                        // Close and add loop
-                                        if (curLoop != null) 
-                                        {
-                                            if(firstNode != null && prevNode != null)
-                                            { 
-                                                // Oh geeze! Technically this is what it should be, but I don't think the
-                                                // code is currently robust enough to handle a 1 point curve.
-                                                if(firstNode == prevNode)
-                                                { 
-                                                    firstNode.next = firstNode;
-                                                    firstNode.prev = firstNode;
-                                                }
-                                                else if(firstNode.Pos == prevNode.Pos)
-                                                { 
-                                                    // If they're positioned on the exact same spot, we turn
-                                                    // it into a single point
-                                                    curLoop.nodes.Remove(prevNode);
-                                                    firstNode.prev = prevNode.prev; // Disconnect the prev node from the chain and form a loop without it
-                                                    prevNode.prev.next = firstNode;
-
-
-                                                    firstNode.UseTanIn = prevNode.UseTanIn;
-                                                    firstNode.TanIn = prevNode.TanIn;
-                                                }
-                                                else
-                                                {
-                                                    // If they're not the same spot, we connect them with a line
-                                                    firstNode.prev = prevNode;
-                                                    firstNode.TanIn = Vector2.zero;
-                                                    firstNode.UseTanIn = false;
-
-                                                    prevNode.next = firstNode;
-                                                    prevNode.TanOut = Vector2.zero;
-                                                    prevNode.UseTanOut = false;
-                                                }
-                                            }
-
-                                            bs.AddLoop(curLoop);
-                                            curLoop = null;
-                                            prevNode = null;
-                                            firstNode = null;
-
-                                            lastCmd = (char)0;
-                                        }
-                                    }
-                                    else
-                                    { 
-                                        break;  // TODO: ERROR
-                                    }
-                                }
-
-
-                                if(curLoop != null)
-                                { 
-                                    bs.AddLoop(curLoop);
-                                    curLoop = null;
-                                    prevNode = null;
-                                    firstNode = null;
-                                }
-                            }
-
-                            
-                        }
-                    }
+                    foreach(System.Xml.XmlElement eleLE in EnumerateChildElements(eleLayer))
+                        CreateShapeFromXML(eleLE, doc, layer);
                 }
 
                 return true;
+            }
+
+            public static Layer ResolveUsableLayer(Document doc, Layer layer)
+            { 
+                if(layer == null)
+                    return doc.GetFirstLayer();
+
+                return layer;
+            }
+
+            public static BShape CreateShapeFromXML(System.Xml.XmlElement ele, Document doc, Layer layer)
+            {
+                BShape bs = null;
+                if (ele.Name == "path")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc,layer), ele, out mat);
+
+                    System.Xml.XmlAttribute attrPathDraw = ele.Attributes["d"];
+                    if (attrPathDraw != null)
+                        ProcessPathDrawAttrib(bs, attrPathDraw.Value, mat);
+                }
+                else if (ele.Name == "rect")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenRect gen = new BShapeGenRect(bs, Vector2.zero, Vector2.one);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+
+                }
+                else if (ele.Name == "ellipse")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenEllipse gen = new BShapeGenEllipse(bs, Vector2.zero, Vector2.one);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+                }
+                else if (ele.Name == "circle")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenCircle gen = new BShapeGenCircle(bs, Vector2.zero, 1.0f);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+                }
+                else if (ele.Name == "polyline")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenPolyline gen = new BShapeGenPolyline(bs);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+                }
+                else if (ele.Name == "polygon")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenPolygon gen = new BShapeGenPolygon(bs);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+                }
+                else if (ele.Name == "line")
+                {
+                    SVGMat mat;
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+
+                    BShapeGenLine gen = new BShapeGenLine(bs, Vector2.zero, Vector2.zero);
+                    gen.LoadFromSVGXML(ele);
+                    bs.shapeGenerator = gen;
+                }
+
+                if (bs != null)
+                    bs.FlagDirty();
+
+                return bs;
+            }
+
+            public static BShape CreateTemplateShapeFromXML(Layer layer, System.Xml.XmlElement ele, out SVGMat mat)
+            {
+                BShape bs = new BShape(Vector2.zero, 0.0f);
+                layer.shapes.Add(bs);
+                bs.layer = layer;
+
+                LoadShapeInfo(bs, ele, out mat);
+                return bs;
             }
 
             public static List<string> SplitDrawCommand(string drawCmd)
@@ -758,6 +493,478 @@ namespace PxPre
                     }
                 }
                 return ret;
+            }
+
+            public static List<Vector2> SplitPointsString(string pointsString)
+            { 
+                List<Vector2> ret = new List<Vector2>();
+
+                // Find a command, find a whitespace, 
+                // parse in between, don't worry about any other
+                // whitespace
+
+                int idx = 0;
+                while(idx < pointsString.Length)
+                { 
+                    int comma = pointsString.IndexOf(',', idx);
+
+                    if(comma == -1)
+                        break;
+
+
+                    int end = comma + 1;
+
+                    // Eat any whitespace
+                    while( true)
+                    { 
+                        if(end >= pointsString.Length)
+                            break;
+
+                        if(char.IsWhiteSpace(pointsString[end]) == false)
+                            break;
+
+                        ++end;
+                    }
+
+                    if(end >= pointsString.Length)
+                        break;
+                    
+                    // Eat to next whitespace or end
+                    while(true)
+                    { 
+                        if(end >= pointsString.Length)
+                            break;
+
+                        if(char.IsWhiteSpace(pointsString[end]) == true)
+                            break;
+
+                        ++end;
+                    }
+
+                    // If nothing was eaten for the Y, we have a degenerate point
+                    if(end == comma + 1)
+                        break;
+
+
+                    string strX = pointsString.Substring(idx, comma - idx).Trim();
+                    string strY = pointsString.Substring(comma + 1, end - comma - 1).Trim();
+
+                    Vector2 newV = new Vector2();
+                    if(float.TryParse(strX, out newV.x) == false)
+                        break;
+
+                    if(float.TryParse(strY, out newV.y) == false)
+                        break;
+
+                    ret.Add(newV);
+
+                    idx = end;
+                }
+
+                return ret;
+            }
+
+            public static string PointsToPointsString(IEnumerable<Vector2> ieV2)
+            { 
+                List<string> strs = new List<string>();
+                foreach(Vector2 v2 in ieV2)
+                    strs.Add(v2.x.ToString() + "," + v2.y.ToString());
+
+                return string.Join(" ", strs);
+            }
+
+            public static void LoadShapeInfo(BShape shape, System.Xml.XmlElement ele, out SVGMat matrix)
+            {
+                System.Xml.XmlAttribute attrPathID = ele.Attributes["id"];
+                if (attrPathID != null)
+                    ProcessShapeIdAttrib(shape, attrPathID.Value);
+
+                System.Xml.XmlAttribute attrPathStyle = ele.Attributes["style"];
+                if (attrPathStyle != null)
+                    ProcessShapeStyleAttrib(shape, attrPathStyle.Value);
+
+
+                System.Xml.XmlAttribute attrTrans = ele.Attributes["transform"];
+                matrix = (attrTrans != null) ? ProcessMatrixAttribute(attrTrans.Value) : SVGMat.Identity();
+            }
+
+            public static void ProcessPathDrawAttrib(BShape shape, string attrib, SVGMat mat)
+            {
+                BLoop curLoop = null;
+                BNode prevNode = null;
+                BNode firstNode = null;
+                Vector2 lastPos = Vector2.zero;
+
+                // https://www.w3schools.com/graphics/svg_path.asp
+
+                List<string> parts = SplitDrawCommand(attrib);
+
+                int i = 0;
+                char lastCmd = (char)0;
+                while (i < parts.Count)
+                {
+                    // Did we parse the command on this loop iter?
+                    bool parsedLetter = false;
+                    if (parts[i].Length == 1 && char.IsLetter(parts[i][0]) == true)
+                    {
+                        lastCmd = parts[i][0];
+                        parsedLetter = true;
+                        ++i;
+                    }
+
+                    if (lastCmd == 'm') // Relative Move To
+                    {
+                        Vector2 v;
+                        if (ConsumeVector2(parts, ref i, out v) == false)
+                            break; // Aborting
+
+                        v = lastPos + v;
+
+                        if (parsedLetter == false)
+                        {
+                            EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+                            BNode node = new BNode(curLoop, mat.Mul(v));
+                            prevNode.next = node;
+                            node.prev = prevNode;
+                            node.UseTanOut = false;
+                            node.UseTanIn = false;
+                            curLoop.nodes.Add(node);
+                            prevNode = node;
+                        }
+
+                        lastPos = v;
+
+
+                    }
+                    else if (lastCmd == 'M') // Global Move To
+                    {
+                        Vector2 v;
+                        if (ConsumeVector2(parts, ref i, out v) == false)
+                            break; //Aborting
+
+                        if (parsedLetter == false)
+                        {
+                            EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+                            BNode node = new BNode(curLoop, mat.Mul(v));
+                            prevNode.next = node;
+                            node.prev = prevNode;
+                            node.UseTanOut = false;
+                            node.UseTanIn = false;
+                            curLoop.nodes.Add(node);
+                            prevNode = node;
+                        }
+
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 'l' || lastCmd == 'L') // Relative and Global Line To
+                    {
+                        Vector2 v;
+                        if (ConsumeVector2(parts, ref i, out v) == false)
+                            break; //Aborting
+
+                        EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+
+                        if (lastCmd == 'l') // if relative
+                            v += lastPos;
+
+                        BNode node = new BNode(curLoop, mat.Mul(v));
+                        curLoop.nodes.Add(node);
+                        node.prev = prevNode;
+                        prevNode.next = node;
+                        prevNode.UseTanOut = false;
+                        node.UseTanIn = false;
+
+                        prevNode = node;
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 'h' || lastCmd == 'H') // Relative or Global Horizontal Line
+                    {
+                        float f;
+                        if (ConsumeFloat(parts, ref i, out f) == false)
+                            break; // Aborting
+
+                        EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+
+                        Vector2 v = lastPos;
+                        if (lastCmd == 'h')
+                            v.x += f; // Relative
+                        else
+                            v.x = f; // Global
+
+                        BNode node = new BNode(curLoop, mat.Mul(v));
+                        curLoop.nodes.Add(node);
+                        node.prev = prevNode;
+                        prevNode.next = node;
+                        prevNode.UseTanOut = false;
+                        node.UseTanIn = false;
+
+                        prevNode = node;
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 'v' | lastCmd == 'V') // Relative or Global Vertical Line
+                    {
+                        float f;
+                        if (ConsumeFloat(parts, ref i, out f) == false)
+                            break;
+
+                        EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+
+                        Vector2 v = lastPos;
+                        if (lastCmd == 'v')
+                            v.y += f; // Relative
+                        else
+                            v.y = f; // Global
+
+                        BNode node = new BNode(curLoop, mat.Mul(v));
+                        curLoop.nodes.Add(node);
+                        node.prev = prevNode;
+                        prevNode.next = node;
+                        prevNode.UseTanOut = false;
+                        node.UseTanIn = false;
+
+                        prevNode = node;
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 'c' || lastCmd == 'C') // Relative or Global Cubic
+                    {
+                        Vector2 tcurout, tnxtin, v;
+                        if (
+                            ConsumeVector2(parts, ref i, out tcurout) == false ||
+                            ConsumeVector2(parts, ref i, out tnxtin) == false ||
+                            ConsumeVector2(parts, ref i, out v) == false)
+                        {
+                            break; //Aborting
+                        }
+
+                        EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+
+                        // Relative
+                        if (lastCmd == 'c')
+                        {
+                            tcurout += lastPos;
+                            tnxtin += lastPos;
+                            v += lastPos;
+                        }
+
+                        BNode node = new BNode(curLoop, mat.Mul(v));
+                        curLoop.nodes.Add(node);
+                        //
+                        node.prev = prevNode;
+                        prevNode.next = node;
+                        //
+                        prevNode.UseTanOut = true;
+                        prevNode.TanOut = mat.Mul(tcurout) - prevNode.Pos;
+                        node.UseTanIn = true;
+                        node.TanIn = mat.Mul(tnxtin) - node.Pos;
+
+                        prevNode = node;
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 's' || lastCmd == 'S') // Relative Cubic Smooth
+                    {
+                        Vector2 t, v;
+                        if (
+                            ConsumeVector2(parts, ref i, out t) == false ||
+                            ConsumeVector2(parts, ref i, out v) == false)
+                        {
+                            break; // Aborting
+                        }
+
+                        EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
+
+                        // Relative
+                        if (lastCmd == 'S')
+                        {
+                            t += lastPos;
+                            v += lastPos;
+                        }
+
+                        BNode node = new BNode(curLoop, mat.Mul(v));
+                        curLoop.nodes.Add(node);
+                        node.prev = prevNode;
+                        prevNode.next = node;
+                        prevNode.UseTanOut = true;
+                        prevNode.TanOut = mat.Mul(t) - prevNode.Pos;
+                        node.UseTanOut = true;
+                        node.TanIn = mat.Mul(t) - node.Pos;
+
+                        prevNode = node;
+                        lastPos = v;
+                    }
+                    else if (lastCmd == 'q') // Relative Quadratic
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 'Q') // Global Quadratic
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 't') // Relative Quadratic Smooth
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 'T') // Global Quadratic Smooth
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 'a') // Relative elliptical arc curve
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 'A') // Global elliptical arc curve
+                    {
+                        // UNIMPLEMENTED:
+                    }
+                    else if (lastCmd == 'z' || lastCmd == 'Z')
+                    {
+                        // Close and add loop
+                        if (curLoop != null)
+                        {
+                            if (firstNode != null && prevNode != null)
+                            {
+                                // Oh geeze! Technically this is what it should be, but I don't think the
+                                // code is currently robust enough to handle a 1 point curve.
+                                if (firstNode == prevNode)
+                                {
+                                    firstNode.next = firstNode;
+                                    firstNode.prev = firstNode;
+                                }
+                                else if (firstNode.Pos == prevNode.Pos)
+                                {
+                                    // If they're positioned on the exact same spot, we turn
+                                    // it into a single point
+                                    curLoop.nodes.Remove(prevNode);
+                                    firstNode.prev = prevNode.prev; // Disconnect the prev node from the chain and form a loop without it
+                                    prevNode.prev.next = firstNode;
+
+
+                                    firstNode.UseTanIn = prevNode.UseTanIn;
+                                    firstNode.TanIn = prevNode.TanIn;
+                                }
+                                else
+                                {
+                                    // If they're not the same spot, we connect them with a line
+                                    firstNode.prev = prevNode;
+                                    firstNode.TanIn = Vector2.zero;
+                                    firstNode.UseTanIn = false;
+
+                                    prevNode.next = firstNode;
+                                    prevNode.TanOut = Vector2.zero;
+                                    prevNode.UseTanOut = false;
+                                }
+                            }
+
+                            shape.AddLoop(curLoop);
+                            curLoop = null;
+                            prevNode = null;
+                            firstNode = null;
+
+                            lastCmd = (char)0;
+                        }
+                    }
+                    else
+                    {
+                        break;  // TODO: ERROR
+                    }
+                }
+
+
+                if (curLoop != null)
+                {
+                    shape.AddLoop(curLoop);
+                    curLoop = null;
+                    prevNode = null;
+                    firstNode = null;
+                }
+            }
+
+            public static SVGMat ProcessMatrixAttribute(string attrib)
+            {
+                SVGMat ret = SVGMat.Identity();
+
+                if (attrib.StartsWith("matrix(") == true)
+                {
+                    int matlen = "matrix(".Length;
+                    // Not exactly robust parsing - an extra -1 for the closing parenthesis
+                    string matValues = attrib.Substring(matlen, attrib.Length - matlen - 1);
+                    string[] vals = matValues.Split(new char[] { ',' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                    float.TryParse(vals[0].Trim(), out ret.x.x);
+                    float.TryParse(vals[1].Trim(), out ret.x.y);
+                    float.TryParse(vals[2].Trim(), out ret.y.x);
+                    float.TryParse(vals[3].Trim(), out ret.y.y);
+                    float.TryParse(vals[4].Trim(), out ret.t.x);
+                    float.TryParse(vals[5].Trim(), out ret.t.y);
+                }
+
+                return ret;
+            }
+
+            public static void ProcessShapeStyleAttrib(BShape shape, string attrib)
+            {
+                Dictionary<string, string> styles = Utils.SplitProperties(attrib);
+                string fill;
+                if (styles.TryGetValue("fill", out fill) == true)
+                {
+                    if (fill == "none")
+                        shape.fill = false;
+                    else
+                    {
+                        shape.fill = true;
+                        shape.fillColor = Utils.ConvertSVGStringToColor(fill);
+                    }
+                }
+
+                string fillopacity;
+                if (styles.TryGetValue("fill-opacity", out fillopacity) == true)
+                {
+                    float opacity;
+                    if (float.TryParse(fillopacity, out opacity) == true)
+                        shape.fillColor.a = opacity;
+                }
+
+                string stroke;
+                if (styles.TryGetValue("stroke", out stroke) == true)
+                {
+                    if (stroke == "none")
+                        shape.stroke = false;
+                    else
+                    {
+                        shape.stroke = true;
+                        shape.strokeColor = Utils.ConvertSVGStringToColor(fill);
+                    }
+                }
+
+                string strokeopacity;
+                if (styles.TryGetValue("stroke-opacity", out strokeopacity) == true)
+                {
+                    float opacity;
+                    if (float.TryParse(strokeopacity, out opacity) == true)
+                        shape.strokeColor.a = opacity;
+                }
+
+                string strokewidth;
+                if (styles.TryGetValue("stroke-width", out strokewidth) == true)
+                {
+                    float num;
+                    Utils.LengthUnit unit;
+                    if (Utils.ExtractLengthString(strokewidth, out num, out unit) == true)
+                        shape.strokeWidth = Utils.ConvertUnitsToMeters(num, unit);
+                }
+
+
+                string strokecap;
+                if (styles.TryGetValue("stroke-linecap", out strokecap) == true)
+                    shape.cap = BShape.StringToCap(strokecap);
+
+                string strokejoin;
+                if (styles.TryGetValue("stroke-linejoin", out strokejoin) == true)
+                    shape.corner = BShape.StringToCorner(strokejoin);
+            }
+
+            public static void ProcessShapeIdAttrib(BShape shape, string attrib)
+            { 
+                shape.name = attrib;
             }
 
             public static bool ConsumeWhitespace(string str, ref int idx)
@@ -848,6 +1055,32 @@ namespace PxPre
                     return xmlAttr;
 
                 return ele.GetAttributeNode($"{ xmlns}:{ attr}");
+            }
+
+            public static bool AttribToFloat(System.Xml.XmlAttribute attr, ref float f)
+            { 
+                if(attr == null || string.IsNullOrEmpty(attr.Value) == true)
+                    return false;
+
+                float pf;
+                if(float.TryParse(attr.Value, out pf) == true)
+                { 
+                    f = pf;
+                    return true;
+                }
+                return false;
+            }
+
+            public static IEnumerable<System.Xml.XmlElement> EnumerateChildElements(System.Xml.XmlElement ele)
+            { 
+                foreach(System.Xml.XmlNode node in ele)
+                { 
+                    if(node.NodeType == System.Xml.XmlNodeType.Element == false)
+                        continue;
+
+                    System.Xml.XmlElement childEle = node as System.Xml.XmlElement;
+                    yield return childEle;
+                }
             }
         }
     }

@@ -27,6 +27,13 @@ namespace PxPre
 { 
     namespace Berny
     {
+        public enum IslandTypeRequest
+        { 
+            Any,
+            Open,
+            Closed
+        }
+
         /// <summary>
         /// Cached values for how much a node's part will move (per-unit)
         /// during inflation.
@@ -79,10 +86,10 @@ namespace PxPre
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>
             /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
-            /// if each app session runs deterministicly the same. Used for identifying objects when
+            /// if each app session runs deterministically the same. Used for identifying objects when
             /// debugging.
             /// </summary>
-            int debugCounter;
+            public int debugCounter;
 #endif
 
             /// <summary>
@@ -133,6 +140,68 @@ namespace PxPre
                         BNode bnlast = this.nodes[lastIdx];
                         bnfirst.prev = bnlast;
                         bnlast.next = bnfirst;
+                    }
+                }
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                this.debugCounter = Utils.RegisterCounter();
+#endif
+            }
+
+            public BLoop(BShape shape, bool closed, params Vector2 [] linePoints)
+            {
+                // Arguably, we could have made the style of creation between this and the 
+                // "params BNode.BezierInfo []" constructor the same style of either
+                // storing in an array and connecting afterwards (the other) or making 
+                // connections as we go and storing the last (this one).
+                if (shape != null)
+                    shape.AddLoop(this);
+
+                if(linePoints.Length == 0)
+                { }
+                else if(linePoints.Length == 1)
+                { 
+                    BNode bn = new BNode(this, linePoints[0]);
+                    this.nodes.Add(bn);
+                }
+                else if(linePoints.Length == 2)
+                {
+                    BNode bnA = new BNode(this, linePoints[0]);
+                    this.nodes.Add(bnA);
+
+                    BNode bnB = new BNode(this, linePoints[1]);
+                    this.nodes.Add(bnB);
+
+                    bnA.next = bnB;
+                    bnB.prev = bnA;
+                }
+                else
+                { 
+                    BNode first = null;
+                    BNode prev = null;
+
+                    foreach(Vector2 v2 in linePoints)
+                    { 
+                        BNode bn = new BNode(this, v2);
+                        this.nodes.Add(bn);
+
+                        if(prev == null)
+                        { 
+                            first = bn;
+                        }
+                        else
+                        { 
+                            prev.next = bn;
+                            bn.prev = prev;
+                        }
+                        prev = bn;
+                    }
+
+                    if(closed == true)
+                    {
+                        // At this point, prev will point to the last item.
+                        first.prev = prev;
+                        prev.next = first;
                     }
                 }
 
@@ -307,7 +376,7 @@ namespace PxPre
             /// Returns a node from each island found.
             /// </summary>
             /// <returns>A node from each island found in the loop.</returns>
-            public List<BNode> GetIslands()
+            public List<BNode> GetIslands(IslandTypeRequest req = IslandTypeRequest.Any)
             { 
                 List<BNode> ret = new List<BNode>();
                 HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
@@ -317,7 +386,22 @@ namespace PxPre
                     BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
                     BNode.EndpointQuery eq = n.GetPathLeftmost();
 
-                    ret.Add(eq.node);
+                    switch(req)
+                    { 
+                        case IslandTypeRequest.Any:
+                            ret.Add(eq.node);
+                            break;
+
+                        case IslandTypeRequest.Closed:
+                            if(eq.result == BNode.EndpointResult.Cyclical)
+                                ret.Add(eq.node);
+                            break;
+
+                        case IslandTypeRequest.Open:
+                            if(eq.result == BNode.EndpointResult.SuccessfulEdge)
+                                ret.Add(eq.node);
+                            break;
+                    }
 
                     BNode it = eq.node;
                     while (it != null)
@@ -524,31 +608,27 @@ namespace PxPre
                         new BNode(
                             this, 
                             Vector2.Lerp(targ.Pos,  targ.next.Pos, lambda));
+
+                    bn.UseTanIn = false;
+                    bn.UseTanOut = false;
                 }
                 else if(pb.pathType == BNode.PathType.BezierCurve)
                 {
-                    float A, B, C, D;
-                    Utils.GetBezierWeights(lambda, out A, out B, out C, out D);
-
-                    Vector2 newPos =
-                        A * targ.Pos +
-                        B * (targ.Pos + pb.prevTanOut) +
-                        C * (targ.next.Pos + pb.nextTanIn) +
-                        D * targ.next.Pos;
-
-                    Utils.GetBezierDerivativeWeights(lambda, out A, out B, out C, out D);
-
-                    Vector2 newTan =
-                        A * targ.Pos +
-                        B * (targ.Pos + pb.prevTanOut) +
-                        C * (targ.next.Pos + pb.nextTanIn) +
-                        D * targ.next.Pos;
-
+                    BNode.SubdivideInfo sdi = targ.GetSubdivideInfo(lambda);
                     bn = new BNode(
                             this,
-                            newPos,
-                            -newTan,
-                            newTan);
+                            sdi.subPos,
+                            sdi.subIn,
+                            sdi.subOut);
+
+                    targ.next.SetTangentDisconnected();
+                    targ.SetTangentDisconnected();
+
+                    bn.UseTanIn = true;
+                    bn.UseTanOut = true;
+                    targ.TanOut = sdi.prevOut;              
+                    targ.next.TanIn = sdi.nextIn;
+
                 }
 
                 if(bn != null)
@@ -558,11 +638,6 @@ namespace PxPre
                     bn.next.prev = bn;
                     bn.prev.next = bn;
 
-                    bn.next.SetTangentDisconnected();
-                    bn.next.TanIn *= 0.5f;
-
-                    bn.prev.SetTangentDisconnected();
-                    bn.prev.TanOut *= 0.5f;
                     //
                     this.nodes.Add(bn);
 
@@ -698,11 +773,20 @@ namespace PxPre
                 return ret;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="v2"></param>
+            /// <returns></returns>
             public static Vector2 RotateEdge90CCW(Vector2 v2)
             { 
                 return new Vector2(-v2.y, v2.x);
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="amt"></param>
             public void Inflate(float amt)
             { 
                 Dictionary<BNode, InflationCache> cachedInf = 
@@ -736,12 +820,19 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
             public void Reverse()
             { 
                 foreach(BNode bn in this.nodes)
                     bn._Invert();
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="dst"></param>
             public void DumpInto(BLoop dst)
             { 
                 if(dst == this)
@@ -754,6 +845,16 @@ namespace PxPre
                 }
 
                 this.nodes.Clear();
+            }
+
+            /// <summary>
+            /// Call BNode.Deinflect() for all nodes in the loop.
+            /// </summary>
+            public void Deinflect()
+            { 
+                List<BNode> nodeCpy = new List<BNode>( this.nodes);
+                foreach(BNode bn in nodeCpy)
+                    bn.Deinflect();
             }
         }
     } 

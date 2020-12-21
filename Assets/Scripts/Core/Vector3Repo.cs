@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,20 +28,20 @@ namespace PxPre
 {
     namespace Berny
     {
-        public class Vector2Repo
+        public class Vector3Repo : MonoBehaviour
         {
-            List<Vector2> vectors = new List<Vector2>();
-            Dictionary<Vector2, int> lookup = new Dictionary<Vector2, int>();
+            List<Vector3> vectors = new List<Vector3>();
+            Dictionary<Vector3, int> lookup = new Dictionary<Vector3, int>();
 
-            public bool HasVector(Vector2 v)
-            { 
+            public bool HasVector(Vector3 v)
+            {
                 return lookup.ContainsKey(v);
             }
 
             public int GetVectorID(Vector3 v)
-            { 
+            {
                 int ret;
-                if(lookup.TryGetValue(v, out ret) == true)
+                if (lookup.TryGetValue(v, out ret) == true)
                     return ret;
 
                 int idx = lookup.Count;
@@ -50,44 +51,14 @@ namespace PxPre
                 return idx;
             }
 
-            public Vector2 GetVector(int idx)
-            { 
+            public Vector3 GetVector(int idx)
+            {
                 return this.vectors[idx];
             }
 
-            public Vector2 [] GetVector2Array()
-            { 
-                return this.vectors.ToArray();
-            }
-
-            public Vector3 [] GetVector3Array()
-            { 
-                Vector3 [] ret = new Vector3 [this.vectors.Count];
-
-                int ct = this.vectors.Count;
-                for (int i = 0; i < ct; ++i)
-                {
-                    ret[i] = this.vectors[i];
-                }
-
-                return ret;
-            }
-
-            public Vector3 [] GetVector3Array(float z)
+            public Vector3[] GetVector3Array()
             {
-                Vector3[] ret = new Vector3[this.vectors.Count];
-
-                int ct = this.vectors.Count;
-                for (int i = 0; i < ct; ++i)
-                {
-                    ret[i] = 
-                        new Vector3(
-                            this.vectors[i].x,
-                            this.vectors[i].y,
-                            z);
-                }
-
-                return ret;
+                return this.vectors.ToArray();
             }
         }
     }

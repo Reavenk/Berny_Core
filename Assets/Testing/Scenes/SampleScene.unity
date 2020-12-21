@@ -150,6 +150,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d20c3262a89bc64690fb5bc0441d625, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  standardShader: {fileID: 10755, guid: 0000000000000000f000000000000000, type: 0}
 --- !u!4 &562318029
 Transform:
   m_ObjectHideFlags: 0

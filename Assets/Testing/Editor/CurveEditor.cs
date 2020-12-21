@@ -33,6 +33,7 @@ public class CurveEditor : Editor
     Vector2 averagePoint = Vector2.zero;
 
     public float infAmt = 0.05f;
+    public float strokeWidth = 0.1f;
 
     public static string textToCreate = "Text To Create!";
     public static bool drawKnots = true;
@@ -57,7 +58,15 @@ public class CurveEditor : Editor
             t.curveDocument.TestValidity();
 
         if(GUILayout.Button("Fill") == true)
-            t.UpdateFillsForAll();
+            t.UpdateFillsForAll( BernyTest.FillType.Filled, this.strokeWidth);
+
+        if (GUILayout.Button("Fill Outline") == true)
+            t.UpdateFillsForAll( BernyTest.FillType.Outlined, this.strokeWidth);
+        
+        if (GUILayout.Button("Fill Outlined") == true)
+            t.UpdateFillsForAll( BernyTest.FillType.FilledAndOutlined, this.strokeWidth);
+
+        this.strokeWidth = EditorGUILayout.Slider("Stroke Width", this.strokeWidth, 0.001f, 1.0f);
 
         GUILayout.BeginHorizontal();
             if(GUILayout.Button("Select All") == true)
@@ -85,7 +94,14 @@ public class CurveEditor : Editor
                 "CircAnCirc",
                 "Complex",
                 "Complex2",
-                "Edges"
+                "Edges",
+                "ShapeCircle",
+                "ShapeEllipse",
+                "ShapeLine",
+                "ShapePolygon",
+                "ShapePolyline",
+                "ShapeRect"
+
             };
 
         foreach(string f in files)
@@ -93,7 +109,8 @@ public class CurveEditor : Editor
             if (GUILayout.Button("LOAD " + f) == true)
             {
                 t.curveDocument.Clear();
-                SVGSerializer.Load(f + ".svg", t.curveDocument);
+                SVGSerializer.Load("TestSamples/" + f + ".svg", t.curveDocument);
+                t.curveDocument.FlushDirty();
             }
         }
 
@@ -107,7 +124,10 @@ public class CurveEditor : Editor
                 foreach(BShape bs in l.shapes)
                 { 
                     foreach(BLoop bl in bs.loops)
+                    {
+                        bl.Deinflect();
                         bl.Inflate(this.infAmt);
+                    }
                 }
             }
         }
@@ -115,7 +135,10 @@ public class CurveEditor : Editor
         if(GUILayout.Button("Edgeify") == true)
         {
             foreach (BLoop bl in t.curveDocument.EnumerateLoops())
+            {
+                bl.Deinflect();
                 PxPre.Berny.Operators.Edgify(bl, this.infAmt);
+            }
         }
 
         GUILayout.Space(20.0f);
@@ -424,14 +447,14 @@ public class CurveEditor : Editor
                 
                 // If loops is filled, srcLoop should be non-null
                 if (loops.Count > 0)
-                    Boolean.Union(srcLoop, true, loops.ToArray());
+                    Boolean.Union(srcLoop, loops.ToArray());
             }
 
             if(GUILayout.Button("Test Difference") == true)
             {
                 List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(this.selectedNodes);
                 if(loops.Count >= 2)
-                    Boolean.Difference( loops[0], loops[1], true);
+                    Boolean.Difference( loops[0], loops[1]);
             }
 
             if(GUILayout.Button("Test Intersection") == true)
@@ -446,6 +469,96 @@ public class CurveEditor : Editor
                 List<BLoop> loops = Boolean.GetUniqueLoopsInEncounteredOrder(this.selectedNodes);
                 if (loops.Count >= 2)
                     Boolean.Exclusion(loops[0], loops[1], true);
+            }
+
+            if(GUILayout.Button("Bridge") == true)
+            { 
+                HashSet<BLoop> loops = new HashSet<BLoop>();
+                List<BLoop> ol = new List<BLoop>();
+
+                foreach(BNode bn in this.selectedNodes)
+                { 
+                    if(loops.Add(bn.parent) == true)
+                        ol.Add(bn.parent);
+                }
+
+                if(ol.Count > 0)
+                {
+                    BLoop blTarg = ol[0];
+                    if(ol.Count >= 2)
+                    {
+                        //Boolean.Union(blTarg, ol[1]);
+                        ol[1].DumpInto(blTarg);
+                    }
+
+                    List<BNode> islands = blTarg.GetIslands( IslandTypeRequest.Closed);
+                    if(islands.Count >= 2)
+                    { 
+                        List<BNode> segmentsA = new List<BNode>(islands[0].Travel());
+                        List<BNode> segmentsB = new List<BNode>(islands[1].Travel());
+
+                        Boolean.BoundingMode bm = Boolean.GetLoopBoundingMode(segmentsA, segmentsB);
+                        // We want segmentsA to be the larger outside
+                        if(bm == Boolean.BoundingMode.RightSurroundsLeft)
+                        {
+                            List<BNode> tmp = segmentsB;
+                            segmentsB = segmentsA;
+                            segmentsA = tmp;
+                        }
+
+                        if(BNode.CalculateWinding(segmentsB) > 0.0f)
+                            segmentsB[0].InvertChainOrder();
+
+                        if (BNode.CalculateWinding(segmentsA) < 0.0f)
+                            segmentsA[0].InvertChainOrder();
+
+                        BNode inR;
+                        float inf;
+                        Vector2 inmaxR;
+                        BNode.GetMaxPoint(segmentsB, out inR, out inmaxR, out inf, 0);
+
+                        Vector2 rayCont = inmaxR + new Vector2(1.0f, 0.0f);
+
+                        List<float> interCurve = new List<float>();
+                        List<float> interLine = new List<float>();
+                        List<BNode> colNodes = new List<BNode>();
+                        foreach(BNode bn in segmentsA)
+                        { 
+                            bn.ProjectSegment(
+                                inmaxR, 
+                                rayCont, 
+                                interCurve, 
+                                interLine, 
+                                colNodes);
+                        }
+
+                        BNode closest = null;
+                        float curveT = 0.0f;    
+                        float rayDst = 0.0f; // Since the offset for the ray control is positive 1, this will be unit dist
+
+                        for(int i = 0; i < interCurve.Count; ++i)
+                        { 
+                            if(interCurve[i] < 0.0f || interCurve[i] > 1.0f)
+                                continue;
+
+                            if(interLine[i] <= 0.0f)
+                                continue;
+
+                            if(closest == null || interLine[i] < rayDst)
+                            {
+                                closest = colNodes[i];
+                                rayDst = interLine[i];
+                                curveT = interCurve[i];
+                            }
+                        }
+
+                        if(closest != null)
+                        { 
+                            // We have what we need for a connection.
+                            BNode.MakeBridge(inR, inf, closest, curveT);
+                        }
+                    }
+                }
             }
         }
 
@@ -480,11 +593,14 @@ public class CurveEditor : Editor
 
         Handles.BeginGUI();
             foreach(BNode selbn in this.selectedNodes)
+            {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-            GUILayout.Label($"Selected: {selbn.debugCounter.ToString()} - {selbn.tangentMode.ToString()} - {selbn.Pos.x} : {selbn.Pos.y}");
+                int parentID = (selbn.parent != null) ? selbn.parent.debugCounter : -1;
+                GUILayout.Label($"Selected: {selbn.debugCounter.ToString()} - {selbn.tangentMode.ToString()} - {selbn.Pos.x} : {selbn.Pos.y} - [Parent: {parentID}]");
 #else
-            GUILayout.Label($"Selected: {selbn.tangentMode.ToSTring()} - {selbn.Pos.x} : {selbn.Pos.y}");
+                GUILayout.Label($"Selected: {selbn.tangentMode.ToSTring()} - {selbn.Pos.x} : {selbn.Pos.y}");
 #endif
+            }
 
             this.DoUIDocument(t.curveDocument, 0.0f);
         Handles.EndGUI();
@@ -644,6 +760,11 @@ public class CurveEditor : Editor
 
         if (ct > 0.0f)
             this.averagePoint /= ct;
+    }
+
+    void TestBridge(BLoop loopA, BLoop loopB)
+    { 
+
     }
 
     // Testing intersection functionality - logic going to be moved to relevant core classes.
