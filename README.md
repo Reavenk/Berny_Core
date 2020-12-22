@@ -13,8 +13,8 @@ paths and SVGs, but is in current development.
 The library is not fully featured, use at your own risk.
 
 # Intall
-To install, copy the Script library to your project. The library is under
-the namespace PxPre.Berny.
+To install, copy repository in your Unity project, or reference as subdirectory.
+The library should work for Unity 5+.
 
 # Preview
 This is the core library that can be added as a submodules to other repos
