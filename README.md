@@ -10,12 +10,18 @@ Bezier curves.
 This library has minimal functionality for loading, saving and editing Bezier
 paths and SVGs, but is in current development.
 
+The library is not fully featured, use at your own risk.
+
 # Intall
 To install, copy the Script library to your project. The library is under
 the namespace PxPre.Berny.
 
 # Preview
-For a basic preview, see the scene in Testing/Scenes/SampleScene.unity.
+This is the core library that can be added as a submodules to other repos
+without adding any additional development overhead. For testing, development
+and samples, see the development repo (which submodules this one),
+https://github.com/Reavenk/Berny_Dev
+For the basic development test harness, see the scene in Testing/Scenes/SampleScene.unity.
 
 It contains a test scene where the Test GameObject can be selected to 
 edit a path in the scene, along with controls in the Inspector for it.
