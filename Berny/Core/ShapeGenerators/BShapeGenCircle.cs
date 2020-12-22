@@ -134,13 +134,13 @@ namespace PxPre
                 this.shape.AddLoop(nodes.ToArray());
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrCX = shapeEle.GetAttributeNode("cx");
                 SVGSerializer.AttribToFloat(attrCX, ref this.cx);
 
                 System.Xml.XmlAttribute attrCY = shapeEle.GetAttributeNode("cy");
-                SVGSerializer.AttribToFloat(attrCY, ref this.cy);
+                SVGSerializer.AttribToFloat(attrCY, ref this.cy, invertY);
 
                 System.Xml.XmlAttribute attrR = shapeEle.GetAttributeNode("r");
                 SVGSerializer.AttribToFloat(attrR, ref this.radius);
@@ -148,10 +148,10 @@ namespace PxPre
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttribute("cx", this.cx.ToString());
-                shapeEle.SetAttribute("cy", this.cy.ToString());
+                shapeEle.SetAttribute("cy", SVGSerializer.InvertBranch(this.cy, invertY).ToString());
                 shapeEle.SetAttribute("radius", this.radius.ToString());
 
                 return true;

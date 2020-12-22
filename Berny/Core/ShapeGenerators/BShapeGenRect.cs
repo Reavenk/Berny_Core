@@ -189,17 +189,17 @@ namespace PxPre
                 }
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrX = shapeEle.GetAttributeNode("x");
                 SVGSerializer.AttribToFloat(attrX, ref this.fx);
                 System.Xml.XmlAttribute attrY = shapeEle.GetAttributeNode("y");
-                SVGSerializer.AttribToFloat(attrY, ref this.fy);
+                SVGSerializer.AttribToFloat(attrY, ref this.fy, invertY);
 
                 System.Xml.XmlAttribute attrWidth = shapeEle.GetAttributeNode("width");
                 SVGSerializer.AttribToFloat(attrWidth, ref this.width);
                 System.Xml.XmlAttribute attrHeight = shapeEle.GetAttributeNode("height");
-                SVGSerializer.AttribToFloat(attrHeight, ref this.height);
+                SVGSerializer.AttribToFloat(attrHeight, ref this.height, invertY);
 
                 System.Xml.XmlAttribute attrRX = shapeEle.GetAttributeNode("rx");
                 SVGSerializer.AttribToFloat(attrRX, ref this.rx);
@@ -209,13 +209,13 @@ namespace PxPre
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttribute("x", this.fx.ToString());
-                shapeEle.SetAttribute("y", this.fy.ToString());
+                shapeEle.SetAttribute("y", SVGSerializer.InvertBranch(this.fy, invertY).ToString());
 
                 shapeEle.SetAttribute("width", this.width.ToString());
-                shapeEle.SetAttribute("height", this.height.ToString());
+                shapeEle.SetAttribute("height", SVGSerializer.InvertBranch(this.height, invertY).ToString());
 
                 shapeEle.SetAttribute("rx", this.rx.ToString());
                 shapeEle.SetAttribute("ry", this.ry.ToString());

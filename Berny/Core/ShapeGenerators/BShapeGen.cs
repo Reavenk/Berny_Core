@@ -47,8 +47,8 @@ namespace PxPre
             public abstract void Reconstruct();
 
             public virtual string GetSVGXMLName {get => this.ShapeType;}
-            public abstract bool LoadFromSVGXML(System.Xml.XmlElement shapeEle);
-            public abstract bool SaveToSVGXML(System.Xml.XmlElement shapeEle);
+            public abstract bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY);
+            public abstract bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY);
         }
     }
 }

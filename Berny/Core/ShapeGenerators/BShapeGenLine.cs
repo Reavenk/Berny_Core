@@ -104,7 +104,7 @@ namespace PxPre
                 this.FlagDirty();
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrX1 = shapeEle.GetAttributeNode("x1");
                 System.Xml.XmlAttribute attrY1 = shapeEle.GetAttributeNode("y1");
@@ -112,18 +112,18 @@ namespace PxPre
                 System.Xml.XmlAttribute attrY2 = shapeEle.GetAttributeNode("y2");
 
                 SVGSerializer.AttribToFloat(attrX1, ref this.pt0.x);
-                SVGSerializer.AttribToFloat(attrY1, ref this.pt0.y);
+                SVGSerializer.AttribToFloat(attrY1, ref this.pt0.y, invertY);
                 SVGSerializer.AttribToFloat(attrX2, ref this.pt1.x);
-                SVGSerializer.AttribToFloat(attrY2, ref this.pt1.y);
+                SVGSerializer.AttribToFloat(attrY2, ref this.pt1.y, invertY);
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttributeNode("x1", this.pt0.x.ToString());
-                shapeEle.SetAttributeNode("y1", this.pt0.y.ToString());
+                shapeEle.SetAttributeNode("y1", SVGSerializer.InvertBranch(this.pt0.y, invertY).ToString());
                 shapeEle.SetAttributeNode("x2", this.pt1.x.ToString());
-                shapeEle.SetAttributeNode("y2", this.pt1.y.ToString());
+                shapeEle.SetAttributeNode("y2", SVGSerializer.InvertBranch(this.pt1.y, invertY).ToString());
 
                 return true;
             }

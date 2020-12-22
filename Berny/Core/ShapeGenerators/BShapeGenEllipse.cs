@@ -154,7 +154,7 @@ namespace PxPre
                 }
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrCX = shapeEle.GetAttributeNode("cx");
                 SVGSerializer.AttribToFloat(attrCX, ref this.cx);
@@ -171,10 +171,10 @@ namespace PxPre
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttribute("cx", this.cx.ToString());
-                shapeEle.SetAttribute("cy", this.cy.ToString());
+                shapeEle.SetAttribute("cy", SVGSerializer.InvertBranch(this.cy, invertY).ToString());
 
                 shapeEle.SetAttribute("rx", this.rx.ToString());
                 shapeEle.SetAttribute("ry", this.ry.ToString());

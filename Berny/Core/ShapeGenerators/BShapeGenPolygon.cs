@@ -109,11 +109,11 @@ namespace PxPre
                 this.FlagDirty();
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attribPoints = shapeEle.GetAttributeNode("points");
                 if(attribPoints != null && string.IsNullOrEmpty(attribPoints.Value) == false)
-                    this.points = SVGSerializer.SplitPointsString(attribPoints.Value);
+                    this.points = SVGSerializer.SplitPointsString(attribPoints.Value, invertY);
 
                 System.Xml.XmlAttribute attribFillRule = shapeEle.GetAttributeNode("fill-rule");
                 if(attribFillRule != null && string.IsNullOrEmpty(attribFillRule.Value) == false)
@@ -129,9 +129,9 @@ namespace PxPre
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
-                shapeEle.SetAttribute("points", SVGSerializer.PointsToPointsString(this.points));
+                shapeEle.SetAttribute("points", SVGSerializer.PointsToPointsString(this.points, invertY));
 
                 switch(this.fillRule)
                 {

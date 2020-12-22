@@ -84,7 +84,7 @@ namespace PxPre
                 this.FlagDirty();
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrPoints = shapeEle.GetAttributeNode("points");
 
@@ -92,16 +92,16 @@ namespace PxPre
                     return false;
 
                 string val = attrPoints.Value;
-                this.polyPoints = SVGSerializer.SplitPointsString(val);
+                this.polyPoints = SVGSerializer.SplitPointsString(val, invertY);
 
                 return true;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle)
+            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttributeNode(
                     "points", 
-                    SVGSerializer.PointsToPointsString(this.polyPoints));
+                    SVGSerializer.PointsToPointsString(this.polyPoints, invertY));
 
                 return true;
             }

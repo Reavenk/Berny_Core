@@ -30,13 +30,13 @@ namespace PxPre
     {
         public static class SVGSerializer
         { 
-            public static bool Save(string filename, Document doc)
+            public static bool Save(string filename, Document doc, bool invertY = true)
             { 
                 System.Xml.XmlDocument xmlDoc = new System.Xml.XmlDocument();
                 System.Xml.XmlElement root = xmlDoc.CreateElement("svg");
                 xmlDoc.AppendChild(root);
 
-                if(ConvertToXML(doc, xmlDoc, root) == false)
+                if(ConvertToXML(doc, xmlDoc, root, invertY) == false)
                     return false;
 
                 xmlDoc.Save(filename);
@@ -44,7 +44,7 @@ namespace PxPre
                 return true;
             }
 
-            public static bool ConvertToXML(Document doc, System.Xml.XmlDocument xmldoc, System.Xml.XmlElement xmlroot)
+            public static bool ConvertToXML(Document doc, System.Xml.XmlDocument xmldoc, System.Xml.XmlElement xmlroot, bool invertY)
             { 
                 xmlroot.SetAttribute("version", "PxPreVector", "0.0.1");
                 xmlroot.SetAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/");
@@ -146,7 +146,7 @@ namespace PxPre
                             // save the SVG stuff - if not, it's a path and we'll fallback on saving the explicit path.
                             if(shape.shapeGenerator != null)
                             { 
-                                shape.shapeGenerator.SaveToSVGXML(eleShape);
+                                shape.shapeGenerator.SaveToSVGXML(eleShape, invertY);
                                 continue;
                             }
 
@@ -169,7 +169,7 @@ namespace PxPre
                                     BNode.EndpointQuery eq = Utils.GetFirstInHash(nodesLeft).GetPathLeftmost();
                                     BNode it = eq.node;
 
-                                    drawAttrib += $"M {eq.node.Pos.x}, {eq.node.Pos.y}";
+                                    drawAttrib += $"M {eq.node.Pos.x}, {InvertBranch(eq.node.Pos.y, invertY)}";
                                     while(true)
                                     { 
                                         if(it == null)
@@ -187,7 +187,7 @@ namespace PxPre
                                                 lastSymbol = "L";
                                             }
 
-                                            drawAttrib += $"  {it.next.Pos.x.ToString()}, {it.next.Pos.y.ToString()}";
+                                            drawAttrib += $"  {it.next.Pos.x.ToString()}, {InvertBranch(it.next.Pos.y, invertY).ToString()}";
                                         }
                                         else
                                         { 
@@ -206,7 +206,7 @@ namespace PxPre
                                                 lastSymbol = "C";
                                             }
 
-                                            drawAttrib += $" {it.Pos.x + curOut.x},{it.Pos.y + curOut.y} {it.next.Pos.x + nextIn.x},{it.next.Pos.y + nextIn.y} {it.next.Pos.x},{it.next.Pos.y}";
+                                            drawAttrib += $" {it.Pos.x + curOut.x},{InvertBranch(it.Pos.y + curOut.y, invertY)} {it.next.Pos.x + nextIn.x},{InvertBranch(it.next.Pos.y + nextIn.y, invertY)} {it.next.Pos.x},{InvertBranch(it.next.Pos.y, invertY)}";
 
                                         }
 
@@ -232,7 +232,7 @@ namespace PxPre
                 return true;
             }
 
-            public static bool Load(string filename, Document doc)
+            public static bool Load(string filename, Document doc, bool invertY = true)
             { 
                 System.Xml.XmlDocument xmlDoc = new System.Xml.XmlDocument();
                 try
@@ -244,10 +244,10 @@ namespace PxPre
                     Debug.Log("Error loading SVG: " + ex.Message);
                     return false;
                 }
-                return ConvertFromXML(xmlDoc, doc);
+                return ConvertFromXML(xmlDoc, doc, invertY);
             }
 
-            public static bool ConvertFromXML(System.Xml.XmlDocument xmlDoc, Document doc)
+            public static bool ConvertFromXML(System.Xml.XmlDocument xmlDoc, Document doc, bool invertY)
             { 
                 System.Xml.XmlElement root = xmlDoc.DocumentElement;
                 if(root.Name != "svg")
@@ -303,7 +303,7 @@ namespace PxPre
                         // It could just be a shape at the root level.
                         // If not, CreateShapeFromXML will silently and gracefully do nothing.
                         // but the return value can be checked if it's non-null.
-                        CreateShapeFromXML(ele, doc, null);
+                        CreateShapeFromXML(ele, doc, null, invertY);
                     }
                 }
 
@@ -351,7 +351,7 @@ namespace PxPre
                         layer.Locked = true;
 
                     foreach(System.Xml.XmlElement eleLE in EnumerateChildElements(eleLayer))
-                        CreateShapeFromXML(eleLE, doc, layer);
+                        CreateShapeFromXML(eleLE, doc, layer, invertY);
                 }
 
                 return true;
@@ -365,71 +365,71 @@ namespace PxPre
                 return layer;
             }
 
-            public static BShape CreateShapeFromXML(System.Xml.XmlElement ele, Document doc, Layer layer)
+            public static BShape CreateShapeFromXML(System.Xml.XmlElement ele, Document doc, Layer layer, bool invertY)
             {
                 BShape bs = null;
                 if (ele.Name == "path")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc,layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc,layer), ele, out mat, invertY);
 
                     System.Xml.XmlAttribute attrPathDraw = ele.Attributes["d"];
                     if (attrPathDraw != null)
-                        ProcessPathDrawAttrib(bs, attrPathDraw.Value, mat);
+                        ProcessPathDrawAttrib(bs, attrPathDraw.Value, mat, invertY);
                 }
                 else if (ele.Name == "rect")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenRect gen = new BShapeGenRect(bs, Vector2.zero, Vector2.one);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
 
                 }
                 else if (ele.Name == "ellipse")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenEllipse gen = new BShapeGenEllipse(bs, Vector2.zero, Vector2.one);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
                 }
                 else if (ele.Name == "circle")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenCircle gen = new BShapeGenCircle(bs, Vector2.zero, 1.0f);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
                 }
                 else if (ele.Name == "polyline")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenPolyline gen = new BShapeGenPolyline(bs);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
                 }
                 else if (ele.Name == "polygon")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenPolygon gen = new BShapeGenPolygon(bs);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
                 }
                 else if (ele.Name == "line")
                 {
                     SVGMat mat;
-                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat);
+                    bs = CreateTemplateShapeFromXML(ResolveUsableLayer(doc, layer), ele, out mat, invertY);
 
                     BShapeGenLine gen = new BShapeGenLine(bs, Vector2.zero, Vector2.zero);
-                    gen.LoadFromSVGXML(ele);
+                    gen.LoadFromSVGXML(ele, invertY);
                     bs.shapeGenerator = gen;
                 }
 
@@ -439,13 +439,13 @@ namespace PxPre
                 return bs;
             }
 
-            public static BShape CreateTemplateShapeFromXML(Layer layer, System.Xml.XmlElement ele, out SVGMat mat)
+            public static BShape CreateTemplateShapeFromXML(Layer layer, System.Xml.XmlElement ele, out SVGMat mat, bool invertY)
             {
                 BShape bs = new BShape(Vector2.zero, 0.0f);
                 layer.shapes.Add(bs);
                 bs.layer = layer;
 
-                LoadShapeInfo(bs, ele, out mat);
+                LoadShapeInfo(bs, ele, out mat, invertY);
                 return bs;
             }
 
@@ -495,7 +495,7 @@ namespace PxPre
                 return ret;
             }
 
-            public static List<Vector2> SplitPointsString(string pointsString)
+            public static List<Vector2> SplitPointsString(string pointsString, bool invertY)
             { 
                 List<Vector2> ret = new List<Vector2>();
 
@@ -556,6 +556,9 @@ namespace PxPre
                     if(float.TryParse(strY, out newV.y) == false)
                         break;
 
+                    if(invertY == true)
+                        newV.y = -newV.y;
+
                     ret.Add(newV);
 
                     idx = end;
@@ -564,16 +567,16 @@ namespace PxPre
                 return ret;
             }
 
-            public static string PointsToPointsString(IEnumerable<Vector2> ieV2)
+            public static string PointsToPointsString(IEnumerable<Vector2> ieV2, bool invertY)
             { 
                 List<string> strs = new List<string>();
                 foreach(Vector2 v2 in ieV2)
-                    strs.Add(v2.x.ToString() + "," + v2.y.ToString());
+                    strs.Add(v2.x.ToString() + "," + InvertBranch(v2.y, invertY).ToString());
 
                 return string.Join(" ", strs);
             }
 
-            public static void LoadShapeInfo(BShape shape, System.Xml.XmlElement ele, out SVGMat matrix)
+            public static void LoadShapeInfo(BShape shape, System.Xml.XmlElement ele, out SVGMat matrix, bool invertY)
             {
                 System.Xml.XmlAttribute attrPathID = ele.Attributes["id"];
                 if (attrPathID != null)
@@ -585,10 +588,10 @@ namespace PxPre
 
 
                 System.Xml.XmlAttribute attrTrans = ele.Attributes["transform"];
-                matrix = (attrTrans != null) ? ProcessMatrixAttribute(attrTrans.Value) : SVGMat.Identity();
+                matrix = (attrTrans != null) ? ProcessMatrixAttribute(attrTrans.Value, invertY) : SVGMat.Identity();
             }
 
-            public static void ProcessPathDrawAttrib(BShape shape, string attrib, SVGMat mat)
+            public static void ProcessPathDrawAttrib(BShape shape, string attrib, SVGMat mat, bool invertY)
             {
                 BLoop curLoop = null;
                 BNode prevNode = null;
@@ -615,7 +618,7 @@ namespace PxPre
                     if (lastCmd == 'm') // Relative Move To
                     {
                         Vector2 v;
-                        if (ConsumeVector2(parts, ref i, out v) == false)
+                        if (ConsumeVector2(parts, ref i, out v, invertY) == false)
                             break; // Aborting
 
                         v = lastPos + v;
@@ -639,7 +642,7 @@ namespace PxPre
                     else if (lastCmd == 'M') // Global Move To
                     {
                         Vector2 v;
-                        if (ConsumeVector2(parts, ref i, out v) == false)
+                        if (ConsumeVector2(parts, ref i, out v, invertY) == false)
                             break; //Aborting
 
                         if (parsedLetter == false)
@@ -659,7 +662,7 @@ namespace PxPre
                     else if (lastCmd == 'l' || lastCmd == 'L') // Relative and Global Line To
                     {
                         Vector2 v;
-                        if (ConsumeVector2(parts, ref i, out v) == false)
+                        if (ConsumeVector2(parts, ref i, out v, invertY) == false)
                             break; //Aborting
 
                         EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
@@ -680,7 +683,7 @@ namespace PxPre
                     else if (lastCmd == 'h' || lastCmd == 'H') // Relative or Global Horizontal Line
                     {
                         float f;
-                        if (ConsumeFloat(parts, ref i, out f) == false)
+                        if (ConsumeFloat(parts, ref i, out f, false) == false)
                             break; // Aborting
 
                         EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
@@ -704,7 +707,7 @@ namespace PxPre
                     else if (lastCmd == 'v' | lastCmd == 'V') // Relative or Global Vertical Line
                     {
                         float f;
-                        if (ConsumeFloat(parts, ref i, out f) == false)
+                        if (ConsumeFloat(parts, ref i, out f, invertY) == false)
                             break;
 
                         EnsureLoopAndNode(shape, ref curLoop, lastPos, ref mat, ref firstNode, ref prevNode);
@@ -729,9 +732,9 @@ namespace PxPre
                     {
                         Vector2 tcurout, tnxtin, v;
                         if (
-                            ConsumeVector2(parts, ref i, out tcurout) == false ||
-                            ConsumeVector2(parts, ref i, out tnxtin) == false ||
-                            ConsumeVector2(parts, ref i, out v) == false)
+                            ConsumeVector2(parts, ref i, out tcurout, invertY) == false ||
+                            ConsumeVector2(parts, ref i, out tnxtin, invertY) == false ||
+                            ConsumeVector2(parts, ref i, out v, invertY) == false)
                         {
                             break; //Aborting
                         }
@@ -764,8 +767,8 @@ namespace PxPre
                     {
                         Vector2 t, v;
                         if (
-                            ConsumeVector2(parts, ref i, out t) == false ||
-                            ConsumeVector2(parts, ref i, out v) == false)
+                            ConsumeVector2(parts, ref i, out t, invertY) == false ||
+                            ConsumeVector2(parts, ref i, out v, invertY) == false)
                         {
                             break; // Aborting
                         }
@@ -878,7 +881,7 @@ namespace PxPre
                 }
             }
 
-            public static SVGMat ProcessMatrixAttribute(string attrib)
+            public static SVGMat ProcessMatrixAttribute(string attrib, bool invertY)
             {
                 SVGMat ret = SVGMat.Identity();
 
@@ -895,6 +898,9 @@ namespace PxPre
                     float.TryParse(vals[3].Trim(), out ret.y.y);
                     float.TryParse(vals[4].Trim(), out ret.t.x);
                     float.TryParse(vals[5].Trim(), out ret.t.y);
+
+                    if(invertY == true)
+                        ret.t.y *= -1; // Invert the translation Y 
                 }
 
                 return ret;
@@ -984,7 +990,7 @@ namespace PxPre
                 return true;
             }
 
-            public static bool ConsumeVector2(List<string> lst, ref int idx, out Vector2 vecOut)
+            public static bool ConsumeVector2(List<string> lst, ref int idx, out Vector2 vecOut, bool invertY)
             { 
                 if(lst.Count < idx + 2 || lst[idx + 1] != ",")
                 {
@@ -1003,11 +1009,14 @@ namespace PxPre
                 if (float.TryParse(strY, out vecOut.y) == false)
                     return false;
 
+                if(invertY == true)
+                    vecOut.y = -vecOut.y;
+
                 idx += 3;
                 return true;
             }
 
-            public static bool ConsumeFloat(List<string> lst, ref int idx, out float f)
+            public static bool ConsumeFloat(List<string> lst, ref int idx, out float f, bool invertY)
             { 
                 if(idx >= lst.Count)
                 { 
@@ -1016,6 +1025,9 @@ namespace PxPre
                 }
 
                 bool ret = float.TryParse(lst[idx], out f);
+                if(invertY == true)
+                    f = -f;
+
                 ++idx;
                 return ret;
             }
@@ -1057,7 +1069,7 @@ namespace PxPre
                 return ele.GetAttributeNode($"{ xmlns}:{ attr}");
             }
 
-            public static bool AttribToFloat(System.Xml.XmlAttribute attr, ref float f)
+            public static bool AttribToFloat(System.Xml.XmlAttribute attr, ref float f, bool invert = false)
             { 
                 if(attr == null || string.IsNullOrEmpty(attr.Value) == true)
                     return false;
@@ -1065,10 +1077,19 @@ namespace PxPre
                 float pf;
                 if(float.TryParse(attr.Value, out pf) == true)
                 { 
-                    f = pf;
+                    if(invert == true)
+                        f = -pf;
+                    else
+                        f = pf;
+
                     return true;
                 }
                 return false;
+            }
+
+            public static float InvertBranch(float val, bool invert)
+            { 
+                return (invert == true) ? -val : val;
             }
 
             public static IEnumerable<System.Xml.XmlElement> EnumerateChildElements(System.Xml.XmlElement ele)
