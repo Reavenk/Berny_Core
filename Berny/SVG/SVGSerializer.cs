@@ -222,9 +222,9 @@ namespace PxPre
                                 }
                             }
 
-                            elePath.SetAttribute("d", drawAttrib);
+                            eleShape.SetAttribute("d", drawAttrib);
 
-                            elePath.SetAttribute("id", shape.name);
+                            eleShape.SetAttribute("id", shape.name);
                         }
                     }
                 }
