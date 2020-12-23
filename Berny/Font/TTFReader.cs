@@ -53,7 +53,6 @@ namespace PxPre
                     return (uint)((this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
                 }
 
-
                 public uint ReadUInt32()
                 {
                     return (uint)((this.ReadInt8() << 24) | (this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
@@ -99,49 +98,94 @@ namespace PxPre
                     return (float)this.ReadInt32() / (float)(1 << 16);
                 }
 
+                /// <summary>
+                /// Read an ASCII string of a known length from file.
+                /// </summary>
+                /// <param name="length">The length of the string.</param>
+                /// <returns>The string read from the data stream.</returns>
                 public string ReadString(int length)
                 {
                     byte[] rbStr = this.ReadBytes(length);
                     return System.Text.ASCIIEncoding.ASCII.GetString(rbStr);
                 }
 
+                /// <summary>
+                /// Read a record string from file. A record string is a pascal
+                /// string with a 2 byte length.
+                /// </summary>
+                /// <returns>The string read from the data stream.</returns>
                 public string ReadNameRecord()
                 {
                     ushort len = this.ReadUint16();
                     return this.ReadString(len);
                 }
 
+                /// <summary>
+                /// Read a string from file in pascal format - where the first byte
+                /// defines the length of the string, directly followed by the ASCII
+                /// data.
+                /// </summary>
+                /// <returns>The string read from the datastream.</returns>
                 public string ReadPascalString()
                 {
                     char c = this.ReadUint8();
                     return this.ReadString(c);
                 }
 
+                // A strategy used in reading is to create file member variables
+                // of the correct byte width and "signed-ness", and just use
+                // ReadInt(out * i) and let the overloading resolve figure out
+                // the proper Read*() function.
+
+                /// <summary>
+                /// Overload of ReadInt() for 1 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out char i)
                 {
                     i = this.ReadUint8();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 1 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out byte i)
                 {
                     i = this.ReadInt8();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 2 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out short i)
                 {
                     i = this.ReadInt16();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 2 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out ushort i)
                 {
                     i = this.ReadUint16();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 4 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out int i)
                 {
                     i = this.ReadInt32();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 4 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out uint i)
                 {
                     i = this.ReadUInt32();
