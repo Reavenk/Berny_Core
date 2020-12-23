@@ -81,7 +81,7 @@ namespace PxPre
                 public override byte[] ReadBytes(int length)
                 { 
                     byte [] ret = new byte[length];
-                    System.Buffer.BlockCopy(this.data, length, ret, 0, length);
+                    System.Buffer.BlockCopy(this.data, (int)this.pos, ret, 0, length);
 
                     this.pos += length;
 
