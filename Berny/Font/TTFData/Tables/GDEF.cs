@@ -127,7 +127,12 @@ namespace PxPre
 
                         public void Read(TTFReader r)
                         {
+                            r.ReadInt(out this.coverageOffset);
+                            r.ReadInt(out this.ligGlyphCount);
 
+                            this.ligGlyphOffsets = new List<ushort>();
+                            for(int i = 0; i < this.ligGlyphCount; ++i)
+                                this.ligGlyphOffsets.Add(r.ReadUint16());
                         }
                     }
 
