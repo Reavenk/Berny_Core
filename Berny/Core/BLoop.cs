@@ -298,6 +298,14 @@ namespace PxPre
                     // If the clockwise item exists, just have them forget about us.
                     bn.next.prev = null;
                 }
+
+                if(this.nodes.Count == 1)
+                { 
+                    BNode onlyLeft = this.nodes[0];
+                    onlyLeft.next = null;
+                    onlyLeft.prev = null;
+                }
+
                 this.FlagDirty();
                 return true;
             }
@@ -678,11 +686,11 @@ namespace PxPre
                 }
 
                 if(a.next != null)
-                    a.InvertChainOrder();
+                    a.ReverseChainOrder();
 
                 // This should only happen if they're different strips
                 if(b.prev != null)
-                    b.InvertChainOrder();
+                    b.ReverseChainOrder();
 
                 a.next = b;
                 b.prev = a;
@@ -826,7 +834,7 @@ namespace PxPre
             public void Reverse()
             { 
                 foreach(BNode bn in this.nodes)
-                    bn._Invert();
+                    bn._Reverse();
             }
 
             /// <summary>
@@ -855,6 +863,14 @@ namespace PxPre
                 List<BNode> nodeCpy = new List<BNode>( this.nodes);
                 foreach(BNode bn in nodeCpy)
                     bn.Deinflect();
+            }
+
+            public bool AbandonParentGenerator()
+            { 
+                if(this.shape != null)
+                    return this.shape.AbandonGenerator();
+
+                return false;
             }
         }
     } 

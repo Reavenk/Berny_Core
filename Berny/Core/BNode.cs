@@ -1195,19 +1195,19 @@ namespace PxPre
             /// Reverse the order of the island. The outline will look the same, 
             /// the chain direction and its winding should be inverted.
             /// </summary>
-            public void InvertChainOrder()
+            public void ReverseChainOrder()
             { 
                 EndpointQuery eq = this.GetPathLeftmost();
 
                 BNode it = eq.node.next;
 
                 BNode tmp = eq.node.prev;
-                eq.node._Invert();
+                eq.node._Reverse();
        
                 while(it != null && it != eq.node)
                 { 
                     BNode next = it.next;
-                    it._Invert();
+                    it._Reverse();
                     it = next;
                 }
             }
@@ -1215,7 +1215,7 @@ namespace PxPre
             /// <summary>
             /// 
             /// </summary>
-            internal void _Invert()
+            internal void _Reverse()
             { 
                 BNode n = this.prev;
                 this.prev = this.next;
@@ -2061,6 +2061,65 @@ namespace PxPre
                 }
 
                 return 0;
+            }
+
+            public static Dictionary<BNode, BNode> CloneNodes(IEnumerable<BNode> nodes, bool transferLoop, bool remap = true, bool allowOnlyRemaps = true)
+            { 
+                Dictionary<BNode, BNode> mapping = new Dictionary<BNode, BNode>();
+
+                foreach(BNode bn in nodes)
+                {
+                    mapping.Add(bn, bn.Clone( transferLoop ? bn.parent : null));
+                    if(transferLoop == true && bn.parent != null)
+                        bn.parent.nodes.Add(bn);
+                }
+
+                if(remap == true)
+                { 
+                    foreach(BNode bn in mapping.Values)
+                    { 
+                        BNode newPrev;
+                        if(mapping.TryGetValue(bn.prev, out newPrev) == true)
+                            bn.prev = newPrev;
+                        else if(allowOnlyRemaps == true)
+                            bn.prev = null;
+
+                        BNode newNext;
+                        if(mapping.TryGetValue(bn.next, out newNext) == true)
+                            bn.next = newNext;
+                        else if (allowOnlyRemaps == true)
+                            bn.next = null;
+                    }
+                }
+
+                return mapping;
+            }
+
+            public void RemoveIsland(bool rewind)
+            { 
+                BNode start = this;
+                if(rewind == true)
+                { 
+                    EndpointQuery eq = this.GetPathLeftmost();
+                    start = eq.node;
+                }
+
+                BNode it = start;
+
+                while(true)
+                { 
+                    BNode next = it.next;
+
+                    if(it.parent != null)
+                        it.parent.nodes.Remove(it);
+
+                    it.next = null;
+                    it.prev = null;
+
+                    it = next;
+                    if(it == null || it == start)
+                        break;
+                }
             }
         }
     }

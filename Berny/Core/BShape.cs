@@ -464,6 +464,15 @@ namespace PxPre
                 this.loops.Clear();
                 this.FlagDirty();
             }
+
+            public bool AbandonGenerator()
+            { 
+                if(this.shapeGenerator == null)
+                    return false;
+
+                this.shapeGenerator = null;
+                return true;
+            }
         }
     }
 }

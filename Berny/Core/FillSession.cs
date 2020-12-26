@@ -264,7 +264,7 @@ namespace PxPre
             /// <param name="vectors"></param>
             /// <param name="sanatizeIsland"></param>
             /// <param name="consume"></param>
-            public void GetTriangles(List<int> triangles, Vector2Repo vectors, bool sanatizeIsland, bool consume = false)
+            public void GetTriangles(List<int> triangles, Vector2Repo vectors, bool sanatizeIsland, FillIsland.WindingRequirement windingRequirement, bool consume = false)
             {
                 if(sanatizeIsland == true)
                 { 
@@ -277,7 +277,7 @@ namespace PxPre
                 }
 
                 foreach(FillIsland fi in this.islands)
-                    fi.GetTriangles(triangles, vectors, consume);
+                    fi.GetTriangles(triangles, vectors, windingRequirement, consume);
             }
 
         }

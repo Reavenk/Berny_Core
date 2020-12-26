@@ -32,6 +32,13 @@ namespace PxPre
         /// </summary>
         public class FillIsland
         {
+            public enum WindingRequirement
+            { 
+                DoesntMatter,
+                Clockwise,
+                Counter
+            }
+
             /// <summary>
             /// The precalculated winding value of the shape.
             /// </summary>
@@ -225,7 +232,7 @@ namespace PxPre
             /// <param name="triangles">The output of triangle mesh indices.</param>
             /// <param name="vectors">The output and manager of Vector2 vertices.</param>
             /// <remarks>This function will clear out the object.</remarks>
-            public void ConsumeIntoTriangles(List<int> triangles, Vector2Repo vectors)
+            public void ConsumeIntoTriangles(List<int> triangles, Vector2Repo vectors, WindingRequirement windingRequirement)
             { 
                 // !DELME
                 if(Utils.verboseDebug == true && this.TestValidity() == false)
@@ -257,28 +264,31 @@ namespace PxPre
                     float localWind = towa.x * from.y - towa.y * from.x;
 
                     bool skip = false;
-                    // Wrong winding, can't earclip.
-                    if(segments.Count != 3 && (wind >= 0.0f) != (localWind >= 0.0f))
-                        skip = true;
-                    else
+                    if(segments.Count > 3)
                     {
-                        FillSegment fsPtCheck = it;
-                        fsPtCheck = fsPtCheck.next.next; // If there's at least 2 segments, this should be valid
+                        // Wrong winding, can't earclip.
+                        if((wind >= 0.0f) != (localWind >= 0.0f))
+                            skip = true;
+                        else
+                        {
+                            FillSegment fsPtCheck = it;
+                            fsPtCheck = fsPtCheck.next.next; // If there's at least 2 segments, this should be valid
 
-                        while(true)
-                        { 
-                            if(Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
+                            while(true)
                             { 
-                                skip = true;
-                                break;
+                                if(Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
+                                { 
+                                    skip = true;
+                                    break;
+                                }
+
+                                fsPtCheck = fsPtCheck.next;
+
+                                // We don't check to go full circle, but one less than. The points should not
+                                // be the actual parts of the triangle.
+                                if (fsPtCheck == it.prev) 
+                                    break;
                             }
-
-                            fsPtCheck = fsPtCheck.next;
-
-                            // We don't check to go full circle, but one less than. The points should not
-                            // be the actual parts of the triangle.
-                            if (fsPtCheck == it.prev) 
-                                break;
                         }
                     }
 
@@ -297,10 +307,22 @@ namespace PxPre
                         continue;
                     }
 
-                    // Record the triangle
-                    triangles.Add(vectors.GetVectorID(it.prev.pos));
-                    triangles.Add(vectors.GetVectorID(it.pos));
-                    triangles.Add(vectors.GetVectorID(it.next.pos));
+                    if(
+                        windingRequirement == WindingRequirement.DoesntMatter ||
+                        localWind <= 0.0f && windingRequirement == WindingRequirement.Clockwise ||
+                        localWind >= 0.0f && windingRequirement == WindingRequirement.Counter)
+                    {
+                        // Record the triangle
+                        triangles.Add(vectors.GetVectorID(it.prev.pos));
+                        triangles.Add(vectors.GetVectorID(it.pos));
+                        triangles.Add(vectors.GetVectorID(it.next.pos));
+                    }
+                    else
+                    {
+                        triangles.Add(vectors.GetVectorID(it.pos));         // Swapped this ...
+                        triangles.Add(vectors.GetVectorID(it.prev.pos));    // ... and this - to change the winding
+                        triangles.Add(vectors.GetVectorID(it.next.pos));
+                    }
                     unaddedLoops = 0;
 
 
@@ -317,10 +339,10 @@ namespace PxPre
                 }
             }
 
-            public void ConsumeIntoOulineTriangles(float width, List<int> triangles, Vector2Repo vectors)
+            public void ConsumeIntoOulineTriangles(float width, List<int> triangles, Vector2Repo vectors, WindingRequirement wr)
             {
                 this.MakeOutlineBridged(width);
-                this.ConsumeIntoTriangles(triangles, vectors);
+                this.ConsumeIntoTriangles(triangles, vectors, wr);
             }
 
             public void ConsumeIntoTrianglesWithOutline(
@@ -390,17 +412,17 @@ namespace PxPre
             /// <param name="vectors">The positions output of the triangles.</param>
             /// <param name="consume">If false, a clone is made instead that is processed so 
             /// that the object does not have its contents consumed.</param>
-            public void GetTriangles(List<int> triangles, Vector2Repo vectors, bool consume = false)
+            public void GetTriangles(List<int> triangles, Vector2Repo vectors, WindingRequirement windingRequirement, bool consume = false)
             {
                 FillIsland fi = this;
                 if(consume == false)
                     fi = this.Clone();
 
-                fi.ConsumeIntoTriangles(triangles, vectors);
+                fi.ConsumeIntoTriangles(triangles, vectors, windingRequirement);
             }
 
             /// <summary>
-            /// Test the validity of the object and internal datastructures.
+            /// Test the validity of the object and internal data structures.
             /// </summary>
             /// <returns>True, if the object is valid; else false</returns>
             public bool TestValidity()
