@@ -85,7 +85,7 @@ namespace PxPre
 
                             this.attachPointOffsets = new List<ushort>();
                             for(int i = 0; i < this.glyphCount; ++i)
-                                this.attachPointOffsets.Add(r.ReadUint16());
+                                this.attachPointOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -106,7 +106,7 @@ namespace PxPre
 
                             this.pointIndices = new List<ushort>();
                             for(int i = 0; i < this.pointCount; ++i)
-                                this.pointIndices.Add( r.ReadUint16());
+                                this.pointIndices.Add( r.ReadUInt16());
                         }
                     }
 
@@ -127,7 +127,12 @@ namespace PxPre
 
                         public void Read(TTFReader r)
                         {
+                            r.ReadInt(out this.coverageOffset);
+                            r.ReadInt(out this.ligGlyphCount);
 
+                            this.ligGlyphOffsets = new List<ushort>();
+                            for(int i = 0; i < this.ligGlyphCount; ++i)
+                                this.ligGlyphOffsets.Add(r.ReadUInt16());
                         }
                     }
 

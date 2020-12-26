@@ -62,7 +62,7 @@ namespace PxPre
                         if (longVer == false)
                         {
                             for (int i = 0; i < readCt; ++i)
-                                this.offset.Add( (uint)(r.ReadUint16() * 2));
+                                this.offset.Add( (uint)(r.ReadUInt16() * 2));
                         }
                         else
                         {

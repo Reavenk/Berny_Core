@@ -48,9 +48,9 @@ namespace PxPre
                 {
                     public struct DeviceRecord
                     {
-                        public char pixelSize;          // Pixel size for following widths (as ppem).
-                        public char maxWidth;           // Maximum width.
-                        public List<char > widths;      // Array of widths (numGlyphs is from the 'maxp' table).
+                        public byte pixelSize;          // Pixel size for following widths (as ppem).
+                        public byte maxWidth;           // Maximum width.
+                        public List<byte> widths;      // Array of widths (numGlyphs is from the 'maxp' table).
                     }
 
                     public const string TagName = "hdmx";
@@ -74,9 +74,9 @@ namespace PxPre
                             r.ReadInt(out dr.pixelSize);
                             r.ReadInt(out dr.maxWidth);
                             //
-                            dr.widths = new List<char>();
+                            dr.widths = new List<byte>();
                             for(int j = 0; j < numGlyphs; ++j)
-                                dr.widths.Add(r.ReadUint8());
+                                dr.widths.Add(r.ReadUInt8());
 
                             this.records.Add(dr);
                         }

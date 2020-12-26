@@ -32,7 +32,9 @@ namespace PxPre
         {
             public class Loader
             {
-
+                // Everything in this specific class is going to be as public and un-abstract as 
+                // possible. We're loading an old low-level format so there's no reason for the
+                // immediate loader to protect or abstract anything.
                 public struct Table
                 { 
                     public string tag;
@@ -50,26 +52,26 @@ namespace PxPre
                 }
 
                 // https://docs.microsoft.com/en-us/typography/opentype/spec/otff#organization-of-an-opentype-font
-                const int FormatTrueType = 0x00010000;
-                const int FormatOTF = 0x4F54544F;
+                public const int FormatTrueType = 0x00010000;
+                public const int FormatOTF = 0x4F54544F;
 
                 // Table directory
-                uint sfntVersion;       // 0x00010000 or 0x4F54544F ('OTTO') — see below.
-                ushort numTables;       // Number of tables.
-                ushort searchRange;     // Maximum power of 2 less than or equal to numTables, times 16 ((2**floor(log2(numTables))) * 16, where “**” is an exponentiation operator).
-                ushort entrySelector;   // Log2 of the maximum power of 2 less than or equal to numTables (log2(searchRange/16), which is equal to floor(log2(numTables))).
-                ushort rangeShift;      // numTables times 16, minus searchRange((numTables* 16) - searchRange).
+                public uint sfntVersion;       // 0x00010000 or 0x4F54544F ('OTTO') — see below.
+                public ushort numTables;       // Number of tables.
+                public ushort searchRange;     // Maximum power of 2 less than or equal to numTables, times 16 ((2**floor(log2(numTables))) * 16, where “**” is an exponentiation operator).
+                public ushort entrySelector;   // Log2 of the maximum power of 2 less than or equal to numTables (log2(searchRange/16), which is equal to floor(log2(numTables))).
+                public ushort rangeShift;      // numTables times 16, minus searchRange((numTables* 16) - searchRange).
 
 
-                Dictionary<string, Table> tables = new Dictionary<string, Table>();
-                List<Table> records = new List<Table>();
+                public Dictionary<string, Table> tables = new Dictionary<string, Table>();
+                public List<Table> records = new List<Table>();
 
                 public bool IsTTF { get => this.sfntVersion == FormatTrueType; }
                 public bool IsOTF { get => this.sfntVersion == FormatOTF; }
 
-                int unitsPerEm = 0;
-                int offsetByteWidth = 0;
-                int numGlyphs = 0;
+                public int unitsPerEm = 0;
+                public int offsetByteWidth = 0;
+                public int numGlyphs = 0;
 
                 public Font.Typeface ReadTTF(string path)
                 {

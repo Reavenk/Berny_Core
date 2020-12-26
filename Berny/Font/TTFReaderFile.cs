@@ -68,14 +68,14 @@ namespace PxPre
                     return false;
                 }
 
-                public override byte ReadInt8()
+                public override sbyte ReadInt8()
                 {
-                    return this.reader.ReadByte();
+                    return this.reader.ReadSByte();
                 }
 
-                public override char ReadUint8()
+                public override byte ReadUInt8()
                 {
-                    return (char)this.reader.ReadByte();
+                    return this.reader.ReadByte();
                 }
 
                 public override long GetPosition()

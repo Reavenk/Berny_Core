@@ -20,34 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PxPre
 {
     namespace Berny
     {
-        namespace TTF
+        namespace CFF
         {
-            /// <summary>
-            /// ItemVariationStore
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// </summary>
-            public struct ItemVariationStore
+            public struct INDEX
             {
-                public ushort format;                       // Format — set to 1
-                public uint variationRegionListOffset;      // Offset in bytes from the start of the item variation store to the variation region list.
-                public ushort itemVariationDataCount;       // The number of item variation data subtables.
-                public List<uint> itemVariationDataOffsets; // Offsets in bytes from the start of the item variation store to each item variation data subtable.
+                public ushort count;        // Number of objects stored in INDEX
+                public byte offSize;
+                public List<uint> offset;
+                public byte[] data;
 
-                public void Read(TTFReader r)
+                public void Read(TTF.TTFReader r)
                 {
-                    r.ReadInt(out this.format);
-                    r.ReadInt(out this.variationRegionListOffset);
-                    r.ReadInt(out this.itemVariationDataCount);
+                    r.ReadInt(out this.count);
+                    r.ReadInt(out this.offSize);
 
-                    this.itemVariationDataOffsets = new List<uint>();
-                    for(int i = 0; i < this.itemVariationDataCount; ++i)
-                        itemVariationDataOffsets.Add(r.ReadUInt16());
+                    this.offset = new List<uint>();
+                    for (int i = 0; i < this.count + 1; ++i)
+                        this.offset.Add(CFFFile.ReadOffset(r, this.offSize) - 1);
+
+                    this.data = r.ReadBytes((int)this.offset[this.offset.Count - 1]);
                 }
             }
         }

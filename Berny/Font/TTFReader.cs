@@ -35,38 +35,37 @@ namespace PxPre
                 public abstract bool IsOpen();
                 public abstract bool Close();
 
-                public abstract byte ReadInt8();
-                public abstract char ReadUint8();
+                public abstract sbyte ReadInt8();
+                public abstract byte ReadUInt8();
 
                 public abstract long GetPosition();
                 public abstract bool SetPosition(long pos);
 
                 public abstract byte[] ReadBytes(int length);
 
-                public ushort ReadUint16()
+                public ushort ReadUInt16()
                 {
-                    return (ushort)(this.ReadInt8() << 8 | this.ReadInt8());
+                    return (ushort)(this.ReadUInt8() << 8 | this.ReadUInt8());
                 }
 
                 public uint ReadUInt24()
                 {
-                    return (uint)((this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                    return (uint)((this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
-
 
                 public uint ReadUInt32()
                 {
-                    return (uint)((this.ReadInt8() << 24) | (this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                    return (uint)((this.ReadUInt8() << 24) | (this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
                 public short ReadInt16()
                 {
-                    return (short)(this.ReadInt8() << 8 | this.ReadInt8());
+                    return (short)(this.ReadUInt8() << 8 | this.ReadUInt8());
                 }
 
                 public int ReadInt32()
                 {
-                    return (int)((this.ReadInt8() << 24) | (this.ReadInt8() << 16) | (this.ReadInt8() << 8) | (this.ReadInt8() << 0));
+                    return (int)((this.ReadUInt8() << 24) | (this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
                 public short ReadFWord()
@@ -76,12 +75,12 @@ namespace PxPre
 
                 public ushort ReadUFWord()
                 {
-                    return this.ReadUint16();
+                    return this.ReadUInt16();
                 }
 
                 public ushort ReadOffset16()
                 {
-                    return this.ReadUint16();
+                    return this.ReadUInt16();
                 }
 
                 public int ReadOffset32()
@@ -99,49 +98,94 @@ namespace PxPre
                     return (float)this.ReadInt32() / (float)(1 << 16);
                 }
 
+                /// <summary>
+                /// Read an ASCII string of a known length from file.
+                /// </summary>
+                /// <param name="length">The length of the string.</param>
+                /// <returns>The string read from the data stream.</returns>
                 public string ReadString(int length)
                 {
                     byte[] rbStr = this.ReadBytes(length);
                     return System.Text.ASCIIEncoding.ASCII.GetString(rbStr);
                 }
 
+                /// <summary>
+                /// Read a record string from file. A record string is a pascal
+                /// string with a 2 byte length.
+                /// </summary>
+                /// <returns>The string read from the data stream.</returns>
                 public string ReadNameRecord()
                 {
-                    ushort len = this.ReadUint16();
+                    ushort len = this.ReadUInt16();
                     return this.ReadString(len);
                 }
 
+                /// <summary>
+                /// Read a string from file in pascal format - where the first byte
+                /// defines the length of the string, directly followed by the ASCII
+                /// data.
+                /// </summary>
+                /// <returns>The string read from the datastream.</returns>
                 public string ReadPascalString()
                 {
-                    char c = this.ReadUint8();
+                    byte c = this.ReadUInt8();
                     return this.ReadString(c);
                 }
 
-                public void ReadInt(out char i)
-                {
-                    i = this.ReadUint8();
-                }
+                // A strategy used in reading is to create file member variables
+                // of the correct byte width and "signed-ness", and just use
+                // ReadInt(out * i) and let the overloading resolve figure out
+                // the proper Read*() function.
 
-                public void ReadInt(out byte i)
+                /// <summary>
+                /// Overload of ReadInt() for 1 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
+                public void ReadInt(out sbyte i)
                 {
                     i = this.ReadInt8();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 1 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
+                public void ReadInt(out byte i)
+                {
+                    i = this.ReadUInt8();
+                }
+
+                /// <summary>
+                /// Overload of ReadInt() for 2 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out short i)
                 {
                     i = this.ReadInt16();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 2 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out ushort i)
                 {
-                    i = this.ReadUint16();
+                    i = this.ReadUInt16();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 4 byte signed int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out int i)
                 {
                     i = this.ReadInt32();
                 }
 
+                /// <summary>
+                /// Overload of ReadInt() for 4 byte unsigned int.
+                /// </summary>
+                /// <param name="i">The output variable.</param>
                 public void ReadInt(out uint i)
                 {
                     i = this.ReadUInt32();
@@ -151,7 +195,8 @@ namespace PxPre
                 {
                     long macTime = this.ReadUInt32() * 0x100000000 + this.ReadUInt32();
                     return new System.DateTime(macTime * 1000);
-                }            }
+                }
+            }
         }
     }
 }

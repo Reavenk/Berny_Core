@@ -53,16 +53,16 @@ namespace PxPre
                     return true;
                 }
 
-                public override byte ReadInt8()
+                public override sbyte ReadInt8()
                 { 
-                    byte ret = this.data[this.pos];
+                    sbyte ret = (sbyte)this.data[this.pos];
                     ++this.pos;
                     return ret;
                 }
 
-                public override char ReadUint8()
+                public override byte ReadUInt8()
                 { 
-                    char ret = (char)this.data[this.pos];
+                    byte ret = this.data[this.pos];
                     ++this.pos;
                     return ret;
                 }
@@ -81,7 +81,7 @@ namespace PxPre
                 public override byte[] ReadBytes(int length)
                 { 
                     byte [] ret = new byte[length];
-                    System.Buffer.BlockCopy(this.data, length, ret, 0, length);
+                    System.Buffer.BlockCopy(this.data, (int)this.pos, ret, 0, length);
 
                     this.pos += length;
 

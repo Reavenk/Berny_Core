@@ -89,7 +89,7 @@ namespace PxPre
                         else
                         {
                             for (int i = 0; i < this.glyphCount + 1; ++i)
-                                this.glyphVariationDataOffsets.Add((uint)r.ReadUint16());
+                                this.glyphVariationDataOffsets.Add((uint)r.ReadUInt16());
                         }
 
                         // Shared tuple records
