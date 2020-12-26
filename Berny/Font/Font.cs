@@ -69,9 +69,9 @@ namespace PxPre
                 public bool IsTTF { get => this.sfntVersion == FormatTrueType; }
                 public bool IsOTF { get => this.sfntVersion == FormatOTF; }
 
-                int unitsPerEm = 0;
-                int offsetByteWidth = 0;
-                int numGlyphs = 0;
+                public int unitsPerEm = 0;
+                public int offsetByteWidth = 0;
+                public int numGlyphs = 0;
 
                 public Font.Typeface ReadTTF(string path)
                 {

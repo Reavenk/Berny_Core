@@ -193,7 +193,6 @@ namespace PxPre
                         }
                         else if(this.version == 1)
                         {
-                            r.ReadInt(out this.version);
                             r.ReadInt(out this.xAvgCharWidth);
                             r.ReadInt(out this.usWeightClass);
                             r.ReadInt(out this.usWidthClass);

@@ -105,7 +105,7 @@ namespace PxPre
 
                             this.substituteGlyphIDs = new List<ushort>();
                             for (int i = 0; i < this.glyphCount; ++i)
-                                this.substituteGlyphIDs.Add(r.ReadUint16());
+                                this.substituteGlyphIDs.Add(r.ReadUInt16());
                         }
                     }
 
@@ -134,7 +134,7 @@ namespace PxPre
 
                             this.sequenceOffsets = new List<ushort>();
                             for(int i = 0; i < this.sequenceCount; ++i)
-                                this.sequenceOffsets.Add( r.ReadUint16());
+                                this.sequenceOffsets.Add( r.ReadUInt16());
 
                         }
                     }
@@ -150,7 +150,7 @@ namespace PxPre
 
                             this.substituteGlyphIDs = new List<ushort>();
                             for(int i = 0; i < this.glyphCount; ++i)
-                                this.substituteGlyphIDs.Add(r.ReadUint16());
+                                this.substituteGlyphIDs.Add(r.ReadUInt16());
                         }
                     }
 
@@ -178,7 +178,7 @@ namespace PxPre
 
                             this.alternateSetOffsets = new List<ushort>();
                             for(int i = 0; i < this.alternateSetCount; ++i)
-                                this.alternateSetOffsets.Add( r.ReadUint16());
+                                this.alternateSetOffsets.Add( r.ReadUInt16());
                         }
                     }
 
@@ -192,7 +192,7 @@ namespace PxPre
                             r.ReadInt(out this.glyphCount);
                             this.alternateGlyphIDs = new List<ushort>();
                             for(int i = 0; i < this.glyphCount; ++i)
-                                this.alternateGlyphIDs.Add(r.ReadUint16());
+                                this.alternateGlyphIDs.Add(r.ReadUInt16());
                         }
                     }
 
@@ -220,7 +220,7 @@ namespace PxPre
 
                             this.ligatureSetCount = new ushort();
                             for(int i = 0; i < this.ligatureSetCount; ++i)
-                                this.ligatureSetOffset.Add( r.ReadUint16());
+                                this.ligatureSetOffset.Add( r.ReadUInt16());
                         }
                     }
 
@@ -249,7 +249,7 @@ namespace PxPre
 
                             this.ligatureOffsets = new List<ushort>();
                             for(int i = 0; i < this.ligatureCount; ++i)
-                                this.ligatureOffsets.Add(r.ReadUint16());
+                                this.ligatureOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -274,7 +274,7 @@ namespace PxPre
 
                             this.componentGlyphIDs = new List<ushort>();
                             for(int i = 0; i < this.componentCount; ++i)
-                                this.componentGlyphIDs.Add(r.ReadUint16());
+                                this.componentGlyphIDs.Add(r.ReadUInt16());
                         }
                     }
 
@@ -317,14 +317,14 @@ namespace PxPre
 
                             this.backtrackCoverageOffsets = new List<ushort>();
                             for(int i = 0; i < this.backtrackGlyphCount; ++i)
-                                this.backtrackCoverageOffsets.Add(r.ReadUint16());
+                                this.backtrackCoverageOffsets.Add(r.ReadUInt16());
 
                             r.ReadInt(out this.lookaheadGlyphCount);
                             r.ReadInt(out this.glyphCount);
 
                             this.substituteGlyphIDs = new List<ushort>();
                             for(int i = 0; i < this.glyphCount; ++i)
-                                this.substituteGlyphIDs.Add(r.ReadUint16());
+                                this.substituteGlyphIDs.Add(r.ReadUInt16());
                         }
                     }
 

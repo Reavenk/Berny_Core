@@ -47,7 +47,7 @@ namespace PxPre
 
                     this.itemVariationDataOffsets = new List<uint>();
                     for(int i = 0; i < this.itemVariationDataCount; ++i)
-                        itemVariationDataOffsets.Add(r.ReadUint16());
+                        itemVariationDataOffsets.Add(r.ReadUInt16());
                 }
             }
         }

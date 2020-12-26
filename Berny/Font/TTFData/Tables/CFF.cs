@@ -35,7 +35,8 @@ namespace PxPre
                 /// <summary>
                 /// CFF — Compact Font Format Table
                 /// https://docs.microsoft.com/en-us/typography/opentype/spec/cff
-                /// 
+                /// https://wwwimages2.adobe.com/content/dam/acom/en/devnet/font/pdfs/5176.CFF.pdf
+                /// https://github.com/Pomax/the-cff-table
                 /// OpenType fonts with TrueType outlines use a glyph index to specify and access 
                 /// glyphs within a font; e.g., to index within the 'loca' table and thereby access 
                 /// glyph data in the 'glyf' table. This concept is retained in OpenType CFF fonts,
@@ -44,6 +45,85 @@ namespace PxPre
                 /// </summary>
                 public struct CFF
                 { 
+                    
+
+                    public enum EncodingID
+                    { 
+                        Standard = 0,
+                        Expert = 1
+                    }
+
+                    public enum CharsetID
+                    { 
+                        ISOAdobe = 0,
+                        Expert = 1,
+                        ExpertSubset = 2
+                    }
+
+                    
+
+                    public struct Format0
+                    { 
+                        public byte format;
+                        public byte nCodes;
+                        public byte [] code;
+                    }
+
+                    public struct Format1
+                    { 
+                        public byte format;
+                        public byte nRanges;
+                        public List<Range1> range1s;
+                    }
+
+                    public struct Range1
+                    {
+                        public byte first;
+                        public byte nLeft;
+                    }
+
+                    public struct SupplementalEncoding
+                    { 
+                        byte nSups;
+                        public List<SupplementFormat> supplement;
+                    }
+
+                    public struct SupplementFormat
+                    {
+                        public byte code;
+                        public string glyphSID;
+                    }
+
+                    public struct CharsetFormat0
+                    { 
+                        public byte format;
+                        public List<int> glyph;
+                    }
+
+                    public struct CharsetFormat1
+                    { 
+                        public byte format;
+                        public List<CharsetRange1> range1;
+                    }
+
+                    public struct CharsetRange1
+                    { 
+                        public int first;
+                        public byte nLeft;
+                    }
+
+                    public struct CharsetFormat2
+                    { 
+                        public byte format;
+                        public List<CharsetRange2> range2;
+                    }
+
+                    public struct CharsetRange2
+                    { 
+                        public int first;
+                        public byte nLeft;
+                    }
+                    // CFF Data Type
                 }
             }
         }

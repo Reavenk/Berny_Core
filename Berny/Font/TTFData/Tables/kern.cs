@@ -57,8 +57,8 @@ namespace PxPre
 
                         public ushort version;
                         public ushort length;
-                        public char flags;
-                        public char format;
+                        public byte flags;
+                        public byte format;
 
                         public void Read(TTFReader r)
                         {

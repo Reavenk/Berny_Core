@@ -171,21 +171,23 @@ namespace PxPre
                         // https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-0-byte-encoding-table
 
                         public ushort format;               // Format number is set to 0.
-                        ushort length;                      // This is the length in bytes of the subtable.
-                        ushort language;                    // For requirements on use of the language field, see “Use of the language field in 'cmap' subtables” in this document.
-                        public List<char> glyphIdArray;     // An array that maps character codes to glyph index values.
+                        public ushort length;              // This is the length in bytes of the subtable.
+                        public ushort language;            // For requirements on use of the language field, see “Use of the language field in 'cmap' subtables” in this document.
+                        public List<byte> glyphIdArray;     // An array that maps character codes to glyph index values.
 
                         public void Read(TTFReader r, bool readformat = false)
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 0;
 
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.language);
 
-                            this.glyphIdArray = new List<char>();
+                            this.glyphIdArray = new List<byte>();
                             for(int i = 0; i < 256; ++i)
-                                this.glyphIdArray.Add(r.ReadUint8());
+                                this.glyphIdArray.Add(r.ReadUInt8());
                         }
 
                         Dictionary<uint, uint> CharacterConversionMap.MapCodeToIndex(TTFReader r)
@@ -213,10 +215,10 @@ namespace PxPre
 
                         public struct SubHeader
                         { 
-                            ushort firstCode;
-                            ushort entryCount;
-                            short idDelta;
-                            ushort idRangeOffset;
+                            public ushort firstCode;
+                            public ushort entryCount;
+                            public short idDelta;
+                            public ushort idRangeOffset;
 
                             public void Read(TTFReader r)
                             {
@@ -227,24 +229,26 @@ namespace PxPre
                             }
                         }
 
-                        ushort format;                  // Format number is set to 2.
-                        ushort length;                  // This is the length in bytes of the subtable.
-                        ushort language;                // For requirements on use of the language field, see “Use of the language field in 'cmap' subtables” in this document.
-                        List<ushort> subHeaderKeys;     // Array that maps high bytes to subHeaders: value is subHeader index × 8.
-                        List<SubHeader> subHeaders;     // Variable-length array of SubHeader records.
-                        List<ushort> glyphIdArray;      // Variable-length array containing subarrays used for mapping the low byte of 2-byte characters.
+                        public ushort format;                  // Format number is set to 2.
+                        public ushort length;                  // This is the length in bytes of the subtable.
+                        public ushort language;                // For requirements on use of the language field, see “Use of the language field in 'cmap' subtables” in this document.
+                        public List<ushort> subHeaderKeys;     // Array that maps high bytes to subHeaders: value is subHeader index × 8.
+                        public List<SubHeader> subHeaders;     // Variable-length array of SubHeader records.
+                        public List<ushort> glyphIdArray;      // Variable-length array containing subarrays used for mapping the low byte of 2-byte characters.
 
                         public void Read(TTFReader r, bool readformat = false)
                         {
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 2;
 
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.language);
 
                             this.subHeaderKeys = new List<ushort>();
                             for(int i = 0; i < 256; ++i)
-                                this.subHeaderKeys.Add( r.ReadUint16());
+                                this.subHeaderKeys.Add( r.ReadUInt16());
 
                             // !NOTE: This parser is unfinished - don't feel like decrypting the documentation
                             // on how to get the sizes for this.
@@ -291,6 +295,8 @@ namespace PxPre
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 4;
 
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.language);
@@ -303,13 +309,13 @@ namespace PxPre
 
                             this.endCode = new List<ushort>();
                             for(int i = 0; i < segCt; ++i)
-                                this.endCode.Add(r.ReadUint16());
+                                this.endCode.Add(r.ReadUInt16());
 
                             r.ReadInt(out this.reservePad);
 
                             this.startCode = new List<ushort>();
                             for(int i = 0; i < segCt; ++i)
-                                this.startCode.Add(r.ReadUint16());
+                                this.startCode.Add(r.ReadUInt16());
 
                             this.idDelta = new List<short>();
                             for(int i = 0; i < segCt; ++i)
@@ -318,7 +324,7 @@ namespace PxPre
                             this.idRangeOffsets = new List<uint>();
                             for(int i = 0; i < segCt; ++i)
                             {
-                                uint ro = r.ReadUint16();
+                                uint ro = r.ReadUInt16();
 
                                 if(ro != 0)
                                 {
@@ -357,7 +363,7 @@ namespace PxPre
                                 {
                                     r.SetPosition(ro);
                                     for (int j = start; j <= end; ++j)
-                                        ret.Add((uint)j, r.ReadUint16());
+                                        ret.Add((uint)j, r.ReadUInt16());
                                 }
                             }
 
@@ -375,17 +381,19 @@ namespace PxPre
                     {
                         // https://docs.microsoft.com/en-us/typography/opentype/spec/cmap#format-6-trimmed-table-mapping
 
-                        ushort format;
-                        ushort length;
-                        ushort language;
-                        ushort firstCode;
-                        ushort entryCount;
-                        List<ushort> glyphIdArray;
+                        public ushort format;
+                        public ushort length;
+                        public ushort language;
+                        public ushort firstCode;
+                        public ushort entryCount;
+                        public List<ushort> glyphIdArray;
 
                         public void Read(TTFReader r, bool readformat = false)
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 6;
 
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.firstCode);
@@ -401,7 +409,7 @@ namespace PxPre
                             int glyphsCt = (length - knownTableSz)/2;
                             this.glyphIdArray = new List<ushort>();
                             for (int i = 0; i < glyphsCt; ++i)
-                                this.glyphIdArray.Add( r.ReadUint16());
+                                this.glyphIdArray.Add( r.ReadUInt16());
                         }
 
                         Dictionary<uint, uint> CharacterConversionMap.MapCodeToIndex(TTFReader r)
@@ -429,7 +437,7 @@ namespace PxPre
                         public ushort reserved;         // Reserved; set to 0
                         public uint length;             // Byte length of this subtable (including the header)
                         public uint language;           // For requirements on use of the language field, see “Use of the language field in 'cmap' subtables” in this document.
-                        public List<char> is32;         // Tightly packed array of bits (8K bytes total) indicating whether the particular 16-bit (index) value is the start of a 32-bit character code
+                        public List<byte> is32;         // Tightly packed array of bits (8K bytes total) indicating whether the particular 16-bit (index) value is the start of a 32-bit character code
                         public uint numGroups;          // Number of groupings which follow
                         public List<SequentialMapGroup> groups; // Array of SequentialMapGroup records.
 
@@ -437,14 +445,16 @@ namespace PxPre
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 8;
 
                             r.ReadInt(out this.reserved);
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.language);
 
-                            this.is32 = new List<char>();
+                            this.is32 = new List<byte>();
                             for(int i = 0; i < 8192; ++i)
-                                this.is32.Add(r.ReadUint8());
+                                this.is32.Add(r.ReadUInt8());
 
                             r.ReadInt(out this.numGroups);
                             
@@ -489,6 +499,8 @@ namespace PxPre
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 10;
 
                             r.ReadInt(out this.reserved);
                             r.ReadInt(out this.length);
@@ -498,7 +510,7 @@ namespace PxPre
 
                             this.glyphIdArray = new List<ushort>();
                             for(int i = 0; i < this.numChars; ++i)
-                                this.glyphIdArray.Add(r.ReadUint16());
+                                this.glyphIdArray.Add(r.ReadUInt16());
                         }
 
                         Dictionary<uint, uint> CharacterConversionMap.MapCodeToIndex(TTFReader r)
@@ -535,6 +547,8 @@ namespace PxPre
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 12;
 
                             r.ReadInt(out this.reserved);
                             r.ReadInt(out this.length);
@@ -580,6 +594,8 @@ namespace PxPre
                         { 
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 13;
 
                             r.ReadInt(out this.reserved);
                             r.ReadInt(out this.length);
@@ -623,6 +639,8 @@ namespace PxPre
                         {
                             if(readformat == true)
                                 r.ReadInt(out this.format);
+                            else
+                                this.format = 14;
 
                             r.ReadInt(out this.length);
                             r.ReadInt(out this.numVarSelectorRecords);
@@ -719,15 +737,15 @@ namespace PxPre
                     public ushort numTables;    // Number of encoding tables that follow.
                     public List<EncodingRecord> encodingRecords;
 
-                    List<Format0> format0;
-                    List<Format2> format2;
-                    List<Format4> format4;
-                    List<Format6> format6;
-                    List<Format8> format8;
-                    List<Format10> format10;
-                    List<Format12> format12;
-                    List<Format13> format13;
-                    List<Format14> format14;
+                    public List<Format0> format0;
+                    public List<Format2> format2;
+                    public List<Format4> format4;
+                    public List<Format6> format6;
+                    public List<Format8> format8;
+                    public List<Format10> format10;
+                    public List<Format12> format12;
+                    public List<Format13> format13;
+                    public List<Format14> format14;
 
                     public void Read(TTFReader r, uint tableStart)
                     {
@@ -746,7 +764,7 @@ namespace PxPre
                         {
                             r.SetPosition(tableStart + rc.subtableOffset);
 
-                            ushort format = r.ReadUint16();
+                            ushort format = r.ReadUInt16();
 
                             if (format == 0)
                             { 

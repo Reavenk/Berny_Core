@@ -52,7 +52,7 @@ namespace PxPre
                     public short underlinePosition;
                     public short underlineThickness;
                     public uint isFixedPitch;
-                    public uint mimMemType42;
+                    public uint minMemType42;
                     public uint maxMemType42;
                     public uint minMemType1;
                     public uint maxMemType1;
@@ -66,7 +66,7 @@ namespace PxPre
                     // numGlyphs
                     public List<byte> offset;
 
-                    public void Read(TTFReader r, int end)
+                    public void Read(TTFReader r)
                     {
                         r.ReadInt(out this.minorVersion);
                         r.ReadInt(out this.majorVersion);
@@ -74,7 +74,7 @@ namespace PxPre
                         r.ReadInt(out this.underlinePosition);
                         r.ReadInt(out this.underlineThickness);
                         r.ReadInt(out this.isFixedPitch);
-                        r.ReadInt(out this.mimMemType42);
+                        r.ReadInt(out this.minMemType42);
                         r.ReadInt(out this.maxMemType42);
                         r.ReadInt(out this.minMemType1);
                         r.ReadInt(out this.maxMemType1);
@@ -85,11 +85,11 @@ namespace PxPre
 
                             this.glyphNameIndex = new List<ushort>();
                             for(int i = 0; i < this.numGlyphs; ++i)
-                                this.glyphNameIndex.Add(r.ReadUint16());
+                                this.glyphNameIndex.Add(r.ReadUInt16());
 
                             this.stringData = new List<string>();
-                            while(r.GetPosition() < end)
-                                this.stringData.Add(r.ReadPascalString());
+                            //while(r.GetPosition() < end)
+                            //    this.stringData.Add(r.ReadPascalString());
 
                             //for(int i = 0; i < )
                         }
@@ -99,7 +99,7 @@ namespace PxPre
 
                             this.offset = new List<byte>();
                             for(int i = 0; i < this.numGlyphs; ++i)
-                                this.offset.Add(r.ReadInt8());
+                                this.offset.Add(r.ReadUInt8());
                         }
                         else if (this.majorVersion == 3 && this.minorVersion == 0)
                         {} // Do nothing

@@ -115,7 +115,7 @@ namespace PxPre
 
                             this.pairSetOffsets = new List<ushort>();
                             for(int i = 0; i < this.pairSetCount; ++i)
-                                this.pairSetOffsets.Add(r.ReadUint16());
+                                this.pairSetOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -367,7 +367,7 @@ namespace PxPre
                         {
                             this.baseAnchorOffsets = new List<ushort>();
                             for(int i = 0; i < markClassCount; ++i)
-                                this.baseAnchorOffsets.Add(r.ReadUint16());
+                                this.baseAnchorOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -416,7 +416,7 @@ namespace PxPre
                             r.ReadInt(out this.ligatureCount);
                             this.ligatureAttachOffsets = new List<ushort>();
                             for(int i = 0; i < this.ligatureCount; ++i)
-                                this.ligatureAttachOffsets.Add(r.ReadUint16());
+                                this.ligatureAttachOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -464,7 +464,7 @@ namespace PxPre
                         {
                             this.ligatureAnchorOffsets = new List<ushort>();
                             for(int i = 0; i < markClassCount; ++i)
-                                this.ligatureAnchorOffsets.Add(r.ReadUint16());
+                                this.ligatureAnchorOffsets.Add(r.ReadUInt16());
                         }
                     }
 
@@ -537,7 +537,7 @@ namespace PxPre
                         {
                             this.mark2AnchorOffsets = new List<ushort>();
                             for(int i = 0; i < offsets; ++i)
-                                mark2AnchorOffsets.Add(r.ReadUint16());
+                                mark2AnchorOffsets.Add(r.ReadUInt16());
                         }
                     }
 

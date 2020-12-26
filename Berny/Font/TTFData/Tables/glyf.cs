@@ -70,8 +70,8 @@ namespace PxPre
                     // Simple Glyph
                     public List<ushort> endPtsOfCountours;  // Array of point indices for the last point of each contour, in increasing numeric order.
                     public ushort instructionLength;        // Total number of bytes for instructions. If instructionLength is zero, no instructions are present for this glyph, and this field is followed directly by the flags field.
-                    public List<char> instructions;         // Array of instruction byte code for the glyph.
-                    public List<char> simpflags;            // Array of flag elements. See below for details regarding the number of flag array elements.
+                    public List<byte> instructions;         // Array of instruction byte code for the glyph.
+                    public List<byte> simpflags;            // Array of flag elements. See below for details regarding the number of flag array elements.
                     public List<int> xCoordinates;          // Contour point x-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
                     public List<int> yCoordinates;          // Contour point y-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
 
@@ -87,7 +87,7 @@ namespace PxPre
                     // features and format spec versions. So we're just going to 
                     // include everything we might need. Not efficient but saner.
                     public ushort numInstr;
-                    public List<char> instr;
+                    public List<byte> instr;
 
                     public float scale;
                     public float xscale;
@@ -111,12 +111,12 @@ namespace PxPre
 
                             this.endPtsOfCountours = new List<ushort>();
                             for(int i = 0; i < this.numberOfContours; ++i)
-                                this.endPtsOfCountours.Add( r.ReadUint16() );
+                                this.endPtsOfCountours.Add( r.ReadUInt16() );
 
                             r.ReadInt(out this.instructionLength);
-                            this.instructions = new List<char>();
+                            this.instructions = new List<byte>();
                             for(int i = 0; i < this.instructionLength; ++i)
-                                this.instructions.Add(r.ReadUint8());
+                                this.instructions.Add(r.ReadUInt8());
 
                             int numPoints = 0;
                             // http://stevehanov.ca/blog/?id=143
@@ -124,17 +124,17 @@ namespace PxPre
                                 numPoints = Mathf.Max(numPoints, us);
                             numPoints += 1;
 
-                            this.simpflags = new List<char>();
+                            this.simpflags = new List<byte>();
                             this.xCoordinates = new List<int>();
                             this.yCoordinates = new List<int>();
                             for (int i = 0; i < numPoints; ++i)
                             {
-                                char flag = r.ReadUint8();
+                                byte flag = r.ReadUInt8();
                                 this.simpflags.Add(flag);
 
                                 if ((flag & REPEAT_FLAG) != 0)
                                 {
-                                    char repeatCount = r.ReadUint8();
+                                    byte repeatCount = r.ReadUInt8();
                                     i += repeatCount;
 
                                     for (int j = 0; j < repeatCount; ++j)
@@ -146,13 +146,13 @@ namespace PxPre
                             int val = 0;
                             for (int i = 0; i < numPoints; ++i)
                             {
-                                char flag = this.simpflags[i];
+                                byte flag = this.simpflags[i];
                                 if ((flag & X_SHORT_VECTOR) != 0)
                                 {
                                     if((flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR) != 0)
-                                        val += r.ReadUint8();
+                                        val += r.ReadUInt8();
                                     else
-                                        val -= r.ReadUint8();
+                                        val -= r.ReadUInt8();
                                 }
                                 else if ((~flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR) != 0)
                                     val += r.ReadInt16();
@@ -165,13 +165,13 @@ namespace PxPre
                             val = 0;
                             for (int i = 0; i < numPoints; ++i)
                             {
-                                char flag = this.simpflags[i];
+                                byte flag = this.simpflags[i];
                                 if ((flag & Y_SHORT_VECTOR) != 0)
                                 {
                                     if ((flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR) != 0)
-                                        val += r.ReadUint8();
+                                        val += r.ReadUInt8();
                                     else
-                                        val -= r.ReadUint8();
+                                        val -= r.ReadUInt8();
                                 }
                                 else if ((~flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR) != 0)
                                     val += r.ReadInt16();
@@ -199,7 +199,7 @@ namespace PxPre
                                 }
                                 else
                                 {
-                                    this.argument1 = (r.ReadInt8() << 8) | r.ReadInt8();
+                                    this.argument1 = (r.ReadUInt8() << 8) | r.ReadUInt8();
                                 }
                                 if ((this.compflags & WE_HAVE_A_SCALE) != 0)
                                 {
@@ -228,9 +228,9 @@ namespace PxPre
                             {
                                 r.ReadInt(out this.numInstr);
 
-                                this.instr = new List<char>();
+                                this.instr = new List<byte>();
                                 for (int i = 0; i < this.instr.Count; ++i)
-                                    this.instr.Add(r.ReadUint8());
+                                    this.instr.Add(r.ReadUInt8());
 
                             } // Is this 
                         } // what a pyramid

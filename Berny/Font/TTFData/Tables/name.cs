@@ -70,6 +70,15 @@ namespace PxPre
                         public ushort length;           // String length (in bytes).
                         public ushort stringOffset;     // String offset from start of storage area (in bytes).
 
+                        public void Read(TTFReader r)
+                        {
+                            r.ReadInt(out this.platformID);
+                            r.ReadInt(out this.encodingID);
+                            r.ReadInt(out this.languageID);
+                            r.ReadInt(out this.nameID);
+                            r.ReadInt(out this.length);
+                            r.ReadInt(out this.stringOffset);
+                        }
                     }
 
                     public const string TagName = "name";
@@ -77,7 +86,7 @@ namespace PxPre
                     public ushort version;                      // Table version number(=1).
                     public ushort count;                        // Number of name records.
                     public ushort storageOffset;                // Offset to start of string storage (from start of table).
-                    public List<string> nameRecord;             // The name records where count is the number of records.
+                    public List<NameRecords> nameRecord;        // The name records where count is the number of records.
 
                     public ushort langTagCount;                 // Number of language-tag records.
                     public List<LangTagRecord> langTagRecord;   // The language-tag records where langTagCount is the number of records.
@@ -88,9 +97,13 @@ namespace PxPre
                         r.ReadInt(out this.count);
                         r.ReadInt(out this.storageOffset);
 
-                        this.nameRecord = new List<string>();
+                        this.nameRecord = new List<NameRecords>();
                         for(int i = 0; i < this.count; ++i)
-                            this.nameRecord.Add(r.ReadNameRecord());
+                        {
+                            NameRecords nr = new NameRecords();
+                            nr.Read(r);
+                            this.nameRecord.Add(nr);
+                        }
 
                         if (this.version == 1)
                         {

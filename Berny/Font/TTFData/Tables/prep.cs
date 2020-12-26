@@ -49,14 +49,14 @@ namespace PxPre
                     public const string TagName = "prep";
 
                     // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM03/Chap3.html
-                    List<char> instructions;
+                    List<byte> instructions;
 
                     public void Read(TTFReader r, int tableSz)
                     {
-                        this.instructions = new List<char>();
+                        this.instructions = new List<byte>();
 
                         for (int i = 0; i < tableSz; ++i)
-                            this.instructions.Add( r.ReadUint8());
+                            this.instructions.Add( r.ReadUInt8());
                     }
                 }
             }

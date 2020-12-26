@@ -52,7 +52,7 @@ namespace PxPre
 
                     this.regionIndexes = new List<ushort>();
                     for (int i = 0; i < this.regionIndexCount; ++i)
-                        this.regionIndexes.Add( r.ReadUint16());
+                        this.regionIndexes.Add( r.ReadUInt16());
                     
                     this.deltaSets = new List<DeltaSet>();
                     for (int i = 0; i < this.itemCount; ++i)
