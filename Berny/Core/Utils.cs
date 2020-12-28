@@ -33,7 +33,7 @@ namespace PxPre
         public static class Utils
         {
             /// <summary>
-            /// Currently unused, the blend types supported in SVG.
+            /// Currently UNUSED, the blend types supported in SVG.
             /// </summary>
             public enum BlendMode
             { 
@@ -280,10 +280,10 @@ namespace PxPre
                 }
 
                 /// <summary>
-                /// 
+                /// Full node segment constructor.
                 /// </summary>
-                /// <param name="node"></param>
-                /// <returns></returns>
+                /// <param name="node">The node value.</param>
+                /// <returns>A subdivide region spanning the entire segment.</returns>
                 public static BezierSubdivRgn FromNode(BNode node)
                 {
                     Utils.BezierSubdivRgn ret = new Utils.BezierSubdivRgn();
@@ -300,11 +300,11 @@ namespace PxPre
                 }
 
                 /// <summary>
-                /// 
+                /// Windowed constructor.
                 /// </summary>
-                /// <param name="node"></param>
-                /// <param name="leftLam"></param>
-                /// <param name="rightLam"></param>
+                /// <param name="node">The node value.</param>
+                /// <param name="leftLam">Interpolation value demarking the left of the window.</param>
+                /// <param name="rightLam">Interpolation value demarking the right of the window.</param>
                 /// <returns></returns>
                 public static BezierSubdivRgn FromNode(BNode node, float leftLam, float rightLam)
                 {
@@ -428,6 +428,10 @@ namespace PxPre
                 ++ctr;
                 return ctr;
             }
+
+            /// <summary>
+            /// RegisterCounter ID generating counter.
+            /// </summary>
             static int ctr = 0;
 
             /// <summary>
@@ -455,7 +459,7 @@ namespace PxPre
             /// So we enumerate and instantly return the value we find.
             /// 
             /// There is a LINQ equivalent, but no reason to bring in LINQ for
-            /// such trivilities.
+            /// such trivialities.
             /// </summary>
             /// <typeparam name="ty">The type of the HashSet.</typeparam>
             /// <param name="hs">The HashSet to pull a value from.</param>
@@ -499,9 +503,11 @@ namespace PxPre
             /// <summary>
             /// 2D cross section.
             /// </summary>
-            /// <param name="a"></param>
-            /// <param name="b"></param>
-            /// <returns></returns>
+            /// <param name="a">Left vector.</param>
+            /// <param name="b">Right vector.</param>
+            /// <returns>The 2D cross product.</returns>
+            /// <remarks>We can imagine this as a 3D cross product is z=0.0 for the parameters, and
+            /// receiving th z value of return (the x and y of the return would be 0.0 for 2D).</remarks>
             /// <remarks>A positive value will be a clockwise winding.</remarks>
             public static float Vector2Cross(Vector2 a, Vector2 b)
             { 
@@ -619,6 +625,14 @@ namespace PxPre
                     ((int)Mathf.Clamp(c.a * 255.0f, 0.0f, 255.0f)).ToString("x2");
             }
 
+            /// <summary>
+            /// Fill in dictionaries mapping SVG color names and hex color values to
+            /// each other.
+            /// </summary>
+            /// <param name="outNameToHex">A dictionary to populate where the key is the string name 
+            /// of the color, and the value is the hex string.</param>
+            /// <param name="outHexToName">A dictionary to populate that is the inverse of the 
+            /// outNameToHex - where the key is the hex value and the value is the string name.</param>
             public static void ColorNamesHexMap(
                 out Dictionary<string,string> outNameToHex,
                 out Dictionary<string, string> outHexToName )
@@ -871,13 +885,16 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Given a postfix string, get the unit type enum.
             /// </summary>
-            /// <param name="str"></param>
-            /// <param name="defaultToMeters"></param>
+            /// <param name="str">The postfix string to convert.</param>
+            /// <param name="defaultToMeters">If true, if the str parameter cannot be identified, meters are returned. Else, if 
+            /// the postfix cannot be identified, Unlabled is returned.</param>
             /// <returns></returns>
             public static LengthUnit ConvertStringToLengthUnit(string str, bool defaultToMeters = false)
             {
+                str = str.Trim().ToLower();
+
                 if(str == "m")
                     return LengthUnit.Meters;
 
@@ -906,10 +923,10 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Given a unit enum, get the postfix string.
             /// </summary>
-            /// <param name="lu"></param>
-            /// <returns></returns>
+            /// <param name="lu">The distance unit to convert.</param>
+            /// <returns>The postfix string version of the unit type.</returns>
             public static string ConvertLengthUnitToString(LengthUnit lu)
             { 
                 switch(lu)
@@ -937,12 +954,13 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Given a string that contains a number value, followed by a unit postfix, extract
+            /// the two separate values.
             /// </summary>
-            /// <param name="str"></param>
-            /// <param name="value"></param>
-            /// <param name="unit"></param>
-            /// <returns></returns>
+            /// <param name="str">The string to parse.</param>
+            /// <param name="value">The distance value in the string.</param>
+            /// <param name="unit">The unit value in the string - if no units are found, it defaults to Unlabled.</param>
+            /// <returns>True, if the parse was successful. If false, the parse failed and the parameter returns are unusable.</returns>
             public static bool ExtractLengthString(string str, out float value, out LengthUnit unit)
             { 
                 str = str.Trim();
@@ -975,11 +993,11 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Converts a distance of a specified unit type into meters.
             /// </summary>
-            /// <param name="value"></param>
-            /// <param name="unit"></param>
-            /// <returns></returns>
+            /// <param name="value">The distance to convert.</param>
+            /// <param name="unit">The unit type of the value parameter.</param>
+            /// <returns>The converted distance into meters.</returns>
             public static float ConvertUnitsToMeters(float value, LengthUnit unit)
             {
                 switch(unit)
@@ -1437,6 +1455,21 @@ namespace PxPre
                 SubdivideSample(rgnAB, rgnBB, iterLeft - 1, minDst, outList);
             }
 
+            /// <summary>
+            /// Calculate the intersection of two node segments.
+            /// 
+            /// For line to line intersection, or line to curve intersection, there are straight-forward functions.
+            /// 
+            /// For cubic curve to cubic curve, the iterative Bezier clipping algorithm is used where curves are
+            /// bisected and their bounding boxes are checked for overlapping to reject non-overlapping bounding 
+            /// boxes. At a certain depth of recursive subdivision, we finally do a line-to-line intersection
+            /// test on very finely windowed sections of the curve.
+            /// </summary>
+            /// <param name="nodeA">A node.</param>
+            /// <param name="nodeB">Another node.</param>
+            /// <param name="iterLeft">The depth of overlapping subdivisions.</param>
+            /// <param name="minDst">The minDist parameter passed into SubdivideSample if curve-to-curve intersection is needed.</param>
+            /// <param name="outList">Intersection information. If an intersection is found, an entry is added into the list.</param>
             public static void NodeIntersections(BNode nodeA, BNode nodeB, int iterLeft, float minDst, List<BezierSubdivSample> outList)
             { 
                 // If we don't have two segments, then we can't have any kind of segment intersection
@@ -1613,7 +1646,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Coppied from the shader toy sample.
+            /// copied from the shader toy sample.
             /// // https://www.shadertoy.com/view/4sKyzW
             /// </summary>
             const int halley_iterations = 8;
@@ -2010,10 +2043,10 @@ namespace PxPre
             /// 
             /// See ParametricCubeBezier for more information from similar usage.
             /// </summary>
-            /// <param name="p0"></param>
-            /// <param name="p1"></param>
-            /// <param name="p2"></param>
-            /// <param name="p3"></param>
+            /// <param name="p0">The first point.</param>
+            /// <param name="p1">The control of the first point.</param>
+            /// <param name="p2">The control of the second point.</param>
+            /// <param name="p3">The second point.</param>
             /// <returns></returns>
             public static Vector4 BezierCoefficients(float p0, float p1, float p2, float p3)
             { 
@@ -2075,6 +2108,16 @@ namespace PxPre
                 roots = tmp;
             }
 
+            /// <summary>
+            /// Evaluate a quartic polynomial.
+            /// </summary>
+            /// <param name="a0">Added constant</param>
+            /// <param name="a1">Coefficient for x</param>
+            /// <param name="a2">Coefficient for x^2</param>
+            /// <param name="a3">Coefficient for x^3</param>
+            /// <param name="a4">Coefficient for x^4</param>
+            /// <param name="x">The time to evaluate for.</param>
+            /// <returns>The evaluated value.</returns>
             public static float EvalPoly5(float a0, float a1, float a2, float a3, float a4, float x)
             {
                 float f = ((((x + a4) * x + a3) * x + a2) * x + a1) * x + a0;
@@ -2254,11 +2297,11 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Solve a quartic 
+            /// Solve the roots for a quartic equation.
             /// </summary>
-            /// <param name="coeffs"></param>
-            /// <param name="s"></param>
-            /// <returns></returns>
+            /// <param name="coeffs">Coefficients of the quartic polynomial.</param>
+            /// <param name="s">The output roots.</param>
+            /// <returns>The number of roots found.</returns>
             /// <remarks>
             /// Original source comments:
             /// Modified from http://tog.acm.org/resources/GraphicsGems/gems/Roots3And4.c
@@ -2473,17 +2516,11 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Generic swap function. Given two variables, swap their values with each other.
             /// </summary>
-            /// <param name="a"></param>
-            /// <param name="b"></param>
-            /// <param name="clean"></param>
-            public static void TestIntersection(BNode a, BNode b, bool clean)
-            {
-                List<Utils.BezierSubdivSample> inter = new List<Utils.BezierSubdivSample>();
-            }
-
-            
+            /// <typeparam name="ty">The type of values being swapped.</typeparam>
+            /// <param name="x">A value to swap.</param>
+            /// <param name="y">The other value to swap.</param>
             public static void Swap<ty>(ref ty x, ref ty y)
             { 
                 ty tmp = x;
