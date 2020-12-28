@@ -28,15 +28,36 @@ namespace PxPre
 { 
     namespace Berny
     { 
+        /// <summary>
+        /// Utility class to perform boolean operations between closed shapes.
+        /// </summary>
         public static class Boolean
         {
             public delegate BoundingMode BooleanImpl(BLoop dstloop, List<BNode> dstSegs, List<BNode> otherSegs);
 
+            /// <summary>
+            /// A description of the collision between two nodes (a left and right island parameter).
+            /// </summary>
             public enum BoundingMode
             { 
+                /// <summary>
+                /// The nodes do not collide or overlap.
+                /// </summary>
                 NoCollision,
+
+                /// <summary>
+                /// The nodes intersect each other.
+                /// </summary>
                 Collision,
+
+                /// <summary>
+                /// The nodes do not intersect paths, but the left island completely surround the right island.
+                /// </summary>
                 LeftSurroundsRight,
+
+                /// <summary>
+                /// The nodes do not intersect paths, but the right island completly surrounds the left island.
+                /// </summary>
                 RightSurroundsLeft
             }
 

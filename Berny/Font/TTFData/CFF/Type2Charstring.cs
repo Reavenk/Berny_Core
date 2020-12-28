@@ -1,4 +1,25 @@
-﻿using System.Collections;
+﻿// MIT License
+// 
+// Copyright (c) 2020 Pixel Precision LLC
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -74,19 +95,38 @@ namespace PxPre
                     Reserved_Load = (12 << 8)|13
                 }
 
-                // If true, do checks while executing to make sure the 
-                // program is well formed.
+                /// <summary>
+                /// Constant for toggling debugging behavior. The ideal expectation is for if statements 
+                /// involving a false value to be optimized out for release builds.
+                /// 
+                /// // If true, do checks while executing to make sure the program is well formed.
+                /// </summary>
                 const bool validateContext = true;
-                byte [] program;
 
+                /// <summary>
+                /// The byte content loaded from the CFF file.
+                /// </summary>
+                public byte [] program;
+
+                /// <summary>
+                /// Default constructor.
+                /// </summary>
                 public Type2Charstring()
                 { }
 
+                /// <summary>
+                /// Constructor that autosets the program.
+                /// </summary>
+                /// <param name="program">The program bytes loaded from the CFF for the glyph charstring.</param>
                 public Type2Charstring(byte [] program)
                 { 
                     this.program = program;
                 }
 
+                /// <summary>
+                /// Execute the program.
+                /// </summary>
+                /// <returns>The glyph created by the program.</returns>
                 public Font.Glyph ExecuteProgram()
                 {
                     Dictionary<int, Type2Charstring> noSubsLocal = 
@@ -98,6 +138,14 @@ namespace PxPre
                     return ExecuteProgram(this.program, noSubsLocal, noSubsGlobal);
                 }
 
+                /// <summary>
+                /// Static helper function to execute charstring bytecode. Can be 
+                /// used on a raw byte array instead of requiring a Type2Charstring object.
+                /// </summary>
+                /// <param name="program">The program to execute.</param>
+                /// <param name="localSubs">Local subroutines.</param>
+                /// <param name="globalSubs">Global subroutines.</param>
+                /// <returns></returns>
                 public static Font.Glyph ExecuteProgram(
                     byte [] program,
                     Dictionary<int, Type2Charstring> localSubs,
@@ -122,6 +170,15 @@ namespace PxPre
                     return ret;
                 }
 
+                /// <summary>
+                /// Execute a Charstring program, given an existing execution context.
+                /// 
+                /// This function is used both for executing the main program, as well as
+                /// executing subroutines.
+                /// </summary>
+                /// <param name="program">The program data.</param>
+                /// <param name="context">The execution context.</param>
+                /// <returns></returns>
                 public static bool ExecuteProgram(
                     byte[] program,
                     ref ExecContext context)
@@ -338,16 +395,14 @@ namespace PxPre
                                 // continues execution after the corresponding call(g)subr.
                                 return false;
 
-                            case (int)Op.VSIndex:
-                                Debug.Log("Consume unhandled opcode vsindex.");
+                            case (int)Op.VSIndex: // Deprecated/obsolete
                                 ctx.PopOp(1);
                                 break;
 
-                            case (int)Op.Blend:
-                                Debug.Log("Hit opcode vsindex.");
+                            case (int)Op.Blend: // Deprecated/obsolete
                                 break;
 
-                            case (int)Op.DotSection:
+                            case (int)Op.DotSection: // Deprecated/Obsolete
                                 break;
 
                             case (int)Op.And:

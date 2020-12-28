@@ -30,10 +30,24 @@ namespace PxPre
     {
         namespace TTF
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public class TTFReaderBytes : TTFReader
             {
+                /// <summary>
+                /// The read position.
+                /// </summary>
                 long pos = 0;
+
+                /// <summary>
+                /// The data buffer to read from.
+                /// </summary>
                 byte [] data;
+
+                /// <summary>
+                /// The state variable to simulate closing the reader.
+                /// </summary>
                 bool closed = true;
 
                 public override bool AtEnd()
@@ -41,6 +55,10 @@ namespace PxPre
                     return this.pos >= data.Length;
                 }
 
+                /// <summary>
+                /// Constructor.
+                /// </summary>
+                /// <param name="data">The data buffer to read from.</param>
                 public TTFReaderBytes(byte [] data)
                 { 
                     this.data = data;

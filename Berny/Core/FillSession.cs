@@ -51,6 +51,10 @@ namespace PxPre
                 this.islands.Clear();
             }
 
+            /// <summary>
+            /// Create a deep copy of the object.
+            /// </summary>
+            /// <returns>A copy of the invoking object.</returns>
             public FillSession Clone()
             { 
                 FillSession ret = new FillSession();
@@ -62,10 +66,10 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Given a shape, fill the session with its closed islands.
             /// </summary>
-            /// <param name="shape"></param>
-            /// <returns></returns>
+            /// <param name="shape">The shape to analyze.</param>
+            /// <returns>The number of islands extracted.</returns>
             public int ExtractFillLoops(BShape shape)
             { 
                 int ret = 0;
@@ -155,9 +159,9 @@ namespace PxPre
             }
              
             /// <summary>
-            /// 
+            /// Detect and repair self intersections.
             /// </summary>
-            /// <param name="island"></param>
+            /// <param name="island">The child island to search-and-operate for self-intersections.</param>
             /// <returns></returns>
             public int SanatizeIslandIntersections(FillIsland island)
             {
@@ -258,12 +262,14 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Get the triangles for the shape via ear-clipping.
             /// </summary>
-            /// <param name="triangles"></param>
-            /// <param name="vectors"></param>
-            /// <param name="sanatizeIsland"></param>
-            /// <param name="consume"></param>
+            /// <param name="triangles">The output list of triangle indexes.</param>
+            /// <param name="vectors">The managed points of the triangles.</param>
+            /// <param name="sanatizeIsland">If true, self-intersection sanitization is performed before 
+            /// extracting triangle data.</param>
+            /// <param name="consume">The operation of extracing triangles consumes the object. If consume is set to false, a deep
+            /// copy is made and consumed instead, preserving the invoking object.</param>
             public void GetTriangles(List<int> triangles, Vector2Repo vectors, bool sanatizeIsland, FillIsland.WindingRequirement windingRequirement, bool consume = false)
             {
                 if(sanatizeIsland == true)
@@ -272,6 +278,7 @@ namespace PxPre
                     // iterate over it - so we make a copy.
                     HashSet<FillIsland> originalIslands = new HashSet<FillIsland>(this.islands);
 
+                    // Currently completly disabled.
                     //foreach(FillIsland fi in originalIslands)
                     //    this.SanatizeIslandIntersections(fi);
                 }

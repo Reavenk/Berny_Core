@@ -456,6 +456,9 @@ namespace PxPre
 
             }
 
+            /// <summary>
+            /// Clear all contents in the shape.
+            /// </summary>
             public void Clear()
             {
                 if(this.loops.Count == 0)
@@ -465,6 +468,11 @@ namespace PxPre
                 this.FlagDirty();
             }
 
+            /// <summary>
+            /// Remove the procedural shape generator.
+            /// </summary>
+            /// <returns>True if the reference to the generator was successfully removed. If the shape did
+            /// not have a generator, false.</returns>
             public bool AbandonGenerator()
             { 
                 if(this.shapeGenerator == null)

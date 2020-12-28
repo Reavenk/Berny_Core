@@ -28,6 +28,11 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Utility class to save and load a Berny document to/from SVG.
+        /// </summary>
+        /// <remarks>This is not a comprehensive utility. It's just the basic for simple
+        /// stuff, and for quickly loading test scenes.</remarks>
         public static class SVGSerializer
         { 
             public static bool Save(string filename, Document doc, bool invertY = true)

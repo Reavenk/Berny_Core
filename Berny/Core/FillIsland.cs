@@ -32,10 +32,24 @@ namespace PxPre
         /// </summary>
         public class FillIsland
         {
+            /// <summary>
+            /// Specifies constraints for the winding of paths.
+            /// </summary>
             public enum WindingRequirement
             { 
+                /// <summary>
+                /// No contraint should be used.
+                /// </summary>
                 DoesntMatter,
+
+                /// <summary>
+                /// The shape's positive region should be a clockwise winding.
+                /// </summary>
                 Clockwise,
+
+                /// <summary>
+                /// The shape's negative region should be a counter clickwise winding.
+                /// </summary>
                 Counter
             }
 
@@ -54,6 +68,13 @@ namespace PxPre
             /// </summary>
             public HashSet<FillSegment> segments = new HashSet<FillSegment>();
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="ie"></param>
+            /// <param name="pushin"></param>
+            /// <param name="pushout"></param>
+            /// <returns></returns>
             public static FillIsland CreateEdged(IEnumerable<Vector2> ie, float pushin, float pushout)
             { 
                 List<FillSegment> segA = new List<FillSegment>();
@@ -116,6 +137,11 @@ namespace PxPre
                 return fiRet;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="ie"></param>
+            /// <returns></returns>
             public static FillIsland CreateLooped(IEnumerable<Vector2> ie)
             { 
                 FillIsland fiRet = new FillIsland();
@@ -471,6 +497,11 @@ namespace PxPre
                 return ret;
             }
 
+            /// <summary>
+            /// Given a closed shape, turn it into a outline that has a bridge that allows it to be filled with
+            /// a hollow interior.
+            /// </summary>
+            /// <param name="inflate">The amount to inflate the path.</param>
             public void MakeOutlineBridged(float inflate)
             {
                 FillSegment first = null;
@@ -539,6 +570,10 @@ namespace PxPre
                 fsNewLast.prev = last;
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="f"></param>
             public void Inflate(float f)
             { 
                 List<Vector2> infs = new List<Vector2>();
@@ -554,6 +589,10 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// Enumerate across the entire island.
+            /// </summary>
+            /// <returns>An IEnumerable that travels through the entire island.</returns>
             IEnumerable<FillSegment> Travel()
             { 
                 FillSegment first = Utils.GetFirstInHash(this.segments);
@@ -570,17 +609,6 @@ namespace PxPre
 
                 yield break;
             }
-
-            //public static void ConsumeTubeIntoTriangles(
-            //    FillIsland fsA, 
-            //    float zA,
-            //    FillIsland fsB, 
-            //    float zB,
-            //    bool reverseWinding,
-            //    List<int> triangles, 
-            //    Vector2Repo vectors)
-            //{ 
-            //}
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>

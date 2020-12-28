@@ -1,4 +1,26 @@
-﻿using System.Collections;
+﻿// MIT License
+// 
+// Copyright (c) 2020 Pixel Precision LLC
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,11 +30,19 @@ namespace PxPre
     {
         namespace CFF
         {
+            /// <summary>
+            /// The values strings in a CFF file.
+            /// </summary>
             public class Strings
             {
                 // The last predefined string in the CFF (5176.CFF) appendix (+1)
                 const int StdNStrings = 391;
 
+                /// <summary>
+                /// Standard CFF string values. There as Strings.StdNStrings values in
+                /// here, and are expected to be shared and reused between all implementations
+                /// of CFF fonts.
+                /// </summary>
                 public static readonly string[] StandardStrings =
                     new string[]
                     {
@@ -410,8 +440,20 @@ namespace PxPre
                         "Semibold"
                     };
 
+                /// <summary>
+                /// Strings unique to a CFF file. 
+                /// 
+                /// Listed in the order they were parsed from a file.
+                /// </summary>
+                /// <remarks>Given a SID, if the SID value is greater than StdNStrings, the string is located 
+                /// at index SID-StdNStrings</remarks>
                 public List<string> uniqueStrings = new List<string>();
 
+                /// <summary>
+                /// Add a unique string.
+                /// </summary>
+                /// <param name="str">The unique string to store.</param>
+                /// <returns>The SID of the string.</returns>
                 public int Add(string str)
                 { 
                     int ct = this.uniqueStrings.Count;
@@ -419,13 +461,19 @@ namespace PxPre
                     return StdNStrings + ct;
                 }
 
+                /// <summary>
+                /// Get a string via SID.
+                /// </summary>
+                /// <param name="sid">The requested string ID.</param>
+                /// <returns>The string, or error message.</returns>
+                /// <remarks>Handles both unique values and standard string values.</remarks>
                 public string GetString(int sid)
                 {
                     if (sid == -1)
                         return "Value not set.";
 
                     if (sid < StdNStrings)
-                        return "Value not stored.";
+                        return StandardStrings[sid];
 
                     int idx = sid - StdNStrings;
                     if (idx < 0 || idx >= this.uniqueStrings.Count)
@@ -434,6 +482,9 @@ namespace PxPre
                     return this.uniqueStrings[idx];
                 }
 
+                /// <summary>
+                /// Clear all stored unique strings.
+                /// </summary>
                 public void Clear()
                 { 
                     this.uniqueStrings.Clear();

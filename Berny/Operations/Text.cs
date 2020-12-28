@@ -28,8 +28,22 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Utility library to turn Berny fonts and text into proper vectorized Berny shapes.
+        /// </summary>
         public static class Text
         { 
+            /// <summary>
+            /// Given a string and a typeface, create the vector shapes for them.
+            /// </summary>
+            /// <param name="l">The layer to create the glyph shapes in.</param>
+            /// <param name="offset">The location where the glyphs will be created. Represents the
+            /// baseline position for the start of the string.</param>
+            /// <param name="font">The font to create.</param>
+            /// <param name="scale">A multiplier scale on the created geometry.</param>
+            /// <param name="strToGen">The string to generate.</param>
+            /// <returns>A 1-1 mapping between the string chars and the generated shapes. For missing glyphs, the entry will
+            /// either be an empty glyph or null.</returns>
             public static List<BShape> GenerateString(
                 Layer l, 
                 Vector2 offset, 
@@ -42,6 +56,7 @@ namespace PxPre
 
                 const float normLineHeight = 1.0f;
 
+                // For each shape, generate the geometry.
                 for (int i = 0; i < strToGen.Length; ++i)
                 {
                     char c = strToGen[i];
@@ -66,6 +81,13 @@ namespace PxPre
                     ret.Add(shapeLetter);
                     l.shapes.Add(shapeLetter);
 
+                    // Generate each contour in the glyph. When we're iterating through the glyph points,
+                    // we need to remember we're dealing with two possible conventions at once - TTF/OTF and
+                    // CFF.
+                    //
+                    // Remember TTF/OTF uses quadratic beziers and the control flags.
+                    //
+                    // While CCF uses cubic beziers and the point tangents and tangent flags.
                     for (int j = 0; j < g.contours.Count; ++j)
                     {
                         BLoop loopCont = new BLoop(shapeLetter);
@@ -93,11 +115,15 @@ namespace PxPre
                             }
                         }
 
-                        BNode firstNode = null;
-                        BNode prevNode = null;
-                        Vector2? lastTan = null;
+                        BNode firstNode = null;     // Used to know what to link the last node to when we're done looping.
+                        BNode prevNode = null;      // Used to have a record of the last node when we're done looping.
+                        Vector2? lastTan = null;    // The last used tangent when dealing with control points.
 
-                        // Point are now either points, or curve controls surrounded by points.
+                        // Point are now either points, or curve controls surrounded by points - 
+                        // or it's a CFF and we don't actually care about control points since we have
+                        // explicitly defined tangents.
+                        //
+                        // The code is written to handle both without explicitly knowing which system is being used.
                         for (int k = 0; k < cont.points.Count; ++k)
                         {
                             Vector2 ptpos = cont.points[k].position * scale + pos;

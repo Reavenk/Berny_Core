@@ -1213,7 +1213,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Reverse the tangent information and linked list references.
             /// </summary>
             internal void _Reverse()
             { 
@@ -1252,11 +1252,15 @@ namespace PxPre
             /// <param name="maxBisections">The number of bisection iterations.</param>
             /// <param name="eps">The epsillon for when to quit if bisected areas get too small.</param>
             /// <returns>The estimated closes point on the curve.</returns>
-            /// <remarks>This implementation is depresecated for a more accurate analytical method.</remarks>
+            /// <remarks>This implementation is deprecated for a more accurate analytical method.</remarks>
             //
-            // A better implementation exists, but only in peices for a BNode segment and not an entire chain.
+            // A better implementation exists, but only in pieces for a BNode segment and not an entire chain.
             // It is planned to be added in and this will be phased out.
-            public PointOnCurve FindClosestToPointChainBySub(Vector2 pos, int initSubdivs, int maxBisections, float eps)
+            public PointOnCurve FindClosestToPointChainBySub(
+                Vector2 pos, 
+                int initSubdivs, 
+                int maxBisections, 
+                float eps)
             {
                 BNode closest = null;
                 float closestDistSqr = float.PositiveInfinity;
@@ -1478,7 +1482,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Createa deep copy of the node and its contents.
+            /// Create a deep copy of the node and its contents.
             /// </summary>
             /// <param name="loop">The loop to add the node to.</param>
             /// <returns>The newly created duplicate node.</returns>
@@ -1517,10 +1521,11 @@ namespace PxPre
             /// <summary>
             /// When inflating, how much to move out per unit inflation amount. 
             /// </summary>
-            /// <param name="vA"></param>
-            /// <param name="vB"></param>
-            /// <param name="vC"></param>
-            /// <returns></returns>
+            /// <param name="vA">The left point on the inflating segment.</param>
+            /// <param name="vB">The midpoint to calculate the inflation vector for.</param>
+            /// <param name="vC">The right point on the inflating segment.</param>
+            /// <returns>A scaled vector that will move vB outwards 1 unit length. Scale linearly to
+            /// whatever inflation amount is needed.</returns>
             public Vector2 GetInflateDirection(Vector2 vA, Vector2 vB, Vector2 vC)
             {
                 Vector2 atb = (vB - vA);
@@ -1557,12 +1562,14 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Utility function, rotate a vector 90 degrees counter-clockwise.
             /// </summary>
-            /// <param name="v2"></param>
-            /// <returns></returns>
+            /// <param name="v2">The vector to rotate.</param>
+            /// <returns>The rotated vector.</returns>
             public Vector2 RotateEdge90CCW(Vector2 v2)
             {
+                // NOTE: I think there's multiple of this function in different files. They need 
+                // to be found and consolidated.
                 return new Vector2(-v2.y, v2.x);
             }
 
@@ -1623,64 +1630,27 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Given an interpolation point, get useful values on how it would subdivided there.
             /// </summary>
-            /// <param name="comp"></param>
-            /// <returns></returns>
-            public BNode GetMinOnIsland(int comp)
-            { 
-                EndpointQuery eq = this.GetPathLeftmost();
-                if(eq.node.next == null)
-                    return eq.node;
-
-                PathBridge pb = eq.node.GetPathBridgeInfo();
-                BNode ret = eq.node;
-
-                float min = 
-                    Mathf.Min(
-                        eq.node.pos[comp], 
-                        (eq.node.pos + pb.prevTanOut)[comp], 
-                        (eq.node.next.pos + pb.nextTanIn)[comp]);
-
-                BNode it = eq.node.next;
-                while(it != null && it != eq.node)
-                { 
-                    pb = it.GetPathBridgeInfo();
-                    float itMin = 
-                        Mathf.Min(
-                            it.pos[comp], 
-                            (it.pos + pb.prevTanOut)[comp]);
-
-
-                    if(it.next != null)
-                    { 
-                        itMin = 
-                            Mathf.Min(
-                                itMin,
-                                (it.next.pos + pb.nextTanIn)[comp]);
-                    }
-
-                    if(itMin < min)
-                    { 
-                        min = itMin;
-                        ret = it;
-                    }
-
-                    it = it.next;
-                }
-                return ret;
-            }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="t"></param>
-            /// <returns></returns>
+            /// <param name="t">The interpolation point to evaluate subdivision for.</param>
+            /// <returns>Subdivision info.</returns>
             public SubdivideInfo GetSubdivideInfo(float t)
             { 
-                // TODO: Handle linear also
-
                 PathBridge pb = this.GetPathBridgeInfo();
+
+                if(pb.pathType == PathType.Line)
+                {
+                    SubdivideInfo retLine = new SubdivideInfo();
+
+                    retLine.subIn = Vector2.zero;
+                    retLine.subOut = Vector2.zero;
+                    retLine.nextIn = Vector2.zero;
+                    retLine.prevOut = Vector2.zero;
+
+                    retLine.subPos = Vector2.Lerp(this.pos, this.next.pos, t);
+
+                    return retLine;
+                }
 
                 Vector2 p0 = this.pos;
                 Vector2 p1 = this.pos + pb.prevTanOut;
@@ -1709,10 +1679,10 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Calculate the location of an interpolation value.
             /// </summary>
-            /// <param name="t"></param>
-            /// <returns></returns>
+            /// <param name="t">Interpolation value between [0.0, 1.0].</param>
+            /// <returns>The interpolated point.</returns>
             public Vector2 CalculatetPoint(float t)
             {
                 if(this.next == null)
@@ -1734,9 +1704,10 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Checks if the segment is a line.
             /// </summary>
-            /// <returns></returns>
+            /// <returns>True, if the segment is a line. False, if the node isn't a segment, or 
+            /// if the segment is a curve.</returns>
             public bool IsLine()
             { 
                 if(this.next == null)
@@ -1748,9 +1719,10 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Check if the segment is a Bezier curve.
             /// </summary>
-            /// <returns></returns>
+            /// <returns>True, if the segment is a curve. False, if the node isn't a segment, or
+            /// if the segment is a line.</returns>
             public bool IsSegment()
             { 
                 return this.next != null;
@@ -1758,12 +1730,19 @@ namespace PxPre
 
 
             /// <summary>
+            /// The the farthest position of the node on an axis.
             /// 
+            /// This doesn't just include segment end positions, but also
+            /// the entire set of interpolatable positions.
             /// </summary>
-            /// <param name="val"></param>
-            /// <param name="t"></param>
-            /// <param name="comp"></param>
-            /// <returns></returns>
+            /// <param name="val">The output position for farthest point. Only modified if the node contains
+            /// a farther point than val already represents.</param>
+            /// <param name="t">The interpolation point to get to val.</param>
+            /// <param name="comp">The component for which axis to check. 0 for the max X axis. 1 for the max Y axis.</param>
+            /// <returns>True, if a new max was found - which results in a modified t output parameter. Else, false.</returns>
+            /// <remarks>The ref t is modified if a new furthest value is found, but the incoming value may not be from
+            /// the invoking node. It is expected that the invoking code is keeping track of which BNode the t belongs to
+            /// for the maximum.</remarks>
             public bool GetMaxPoint(ref Vector2 val, ref float t, int comp)
             {
                 // UNTESTED: Was going to be used for an algorithm,
@@ -1826,6 +1805,15 @@ namespace PxPre
 
             }
 
+            /// <summary>
+            /// Utility function to call BNode.GetMaxPoint() on a collection of BNodes.
+            /// </summary>
+            /// <param name="nodes">The nodes to scan for the maximum point.</param>
+            /// <param name="node">The owner of the maximum point.</param>
+            /// <param name="val">The output position for farthest point.</param>
+            /// <param name="t">The interpolation point to get to val.</param>
+            /// <param name="comp">The component for which axis to check. 0 for the max X axis. 1 for the max Y axis.</param>
+            /// <returns>True, if a new max was found - which results in a modified t output parameter. Else, false.</returns>
             public static bool GetMaxPoint(IEnumerable<BNode> nodes, out BNode node, out Vector2 val, out float t, int comp)
             { 
                 node = null;
@@ -1852,6 +1840,11 @@ namespace PxPre
                 return true;
             }
 
+            /// <summary>
+            /// From the current node, travel forward until the end is reached, or until 
+            /// a complete circle is traveled.
+            /// </summary>
+            /// <returns>An IEnumerable to travel across the linked list.</returns>
             public IEnumerable<BNode> Travel()
             {
                 BNode it = this;
@@ -1867,6 +1860,16 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// Make a 0 width bridge to enable an closed path to be filled with another interior
+            /// closed path defining a hollow interior region.
+            /// </summary>
+            /// <param name="bnIn">A node belonging to the outer loop.</param>
+            /// <param name="inT">The location in bnIn to create the connecting bridge.</param>
+            /// <param name="bnOut">A node belonging to the inner hollowing loop.</param>
+            /// <param name="outT">The location in bnOut to create the connecting bridge.</param>
+            /// <remarks>Creating the bridge will merge the two islands, as well as change their
+            /// topology in a C shape.</remarks>
             public static void MakeBridge(BNode bnIn, float inT, BNode bnOut, float outT)
             {
                 if (inT >= 1.0f)
@@ -1902,6 +1905,14 @@ namespace PxPre
                 otherOut.UseTanIn = false;
             }
 
+
+            /// <summary>
+            /// Calculate the winding of a an ordered set of nodes.
+            /// 
+            /// It's assumed that the enumerated items are an ordered collection of an island.
+            /// </summary>
+            /// <param name="ie">A collection of nodes to check the winding for when combined.</param>
+            /// <returns>The accumulated winding value.</returns>
             public static float CalculateWinding(IEnumerable<BNode> ie)
             { 
                 float acc = 0.0f;
@@ -1992,15 +2003,21 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Project a line segment against the node segment.
             /// </summary>
-            /// <param name="rayStart"></param>
-            /// <param name="rayControl"></param>
-            /// <param name="interCurve"></param>
-            /// <param name="interLine"></param>
-            /// <param name="nodes"></param>
-            /// <returns></returns>
-            public int ProjectSegment(Vector2 rayStart, Vector2 rayControl, List<float> interCurve, List<float> interLine, List<BNode> nodes)
+            /// <param name="rayStart">Point A on the testing line segment.</param>
+            /// <param name="rayControl">Point B on the testing line segment.</param>
+            /// <param name="interCurve">A list of output intersection points on the node segment.</param>
+            /// <param name="interLine">A list of output intersection points on the testing line segment.</param>
+            /// <param name="nodes">The list of output intersecting nodes, aligned with interCurve and interLine. While it simply adds 
+            /// itself, these lists are expected to be recycled amongst many different BNodes so various nodes may appear in the list.</param>
+            /// <returns>The number of collisions found - which is also the number of entries added to the output lists.</returns>
+            public int ProjectSegment(
+                Vector2 rayStart, 
+                Vector2 rayControl, 
+                List<float> interCurve, 
+                List<float> interLine, 
+                List<BNode> nodes)
             { 
                 int cols = ProjectSegment(rayStart, rayControl, interCurve, interLine);
                 for(int i = 0; i < cols; ++i)
@@ -2017,7 +2034,11 @@ namespace PxPre
             /// <param name="interCurve"></param>
             /// <param name="interLine"></param>
             /// <returns></returns>
-            public int ProjectSegment(Vector2 rayStart, Vector2 rayControl, List<float> interCurve, List<float> interLine)
+            public int ProjectSegment(
+                Vector2 rayStart, 
+                Vector2 rayControl, 
+                List<float> interCurve, 
+                List<float> interLine)
             {
                 if(this.next == null)
                     return 0;
@@ -2063,7 +2084,23 @@ namespace PxPre
                 return 0;
             }
 
-            public static Dictionary<BNode, BNode> CloneNodes(IEnumerable<BNode> nodes, bool transferLoop, bool remap = true, bool allowOnlyRemaps = true)
+            /// <summary>
+            /// Create a copy of a collection of nodes.
+            /// 
+            /// For all mapped nodes in a link list, the link list references are also converted so they have their 
+            /// own copy of a similar topology.
+            /// </summary>
+            /// <param name="nodes">The nodes to clone.</param>
+            /// <param name="transferLoop">If true, cloned nodes are added to the original nodes' parent loop(s). </param>
+            /// <param name="remap">If true, remap link list referenced to the newly created copies. Else, keep old 
+            /// references from the original nodes.</param>
+            /// <param name="allowOnlyRemaps">If true, null-out linked list references if there isn't a mapped clone equivalent.</param>
+            /// <returns></returns>
+            public static Dictionary<BNode, BNode> CloneNodes(
+                IEnumerable<BNode> nodes, 
+                bool transferLoop, 
+                bool remap = true, 
+                bool allowOnlyRemaps = true)
             { 
                 Dictionary<BNode, BNode> mapping = new Dictionary<BNode, BNode>();
 
@@ -2095,6 +2132,11 @@ namespace PxPre
                 return mapping;
             }
 
+            /// <summary>
+            /// Remove the entire island from its parent loop.
+            /// </summary>
+            /// <param name="rewind">Start removal from the beginning of the island. Only relevant if
+            /// the node belongs to an open loop.</param>
             public void RemoveIsland(bool rewind)
             { 
                 BNode start = this;

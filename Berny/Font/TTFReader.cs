@@ -30,71 +30,163 @@ namespace PxPre
     {
         namespace TTF
         {
+            /// <summary>
+            /// Utility class used by Berny to read a TrueType Font file and other
+            /// related files and data streams.
+            /// </summary>
             public abstract class TTFReader
             {
+                /// <summary>
+                /// If true, the reader is connected to the data stream.
+                /// </summary>
+                /// <returns>If true, reader is open. Else, false.</returns>
                 public abstract bool IsOpen();
+
+                /// <summary>, returning access and resources back to the system.
+                /// </summary>
+                /// <returns>True if the reader was successfully closed. Else, false.</returns>
+                /// <remark>May not be relevant on all platforms and implementations of TTFReader, but 
+                /// best practice is to call Close() at the proper time, regardless of the implementation
+                /// or usecase. The only exception is explicit use to TTFReaderBytes.</remark>
                 public abstract bool Close();
 
+                /// <summary>
+                /// Read a 1 byte un signed integer from the read position.
+                /// </summary>
+                /// <returns>The read integer value.</returns>
                 public abstract sbyte ReadInt8();
+
+                /// <summary>
+                /// Read a 1 byte signed integer from the read position.
+                /// </summary>
+                /// <returns>The read integer value.</returns>
                 public abstract byte ReadUInt8();
 
+                /// <summary>
+                /// Returns the read position.
+                /// </summary>
+                /// <returns>The read position.</returns>
                 public abstract long GetPosition();
+
+                /// <summary>
+                /// Set the read position of the reader.
+                /// </summary>
+                /// <param name="pos">The new read position.</param>
+                /// <returns>If true, the read position was successfully set. Else, false.</returns>
                 public abstract bool SetPosition(long pos);
 
+                /// <summary>
+                /// Read an array of bytes, starting from the read position.
+                /// </summary>
+                /// <param name="length">The number of bytes to read.</param>
+                /// <returns>The read bytes.</returns>
                 public abstract byte[] ReadBytes(int length);
 
+                /// <summary>
+                /// If true, the read position is past the readable area of the data stream. 
+                /// Else, false.
+                /// </summary>
+                /// <returns>If false, there is still data that can be read from where the read position is.</returns>
                 public abstract bool AtEnd();
 
+                /// <summary>
+                /// Read a signed 16 int from the current read position.
+                /// </summary>
+                /// <returns>The read integer value.</returns>
+                /// <returns>Current implementation is hard coded for little endian platforms.</returns>
                 public ushort ReadUInt16()
                 {
                     return (ushort)(this.ReadUInt8() << 8 | this.ReadUInt8());
                 }
 
+                /// <summary>
+                /// Read a 24 bit unsigned value from the current read position.
+                /// </summary>
+                /// <returns>The read integer value.</returns>
+                /// <remarks>Current implementation is hard coded for little endian platforms.</remarks>
                 public uint ReadUInt24()
                 {
                     return (uint)((this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
+                /// <summary>
+                /// Read a 32 bit unsigned value from the current read position.
+                /// </summary>
+                /// <returns>Current implementation is hard coded for little endian platforms.</returns>
                 public uint ReadUInt32()
                 {
                     return (uint)((this.ReadUInt8() << 24) | (this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
+                /// <summary>
+                /// Read a 16 bit signed value from the current read position.
+                /// </summary>
+                /// <returns></returns>
+                /// <returns>Current implementation is hard coded for little endian platforms.</returns>
                 public short ReadInt16()
                 {
                     return (short)(this.ReadUInt8() << 8 | this.ReadUInt8());
                 }
 
+                /// <summary>
+                /// Read a 32 bit signed value from the current read position.
+                /// </summary>
+                /// <returns></returns>
+                /// <returns>Current implementation is hard coded for little endian platforms.</returns>
                 public int ReadInt32()
                 {
                     return (int)((this.ReadUInt8() << 24) | (this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
+                /// <summary>
+                /// Read a TTF FWord from the current read position.
+                /// </summary>
+                /// <returns>The value read from the data stream.</returns>
                 public short ReadFWord()
                 {
                     return this.ReadInt16();
                 }
 
+                /// <summary>
+                /// Read a TTF UFWord from the current read position.
+                /// </summary>
+                /// <returns>The value read from the data stream.</returns>
                 public ushort ReadUFWord()
                 {
                     return this.ReadUInt16();
                 }
 
+                /// <summary>
+                /// Read a TTF Offset16 value from the current read position.
+                /// </summary>
+                /// <returns>The value read from the data stream.</returns>
                 public ushort ReadOffset16()
                 {
                     return this.ReadUInt16();
                 }
 
+                /// <summary>
+                /// Read a TTF Offset32 value from the current read position.
+                /// </summary>
+                /// <returns>The value read from the data stream.</returns>
                 public int ReadOffset32()
                 {
                     return this.ReadOffset32();
                 }
 
+                /// <summary>
+                /// Reads a TTF FDot14 value from the current read position.
+                /// </summary>
+                /// <returns>The number value read from the data stream and converted to a float.</returns>
                 public float ReadFDot14()
                 {
                     return (float)this.ReadInt16() / (float)(1 << 14);
                 }
 
+                /// <summary>
+                /// Reads a TTF Fixed value from the current read position.
+                /// </summary>
+                /// <returns>the number value read from the data stream and converted to a float.</returns>
                 public float ReadFixed()
                 {
                     return (float)this.ReadInt32() / (float)(1 << 16);
@@ -193,10 +285,16 @@ namespace PxPre
                     i = this.ReadUInt32();
                 }
 
+                /// <summary>
+                /// Reads a date time from the TFF file.
+                /// </summary>
+                /// <returns>The datetime at the current read position.</returns>
                 public System.DateTime ReadDate()
                 {
-                    long macTime = this.ReadUInt32() * 0x100000000 + this.ReadUInt32();
-                    return new System.DateTime(macTime * 1000);
+                    System.DateTime dt = new System.DateTime(1904, 1, 1);
+                    dt.AddSeconds(this.ReadUInt32());
+                    
+                    return dt;
                 }
             }
         }

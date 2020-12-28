@@ -46,13 +46,14 @@ namespace PxPre
                 public struct CFF
                 { 
                     
-
+                    // copied from documentation, currently UNUSED
                     public enum EncodingID
                     { 
                         Standard = 0,
                         Expert = 1
                     }
 
+                    // // copied from documentation, currently UNUSED
                     public enum CharsetID
                     { 
                         ISOAdobe = 0,
@@ -60,8 +61,7 @@ namespace PxPre
                         ExpertSubset = 2
                     }
 
-                    
-
+                    // copied from documentation, currently UNUSED
                     public struct Format0
                     { 
                         public byte format;
@@ -69,6 +69,7 @@ namespace PxPre
                         public byte [] code;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct Format1
                     { 
                         public byte format;
@@ -76,48 +77,56 @@ namespace PxPre
                         public List<Range1> range1s;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct Range1
                     {
                         public byte first;
                         public byte nLeft;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct SupplementalEncoding
                     { 
                         byte nSups;
                         public List<SupplementFormat> supplement;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct SupplementFormat
                     {
                         public byte code;
                         public string glyphSID;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct CharsetFormat0
                     { 
                         public byte format;
                         public List<int> glyph;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct CharsetFormat1
                     { 
                         public byte format;
                         public List<CharsetRange1> range1;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct CharsetRange1
                     { 
                         public int first;
                         public byte nLeft;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct CharsetFormat2
                     { 
                         public byte format;
                         public List<CharsetRange2> range2;
                     }
 
+                    // copied from documentation, currently UNUSED
                     public struct CharsetRange2
                     { 
                         public int first;
@@ -125,10 +134,22 @@ namespace PxPre
                     }
                     // CFF Data Type
 
+                    /// <summary>
+                    /// The TFF/OTF Table identifier
+                    /// </summary>
                     public const string TagName = "CFF ";
 
+                    /// <summary>
+                    /// The CFF file information.
+                    /// </summary>
                     public Berny.CFF.CFFFile data;
 
+                    /// <summary>
+                    /// Read the CFF segment in an TTF/OTF file.
+                    /// </summary>
+                    /// <param name="r">The reader for the TTF/OTF file.</param>
+                    /// <remarks>Assumes the reader parameter is set to the start of the CFF section
+                    /// before invoking.</remarks>
                     public void Read(TTFReader r)
                     { 
                         this.data = new Berny.CFF.CFFFile();

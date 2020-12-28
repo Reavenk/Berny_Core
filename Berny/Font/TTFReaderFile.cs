@@ -30,17 +30,36 @@ namespace PxPre
     {
         namespace TTF
         {
+            /// <summary>
+            /// An implementation of the TTFReader that pulls data from a file.
+            /// </summary>
             public class TTFReaderFile : TTFReader
             {
+                /// <summary>
+                /// The file reader.
+                /// </summary>
                 System.IO.BinaryReader reader = null;
+
+                /// <summary>
+                /// The file stream used by the binary reader.
+                /// </summary>
                 System.IO.FileStream filestream = null;
 
+                /// <summary>
+                /// File path constructor.
+                /// </summary>
+                /// <param name="path">The file path to open.</param>
                 public TTFReaderFile(string path)
                 {
                     if (this.Open(path) == false)
                         throw new System.Exception("Could not open file");
                 }
 
+                /// <summary>
+                /// Opens a file.
+                /// </summary>
+                /// <param name="path">The file path to open.</param>
+                /// <returns>If true, the file was successfully opened. Else, false.</returns>
                 public bool Open(string path)
                 {
                     this.Close();

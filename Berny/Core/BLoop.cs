@@ -27,10 +27,24 @@ namespace PxPre
 { 
     namespace Berny
     {
+        /// <summary>
+        /// A specification of the different types of islands that can be found.
+        /// </summary>
         public enum IslandTypeRequest
         { 
+            /// <summary>
+            /// Identify all islands.
+            /// </summary>
             Any,
+
+            /// <summary>
+            /// Identify only opened islands.
+            /// </summary>
             Open,
+
+            /// <summary>
+            /// Identify only closed islands.
+            /// </summary>
             Closed
         }
 
@@ -148,6 +162,17 @@ namespace PxPre
 #endif
             }
 
+            /// <summary>
+            /// Line loop constructor.
+            /// 
+            /// Creates a shape constructed of straight lines, defined by an ordered array
+            /// of 2D points.
+            /// </summary>
+            /// <param name="shape">The parent shape.</param>
+            /// <param name="closed">
+            /// If true, the shape is created as a closed path.. 
+            /// Else if false, the shape is created as an open path</param>
+            /// <param name="linePoints">The ordered list of points used to define the initial path.</param>
             public BLoop(BShape shape, bool closed, params Vector2 [] linePoints)
             {
                 // Arguably, we could have made the style of creation between this and the 
@@ -248,10 +273,14 @@ namespace PxPre
             }
 
             /// <summary>
+            /// Remove a node from the loop.
             /// 
+            /// The function will "properly" remove the node, which also includes
+            /// managing linked list connections of neighbors.
             /// </summary>
-            /// <param name="bn"></param>
-            /// <returns></returns>
+            /// <param name="bn">The node to remove.</param>
+            /// <returns>If true, the node was successfully remove. Else, false; thge node
+            /// was not found to exist in the invoking loop.</returns>
             public bool RemoveNode(BNode bn)
             { 
                 int idx = this.nodes.IndexOf(bn);
@@ -456,51 +485,6 @@ namespace PxPre
                 return ret;
             }
 
-            ///// <summary>
-            ///// Combine multiple loops into a single loop.
-            ///// </summary>
-            ///// <param name="loops"></param>
-            ///// <returns></returns>
-            //public static BLoop Union(params BLoop [] loops)
-            //{ 
-            //    // TODO:
-            //    return null;
-            //}
-            //
-            ///// <summary>
-            ///// Subtract one loop from another.
-            ///// </summary>
-            ///// <param name="left"></param>
-            ///// <param name="right"></param>
-            ///// <returns></returns>
-            //public static BLoop Difference(BLoop left, BLoop right)
-            //{
-            //    // TODO: 
-            //    return null;
-            //}
-            //
-            ///// <summary>
-            ///// 
-            ///// </summary>
-            ///// <param name="loops"></param>
-            ///// <returns></returns>
-            //public static BLoop Intersect(params BLoop [] loops)
-            //{ 
-            //    // TODO:
-            //    return null;
-            //}
-            //
-            ///// <summary>
-            ///// 
-            ///// </summary>
-            ///// <param name="loops"></param>
-            ///// <returns></returns>
-            //public static BLoop Exclusion(params BLoop [] loops)
-            //{
-            //    // TODO:
-            //    return null;
-            //}
-    
             /// <summary>
             /// Test the properties contained in the datastructure to make sure
             /// there are no errors.
@@ -527,7 +511,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Approximate the arclength by summing the length of the flattened curve segments.
+            /// Approximate the arc-length by summing the length of the flattened curve segments.
             /// </summary>
             /// <returns>The approximated arclength of all curve segments in the loop.</returns>
             public float CalculateSampleLens()
@@ -541,7 +525,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Approximate the arclength by flattening the node and accumulated the line lengths.
+            /// Approximate the arc-length by flattening the node and accumulated the line lengths.
             /// 
             /// This generates lines for measurement with an arbitrary subdivision amount and does
             /// not in any way touch the node segments.
@@ -593,12 +577,14 @@ namespace PxPre
             }
 
             /// <summary>
-            /// Subdivide a child node imto multiple parts.
+            /// Subdivide a child node into multiple parts.
             /// </summary>
             /// <remarks>Not reliable, to be replaced later with De Casteljau's algorithm.</remarks>
-            /// <param name="targ"></param>
-            /// <param name="lambda"></param>
-            /// <returns></returns>
+            /// <param name="targ">The node path to subdivide.</param>
+            /// <param name="lambda">The interpolation location between (0.0, 1.0) to subdivide.</param>
+            /// <returns>The node create during the subdivision process. It will be connected right
+            /// after the targ node. If targ does not have a next node, it does not represent a segment
+            /// and cannot be subdivided; returning in a null return.</returns>
             public BNode Subdivide(BNode targ, float lambda = 0.5f)
             {
                 if (targ.parent != this)
@@ -782,19 +768,20 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Utility function, rotate a 2D vector 90 degrees counter clockwise.
             /// </summary>
-            /// <param name="v2"></param>
-            /// <returns></returns>
+            /// <param name="v2">The vector to rotate.</param>
+            /// <returns>The rotate vector.</returns>
             public static Vector2 RotateEdge90CCW(Vector2 v2)
             { 
                 return new Vector2(-v2.y, v2.x);
             }
 
             /// <summary>
-            /// 
+            /// Inflate (dilate) the loop by a certain amount.
             /// </summary>
-            /// <param name="amt"></param>
+            /// <param name="amt">The distance to dialate the path contents.</param>
+            /// <remarks>Use a negative amt value to deflate/erode.</remarks>
             public void Inflate(float amt)
             { 
                 Dictionary<BNode, InflationCache> cachedInf = 
@@ -829,7 +816,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Reverse the winding order of all nodes in the loop.
             /// </summary>
             public void Reverse()
             { 
@@ -838,9 +825,12 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Move all the nodes in the loop into another loop.
             /// </summary>
-            /// <param name="dst"></param>
+            /// <param name="dst">The destination loop to dump node contents into.</param>
+            /// <remarks>If the dst isn't the same loop, the loop will end up empty. Of the dst is the same
+            /// loop, the operation is skipped.</remarks>
+            /// <remarks>The function only changes loop parenting. No changes are made to node topology/linked-lists.</remarks>
             public void DumpInto(BLoop dst)
             { 
                 if(dst == this)
@@ -865,6 +855,12 @@ namespace PxPre
                     bn.Deinflect();
             }
 
+            /// <summary>
+            /// If the loop has a shape generator, null it. This is used to make the official transition from
+            /// a procedural shape to Bezier defined path.
+            /// </summary>
+            /// <returns>If true, the operation was successful. If false, the loop did not have a 
+            /// shape generator.</returns>
             public bool AbandonParentGenerator()
             { 
                 if(this.shape != null)

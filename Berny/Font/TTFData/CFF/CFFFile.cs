@@ -28,10 +28,28 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// While this functionality was written for the CFF tag in TFF/OTF parser, since the CFF
+        /// is allowed to be a standalone file, the file representation is split into a discrete
+        /// implementation.
+        /// 
+        /// It tries to be mostly independent of outside TTF loading code, except for use of the 
+        /// TFFReader and subclasses - just because it's too useful to omit.
+        /// </summary>
+        /// <remarks>It is undecided how far the library will go supporting any given feature
+        /// besides basic font shape extraction. Besides effort, the biggest limiting factor is
+        /// finding test font to test implementations of features against.</remarks>
         namespace CFF
         {
+            /// <summary>
+            /// The contents of a CFF file.
+            /// 
+            /// The CFF file is meant to be either a stand-alone CFF file or TTF/OTF file, although at the 
+            /// moment, only CFFs embedded in a TTF/OTF file are being developed-for and tested against.
+            /// </summary>
             public class CFFFile
             {
+                // Header and expected indexes/
                 public Header header;
                 public INDEX nameIndex;
                 public INDEX topDictIndex;
@@ -39,6 +57,9 @@ namespace PxPre
                 public INDEX globalSubrsIndex;
                 public INDEX charStringsIndex;
 
+                /// <summary>
+                /// Loaded fonts from this.stringIndex.
+                /// </summary>
                 public Strings strings = new Strings();
 
                 public int versionSID       = -1;
@@ -102,6 +123,8 @@ namespace PxPre
                 public int nominalWidthX;
 
                 public List<Type2Charstring> loadedCharstrings;
+
+                public Dictionary<int, byte[]> globalSubroutines;
 
                 static public byte ReadCard8(TTF.TTFReader r)
                 {
@@ -312,6 +335,27 @@ namespace PxPre
                     this.globalSubrsIndex = new INDEX();
                     this.globalSubrsIndex.Read(r);
 
+                    this.globalSubroutines = new Dictionary<int, byte[]>();
+                    int subIdx = 0;
+                    if(this.globalSubrsIndex.count > 0)
+                    { 
+                        for(int i = 0; i < this.globalSubrsIndex.count; ++i)
+                        {
+                            int baseIdx = this.globalSubrsIndex.data[i];
+                            int sz = this.globalSubrsIndex.data[i + 1] - baseIdx;
+
+                            // We're just adding to a dictionary in order for now - it could be simpler with a list,
+                            // but it's a placeholder since I haven't really looked into how subroutines work in the
+                            // charstring programs and subroutines are entirely unimplemented.
+                            // (wleu 12/27/2020)
+
+                            byte[] programBytes = new byte[sz];
+                            System.Buffer.BlockCopy(this.charStringsIndex.data, baseIdx, programBytes, 0, sz);
+                            this.globalSubroutines.Add(subIdx, programBytes);
+                            ++subIdx;
+                        }
+                    }
+
                     //// Encodings
                     //const int EncodingSupplement = (1 << 8);
                     //byte encodingFormat = r.ReadUInt8();
@@ -479,20 +523,19 @@ namespace PxPre
                         loadedCharstrings.Add(t2c);
                     }
 
+                    // TODO:
                     //FSSelect (CID Fonts only)
 
-                    // CharStrings Index (per font)
-
-                    // Font DICT Index
-
-                    // Private DICT
-
+                    // TODO:
                     // Local Subr INDEX
 
-                    // Copyright and trademark notices
-
+                    // TODO: Make sure the localsubr and globalsubr are correctly being
+                    // referenced 
                 }
 
+                /// <summary>
+                /// Set the Top DICT default values from the documentation.
+                /// </summary>
                 public void SetTopDICTDefaults()
                 {
                     this.isFixedPitch = false;
@@ -511,6 +554,9 @@ namespace PxPre
                     this.CID_Count = 8720;
                 }
 
+                /// <summary>
+                /// Set the default Private DICT values from the documentation.
+                /// </summary>
                 public void SetPrivateDICTDefaults()
                 { 
                     this.blueScale = 0.039625f;
@@ -523,36 +569,65 @@ namespace PxPre
                     this.nominalWidthX = 0;
                 }
 
+                /// <summary>
+                /// Get a string index.
+                /// </summary>
+                /// <param name="sid">The string ID.</param>
+                /// <returns>The requested string.</returns>
                 public string GetString(int sid)
                 { 
                     return this.strings.GetString(sid);
                 }
 
+                /// <summary>
+                /// Get the string from the version SID.
+                /// </summary>
+                /// <returns>The version string.</returns>
                 public string GetVersionID()
                 { 
                     return this.strings.GetString(this.versionSID);
                 }
 
+                /// <summary>
+                /// Get the string from the notice SID.
+                /// </summary>
+                /// <returns>The notice string.</returns>
                 public string GetNoticeID()
                 {
                     return this.strings.GetString(this.noticeSID);
                 }
 
+                /// <summary>
+                /// Get the string from the copyright SID.
+                /// </summary>
+                /// <returns>The copyright string.</returns>
                 public string GetCopyrightID()
                 {
                     return this.strings.GetString(this.copyrightSID);
                 }
 
+                /// <summary>
+                /// Get the string from the fullname SID.
+                /// </summary>
+                /// <returns>The stored font name.</returns>
                 public string GetFullName()
                 {
                     return this.strings.GetString(this.fullNameSID);
                 }
 
+                /// <summary>
+                /// Get the string from the family name SID.
+                /// </summary>
+                /// <returns>The stored family name.</returns>
                 public string GetFamilyName()
                 {
                     return this.strings.GetString(this.familyNameSID);
                 }
 
+                /// <summary>
+                /// Get the string from the weight ID (i.e., bold, italics, light, dark, etc.).
+                /// </summary>
+                /// <returns>The stored weight type.</returns>
                 public string GetWeight()
                 { 
                     return this.strings.GetString(this.weightSID);
