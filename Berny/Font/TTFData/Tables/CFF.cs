@@ -124,6 +124,16 @@ namespace PxPre
                         public byte nLeft;
                     }
                     // CFF Data Type
+
+                    public const string TagName = "CFF ";
+
+                    public Berny.CFF.CFFFile data;
+
+                    public void Read(TTFReader r)
+                    { 
+                        this.data = new Berny.CFF.CFFFile();
+                        this.data.Read(r);
+                    }
                 }
             }
         }

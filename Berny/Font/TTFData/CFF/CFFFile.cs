@@ -86,20 +86,20 @@ namespace PxPre
                 public List<int> otherBlues;
                 public List<int> familyBlues;
                 public List<int> familyOtherBlues;
-                float blueScale;
-                int blueShift;
-                int blueFuzz;
-                int stdHW;
-                int stdVW;
-                List<int> stemSnapH;
-                List<int> stemSnapV;
-                bool forceBold;
-                int languageGroup;
-                float expansionFactor;
-                int initialRandomSeed; // WhuuUU?
-                int subrs;
-                int defaultWidthX;
-                int nominalWidthX;
+                public float blueScale;
+                public int blueShift;
+                public int blueFuzz;
+                public int stdHW;
+                public int stdVW;
+                public List<int> stemSnapH;
+                public List<int> stemSnapV;
+                public bool forceBold;
+                public int languageGroup;
+                public float expansionFactor;
+                public int initialRandomSeed; // WhuuUU?
+                public int subrs;
+                public int defaultWidthX;
+                public int nominalWidthX;
 
                 public List<Type2Charstring> loadedCharstrings;
 

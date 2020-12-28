@@ -40,58 +40,6 @@ namespace PxPre
                     Error
                 }
 
-                public enum Type2Op
-                { 
-                    HStem       = 1,    // Hint operator
-                    VStem       = 3,    // Hint operator
-                    VMoveTo     = 4,
-                    RLineTo     = 5,
-                    HLineTo     = 6,
-                    VLineTo     = 7,
-                    RRCurveTo   = 8,
-                    DotSection  = (12<<8)|0, //Deprecated
-                    And         = (12<<8)|3,
-                    Or          = (12<<8)|4,
-                    Not         = (12<<8)|5,
-                    Abs         = (12<<8)|9,
-                    Add         = (12<<8)|10,
-                    Sub         = (12<<8)|11,
-                    Div         = (12<<8)|12,
-                    Neg         = (12<<8)|14,
-                    Eq          = (12<<8)|15,
-                    Drop        = (12<<8)|18,
-                    Put         = (12<<8)|20,
-                    Get         = (12<<8)|21,
-                    Ifelse      = (12<<8)|22,
-                    Random      = (12<<8)|23,
-                    Mul         = (12<<8)|24,
-                    Sqrt        = (12<<8)|26,
-                    Dup         = (12<<8)|27,
-                    Exch        = (12<<8)|28,
-                    Index       = (12<<8)|29,
-                    Roll        = (12<<8)|30,
-                    Flex        = (12<<8)|35,
-                    Flex1       = (12<<8)|37,
-                    HFlex       = (12<<8)|34,
-                    HFlex1      = (12<<36)|36,
-                    CallSubR    = 10,
-                    Return      = 11,
-                    EndChar     = 14,
-                    HStemHM     = 18,   // Hint operator
-                    HintMask    = 19,   // + mask byte  - Hint operator
-                    CntrMask    = 20,   // + mask byte  - Hint operator
-                    VStemHM     = 23,   // Hint operator
-                    RMoveTo     = 21,
-                    HMoveTo     = 22,
-                    RCurveLine  = 24,
-                    RLineCurve  = 25,
-                    VVCurveTo   = 26,
-                    HHCurveTo   = 27,
-                    CallGSubR   = 29,
-                    VHCurveTo   = 30,
-                    HVCurveTo   = 31,
-                }
-
                 public Type type;
 
                 // If this was C++, this would be a union.
@@ -200,6 +148,22 @@ namespace PxPre
                         return this.realVal;
 
                     return (float)this.intVal;
+                }
+
+                public bool IsZero()
+                {
+                    if (this.type == Type.Real)
+                        return this.realVal == 0.0f;
+
+                    return this.intVal == 0;
+                }
+
+                public bool NonZero()
+                {
+                    if (this.type == Type.Real)
+                        return this.realVal != 0.0f;
+
+                    return this.intVal != 0;
                 }
 
                 public static Operand Read(TTF.TTFReader r)
@@ -318,13 +282,17 @@ namespace PxPre
                         return new Operand(b0, Type.Operator);
                     if(b0 == 28)
                     {
-                        int b1 = r.ReadUInt8();
-                        int b2 = r.ReadUInt8();
-                        return new Operand(b1 << 8 | b2);
+                        byte b1 = r.ReadUInt8();
+                        byte b2 = r.ReadUInt8();
+                        // This is a two's complement signed number, so we can't just
+                        // shift and OR them as an int, but also have to be weary of
+                        // the sign bit and two's complement conversion if it's negative.
+                        short merged = (short)(b1 << 8 | b2);
+                        return new Operand(merged);
                     }
                     if(b0 <= 31)
                         return new Operand(b0, Type.Operator);
-                    if (b0 < 246)
+                    if (b0 <= 246)
                         return new Operand(b0 - 139, Type.Int);
                     if(b0 <= 250)
                     {

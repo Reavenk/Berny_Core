@@ -36,6 +36,11 @@ namespace PxPre
                 byte [] data;
                 bool closed = true;
 
+                public override bool AtEnd()
+                {
+                    return this.pos >= data.Length;
+                }
+
                 public TTFReaderBytes(byte [] data)
                 { 
                     this.data = data;

@@ -82,10 +82,10 @@ namespace PxPre
                             //
                             // NOTE: We should probably just directly "sanitize" this information
                             // when it's first loaded.
-                            if (cont.points[k].control == true && cont.points[k + 1].control == true)
+                            if (cont.points[k].isControl == true && cont.points[k + 1].isControl == true)
                             {
                                 Font.Point pt = new Font.Point();
-                                pt.control = false;
+                                pt.isControl = false;
                                 pt.position = (cont.points[k].position + cont.points[k + 1].position) * 0.5f;
 
                                 cont.points.Insert(k + 1, pt);
@@ -102,7 +102,7 @@ namespace PxPre
                         {
                             Vector2 ptpos = cont.points[k].position * scale + pos;
 
-                            if (cont.points[k].control == false)
+                            if (cont.points[k].isControl == false)
                             {
                                 BNode node = new BNode(loopCont, ptpos);
                                 loopCont.nodes.Add(node);
@@ -123,10 +123,22 @@ namespace PxPre
                                 if (firstNode == null)
                                     firstNode = node;
 
-                                if (k != 0 && cont.points[k - 1].control == false)
+                                if (k != 0 && cont.points[k - 1].isControl == false && cont.points[k - 1].useTangentOut == false)
                                 {
                                     prevNode.UseTanOut = false;
                                     node.UseTanIn = false;
+                                }
+
+                                if(cont.points[k].useTangentIn == true)
+                                {
+                                    node.UseTanIn = true;
+                                    node.TanIn = cont.points[k].tangentIn;
+                                }
+
+                                if (cont.points[k].useTangentOut == true)
+                                {
+                                    node.UseTanOut = true;
+                                    node.TanOut = cont.points[k].tangentOut;
                                 }
 
                                 node.FlagDirty();
@@ -151,8 +163,10 @@ namespace PxPre
                             firstNode.prev = prevNode;
 
                             if (
-                                cont.points[0].control == false &&
-                                cont.points[cont.points.Count - 1].control == false)
+                                cont.points[0].isControl == false &&
+                                cont.points[0].useTangentIn == false && 
+                                cont.points[cont.points.Count - 1].isControl == false &&
+                                cont.points[cont.points.Count - 1].useTangentOut == false)
                             {
                                 firstNode.UseTanIn = false;
                                 prevNode.UseTanOut = false;

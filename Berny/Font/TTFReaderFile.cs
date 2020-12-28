@@ -68,6 +68,11 @@ namespace PxPre
                     return false;
                 }
 
+                public override bool AtEnd()
+                {
+                    return this.filestream.Position < this.filestream.Length;
+                }
+
                 public override sbyte ReadInt8()
                 {
                     return this.reader.ReadSByte();

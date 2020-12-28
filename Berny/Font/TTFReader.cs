@@ -43,6 +43,8 @@ namespace PxPre
 
                 public abstract byte[] ReadBytes(int length);
 
+                public abstract bool AtEnd();
+
                 public ushort ReadUInt16()
                 {
                     return (ushort)(this.ReadUInt8() << 8 | this.ReadUInt8());
