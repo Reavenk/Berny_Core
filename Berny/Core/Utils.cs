@@ -623,10 +623,9 @@ namespace PxPre
                 out Dictionary<string,string> outNameToHex,
                 out Dictionary<string, string> outHexToName )
             { 
-                https://www.december.com/html/spec/colorsvghex.html
+                // https://www.december.com/html/spec/colorsvghex.html
                 outNameToHex = new Dictionary<string, string>();
                 outHexToName = new Dictionary<string, string>();
-
                 outNameToHex.Add("black",                   "#000000");
                 outNameToHex.Add("navy",                    "#000080");
                 outNameToHex.Add("darkblue",                "#00008B");
