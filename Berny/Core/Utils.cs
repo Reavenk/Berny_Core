@@ -1342,12 +1342,12 @@ namespace PxPre
                     //
                     Utils.GetBezierWeights(rgnA.lambda0, out a, out b, out c, out d);
                     Vector2 A0 = a * rgnA.pt0 + b * rgnA.pt1 + c * rgnA.pt2 + d * rgnA.pt3;
-                    Utils.GetBezierWeights(rgnA.lambda1, out a, out b, out b, out d);
+                    Utils.GetBezierWeights(rgnA.lambda1, out a, out b, out c, out d);
                     Vector2 A1 = a * rgnA.pt0 + b * rgnA.pt1 + c * rgnA.pt2 + d * rgnA.pt3;
                     //
                     Utils.GetBezierWeights(rgnB.lambda0, out a, out b, out c, out d);
                     Vector2 B0 = a * rgnB.pt0 + b * rgnB.pt1 + c * rgnB.pt2 + d * rgnB.pt3;
-                    Utils.GetBezierWeights(rgnB.lambda1, out a, out b, out b, out d);
+                    Utils.GetBezierWeights(rgnB.lambda1, out a, out b, out c, out d);
                     Vector2 B1 = a * rgnB.pt0 + b * rgnB.pt1 + c * rgnB.pt2 + d * rgnB.pt3;
 
                     float s, t;
