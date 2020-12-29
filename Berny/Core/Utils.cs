@@ -573,8 +573,11 @@ namespace PxPre
                 float b =  Vector2.Dot(d1, d2);
                 float denom = a * e - b * b;
 
+                // Even if lines are perfectly parallel, we need some leniency with the epsilon
+                // because of floating point error.
+                float segsegEps = 0.000001f;
                 // If segments not parallel, compute closest point on L1 and L2.
-                if(Mathf.Abs(denom) > Mathf.Epsilon)
+                if (Mathf.Abs(denom) > segsegEps)
                     s = (b * f - c * e)/denom;
                 else 
                 {
