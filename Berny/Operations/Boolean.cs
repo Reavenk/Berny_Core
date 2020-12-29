@@ -448,13 +448,20 @@ namespace PxPre
             { 
                 // we always remove B, which may contain extra stuff from 
                 // subtraction shapes that didn't find a target to remove.
-                PerIslandBoolean(left, right, Difference, true);
+                PerIslandBoolean(
+                    left, 
+                    right, 
+                    (x, y, z)=>
+                    {
+                        return Difference(x, y, z, true);
+                    }, 
+                    true);
 
                 right.Clear();
                 RemoveLoop(right, true);
             }
 
-            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB)
+            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB, bool processFullOverlaps = true)
             {
                 // If there is any interaction, a copy of islandB is made and used - this means 
                 // if islandB should be removed, it is up to the caller to remove it themselves.
@@ -479,7 +486,10 @@ namespace PxPre
                 { 
                     BoundingMode bm = GetLoopBoundingMode(islandSegsA, islandSegsB);
 
-                    if(bm == BoundingMode.NoCollision)
+                    if(processFullOverlaps == false)
+                        return bm;
+
+                    if (bm == BoundingMode.NoCollision)
                     { 
                         return BoundingMode.NoCollision;
                     }
@@ -1166,27 +1176,29 @@ namespace PxPre
                 interCurve.Clear();
                 interLine.Clear();
                 foreach(BNode nOth in islandSegsA)
-                { 
-                    BNode.PathBridge pb = nOth.GetPathBridgeInfo();
+                {
+                    //BNode.PathBridge pb = nOth.GetPathBridgeInfo();
+                    //
+                    //if(pb.pathType == BNode.PathType.Line)
+                    //{ 
+                    //    float s, t;
+                    //    if(Utils.ProjectSegmentToSegment(mptR, rayEnd, nOth.Pos, nOth.next.Pos, out s, out t) == true)
+                    //    { 
+                    //        interLine.Add(s);
+                    //        interCurve.Add(t);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    Vector2 pt0 = nOth.Pos;
+                    //    Vector2 pt1 = nOth.Pos + pb.prevTanOut;
+                    //    Vector2 pt2 = nOth.next.Pos + pb.nextTanIn;
+                    //    Vector2 pt3 = nOth.next.Pos;
+                    //
+                    //    Utils.IntersectLine(interCurve, interLine, pt0, pt1, pt2, pt3, mptR, rayEnd, false);
+                    //}
 
-                    if(pb.pathType == BNode.PathType.Line)
-                    { 
-                        float s, t;
-                        if(Utils.ProjectSegmentToSegment(mptR, rayEnd, nOth.Pos, nOth.next.Pos, out s, out t) == true)
-                        { 
-                            interLine.Add(s);
-                            interCurve.Add(t);
-                        }
-                    }
-                    else
-                    {
-                        Vector2 pt0 = nOth.Pos;
-                        Vector2 pt1 = nOth.Pos + pb.prevTanOut;
-                        Vector2 pt2 = nOth.next.Pos + pb.nextTanIn;
-                        Vector2 pt3 = nOth.next.Pos;
-
-                        Utils.IntersectLine(interCurve, interLine, pt0, pt1, pt2, pt3, mptR, rayEnd, false);
-                    }
+                    nOth.ProjectSegment(mptR, rayEnd, interCurve, interLine);
                 }
                 int rightcols = 0;
                 for(int i = 0; i < interLine.Count; ++i)

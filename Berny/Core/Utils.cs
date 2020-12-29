@@ -2470,6 +2470,8 @@ namespace PxPre
                 Vector3 r;
                 int roots = SolveCubicFormula(P.x, P.y, P.z, P.w, out r);
 
+                RefineCubicRoots(P.x, P.y, P.z, P.w, ref r, roots, 10, 0.0001f);
+
                 int ret = 0;
                 for (int i = 0; i < roots; ++i)
                 {
@@ -2494,6 +2496,8 @@ namespace PxPre
                     if(float.IsNaN(s) == true)
                         continue;
 
+                    // Floating point error is very finicky
+                    const float tEps = 0.00001f;
                     // Make sure the collision point is in bounds of our
                     // line and path segment
                     //
@@ -2526,6 +2530,44 @@ namespace PxPre
                 ty tmp = x;
                 x = y;
                 y = tmp;
+            }
+
+            /// <summary>
+            /// Given an imperfect set of cubic roots, use them as a starting point for refinement
+            /// of more accurate minima roots.
+            /// </summary>
+            /// <param name="a">The A value of the cubic equation (t^3).</param>
+            /// <param name="b">The B value of the cubic equation (t^2).</param>
+            /// <param name="c">The B value of the cubic equation (t).</param>
+            /// <param name="d">The B value of the cubic equation (constant).</param>
+            /// <param name="r">The initial roots.</param>
+            /// <param name="roots"></param>
+            /// <param name="iter"></param>
+            /// <param name="eps"></param>
+            public static void RefineCubicRoots(float a, float b, float c, float d, ref Vector3 r, int roots, int iter, float eps)
+            {
+                // The cubic formula may have degenerate cases - in which case we're going to do
+                // some elbow grease refinement.
+                for (int i = 0; i < roots; ++i)
+                {
+                    for (int j = 0; j < iter; ++j)
+                    {
+                        float t = r[i];
+                        float ev = a * t * t * t + b * t * t + c * t + d;
+                        if (Mathf.Abs(ev) <= 0.0001f)
+                            break;
+
+                        // https://www.wolframalpha.com/input/?i=ax%5E3+%2B+bx%5E2+%2B+cx+%2B+d++derive+respect+to+x
+                        float dt = t * (3.0f * a * t + 2.0f * b) + c;
+                        r[i] = t - ev / dt;
+
+                        // Even so, we may reach a point where single precision floats 
+                        // reach their limits. This happens when adding a small -ev/d 
+                        // doesn't modify a large t.
+                        if (t == r[i])
+                            break;
+                    }
+                }
             }
         }
     }

@@ -481,6 +481,32 @@ namespace PxPre
                 this.shapeGenerator = null;
                 return true;
             }
+
+            /// <summary>
+            /// Remove empty loops from the shape.
+            /// </summary>
+            /// <returns>Returns the number of empty loops found and removed.</returns>
+            public int CleanEmptyLoops()
+            { 
+                int ret = 0;
+
+                for(int i = 0; i < this.loops.Count; )
+                {
+                    if(this.loops[i].nodes.Count == 0 )
+                    {
+                        this.loops.RemoveAt(i);
+                        ++ret;
+                    }
+                    else
+                        ++i;
+
+                }
+
+                if(ret != 0)
+                    this.FlagDirty();
+
+                return ret;
+            }
         }
     }
 }

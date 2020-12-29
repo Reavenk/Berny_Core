@@ -302,7 +302,13 @@ namespace PxPre
 
                             while(true)
                             { 
-                                if(Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
+                                if(
+                                    // Sometimes a point can be right on top of another point and it's a legitimate
+                                    // clipping position - especially if we're processing a cavity that's been bridged.
+                                    (fsPtCheck.pos - it.pos).sqrMagnitude > float.Epsilon &&
+                                    (fsPtCheck.pos - it.prev.pos).sqrMagnitude > float.Epsilon &&
+                                    (fsPtCheck.pos - it.next.pos).sqrMagnitude > float.Epsilon &&
+                                    Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
                                 { 
                                     skip = true;
                                     break;

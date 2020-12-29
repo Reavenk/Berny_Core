@@ -1881,7 +1881,7 @@ namespace PxPre
 
                 if (outT >= 1.0f)
                     bnOut = bnOut.next;
-                else if (inT <= 0.0f)
+                else if (outT <= 0.0f)
                 { }
                 else
                     bnOut = bnOut.Subdivide(outT);
@@ -1903,6 +1903,69 @@ namespace PxPre
                 otherIn.UseTanOut = false;
                 otherOut.prev = otherIn;
                 otherOut.UseTanIn = false;
+            }
+
+            public static void FindBridge(
+                List<BNode> islSegsOuter,
+                List<BNode> islSegsInner,
+                out BNode inner, 
+                out BNode outer, 
+                out float innerT, 
+                out float outerT)
+            {
+                Boolean.BoundingMode bm = Boolean.GetLoopBoundingMode(islSegsOuter, islSegsInner);
+                if (bm == Boolean.BoundingMode.RightSurroundsLeft)
+                {
+                    List<BNode> tmp = islSegsInner;
+                    islSegsInner = islSegsOuter;
+                    islSegsOuter = tmp;
+                }
+
+                if (BNode.CalculateWinding(islSegsInner) > 0.0f == BNode.CalculateWinding(islSegsOuter) > 0.0f)
+                    islSegsInner[0].ReverseChainOrder();
+
+                // Get the farthest point on the X axis on the interior.
+                // (nothing special about the X axis, it's either or with X/Y)
+                Vector2 inmaxR;
+                BNode.GetMaxPoint(islSegsInner, out inner, out inmaxR, out innerT, 0);
+
+                Vector2 rayCont = inmaxR + new Vector2(1.0f, 0.0f);
+
+                // From the farthest points on the inner island, make a line in the
+                // positive X direction (because it's based off the MaxX going away
+                // from itself) and find the closest collision point.
+                List<float> interCurve = new List<float>();
+                List<float> interLine = new List<float>();
+                List<BNode> colNodes = new List<BNode>();
+                foreach (BNode bn in islSegsOuter)
+                {
+                    bn.ProjectSegment(
+                        inmaxR,
+                        rayCont,
+                        interCurve,
+                        interLine,
+                        colNodes);
+                }
+
+                outer = null;
+                outerT = 0.0f;
+                float rayDst = 0.0f; // Since the offset for the ray control is positive 1, this will be unit dist
+
+                for (int i = 0; i < interCurve.Count; ++i)
+                {
+                    if (interCurve[i] < 0.0f || interCurve[i] > 1.0f)
+                        continue;
+
+                    if (interLine[i] <= 0.0f)
+                        continue;
+
+                    if (outer == null || interLine[i] < rayDst)
+                    {
+                        outer = colNodes[i];
+                        rayDst = interLine[i];
+                        outerT = interCurve[i];
+                    }
+                }
             }
 
 
