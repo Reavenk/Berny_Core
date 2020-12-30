@@ -471,13 +471,21 @@ namespace PxPre
                 { 
                     if(fsit.next.prev != fsit)
                     {
-                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} next doesnt match previous.");
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} next doesn't match previous.");
+#else
+                        Debug.LogError($"Validity Error: FillSegment next doesn't match previous.");
+#endif
                         ret = false;
                     }
 
                     if(fsit.prev.next != fsit)
                     {
-                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} previous doesnt match next.");
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                        Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} previous doesn't match next.");
+#else
+                        Debug.LogError($"Validity Error: FillSegment previous doesn't match next.");
+#endif
                         ret = false;
                     }
 
@@ -485,7 +493,11 @@ namespace PxPre
 
                     if(this.segments.Contains(fsit) == false)
                     {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                         Debug.LogError($"Validity Error: FillSegment {fsit.debugCtr} not contained it parent segment list.");
+#else
+                        Debug.LogError($"Validity Error: FillSegment not contained it parent segment list.");
+#endif
                         ret = false;
                     }
 

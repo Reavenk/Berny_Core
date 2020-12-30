@@ -294,7 +294,9 @@ namespace PxPre
                 this.docPos = docPos;
                 this.rotation = rotation;
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 this.debugCounter = Utils.RegisterCounter();
+#endif
             }
 
             /// <summary>
