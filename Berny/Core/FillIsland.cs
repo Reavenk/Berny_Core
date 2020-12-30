@@ -293,8 +293,18 @@ namespace PxPre
                     if(segments.Count > 3)
                     {
                         // Wrong winding, can't earclip.
-                        if((wind >= 0.0f) != (localWind >= 0.0f))
+                        if(Mathf.Abs(localWind) < 0.00001f)
+                        {
+                            // Does nothing, eats the if-chain.
+                            //
+                            // If the triangle with its neighbors is degenerate, just consume it. Not the best
+                            // topology, but better than the risk of improper triangulation in the opposite
+                            // winding.
+                        }
+                        else if ((wind >= 0.0f) != (localWind >= 0.0f))
+                        {
                             skip = true;
+                        }
                         else
                         {
                             FillSegment fsPtCheck = it;
