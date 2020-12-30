@@ -868,6 +868,12 @@ namespace PxPre
 
                 return false;
             }
+
+            public void Scale(float f)
+            { 
+                foreach(BNode n in this.nodes)
+                    n.Scale(f);
+            }
         }
     } 
 }

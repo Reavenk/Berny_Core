@@ -89,6 +89,16 @@ namespace PxPre
 
                 return ret;
             }
+
+            public void Scale(float f)
+            {
+                this.lookup.Clear();
+                for(int i = 0; i < this.vectors.Count; ++i)
+                { 
+                    this.vectors[i] *= f;
+                    this.lookup.Add(this.vectors[i], i);
+                }
+            }
         }
     }
 }

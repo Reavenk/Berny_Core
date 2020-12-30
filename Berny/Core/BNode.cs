@@ -2226,6 +2226,15 @@ namespace PxPre
                         break;
                 }
             }
+
+            public void Scale(float f)
+            { 
+                this.pos *= f;
+                this.tanIn *=f;
+                this.tanOut *= f;
+
+                this.FlagDirty();
+            }
         }
     }
 }

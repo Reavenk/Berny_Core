@@ -507,6 +507,15 @@ namespace PxPre
 
                 return ret;
             }
+
+            public void Scale(float f)
+            { 
+                if( f == 1.0f)
+                    return;
+
+                foreach(BLoop bl in this.loops)
+                    bl.Scale(f);
+            }
         }
     }
 }
