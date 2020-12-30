@@ -273,7 +273,7 @@ namespace PxPre
                             { 
                                 if(posIslSegs[i].next != null && posIslSegs[i].prev != null)
                                 { 
-                                    posIslands[i] = posIslSegs[i];
+                                    posIslands[p] = posIslSegs[i];
                                     break;
                                 }
                             }
