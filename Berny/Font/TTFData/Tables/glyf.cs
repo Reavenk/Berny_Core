@@ -95,7 +95,7 @@ namespace PxPre
                     public float scale10;
                     public float yscale;
 
-                    public bool IsComplex { get => this.numberOfContours != -1; }
+                    public bool IsComplex { get => this.numberOfContours == -1; }
 
                     public void Read(TTFReader r)
                     {
@@ -105,7 +105,7 @@ namespace PxPre
                         r.ReadInt(out this.xMax);
                         r.ReadInt(out this.yMax);
 
-                        if (this.IsComplex)
+                        if (this.IsComplex == false)
                         {
                             // Simple
 
