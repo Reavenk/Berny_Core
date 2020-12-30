@@ -62,7 +62,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for an endpoing of the line.
             /// </summary>
             public Vector2 Point1
             {
@@ -71,7 +71,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for the other endpoint of the line.
             /// </summary>
             public Vector2 Point2 
             {
@@ -80,7 +80,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for the x component of the first endpoint.
             /// </summary>
             public float x1
             { 
@@ -89,7 +89,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for the y component of the first endpoint.
             /// </summary>
             public float y1
             { 
@@ -98,7 +98,7 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for the x component of the second endpoint.
             /// </summary>
             public float x2
             { 
@@ -107,17 +107,14 @@ namespace PxPre
             }
 
             /// <summary>
-            /// 
+            /// Property for the y component of the second endpoint.
             /// </summary>
-            public float x3
+            public float y2
             { 
                 get => this.pt1.y;
                 set{ this.pt1.y = value; this.FlagDirty(); }
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
             public override void Reconstruct()
             {
                 this.shape.Clear();
@@ -142,12 +139,6 @@ namespace PxPre
                 this.FlagDirty();
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="shapeEle"></param>
-            /// <param name="invertY"></param>
-            /// <returns></returns>
             public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 System.Xml.XmlAttribute attrX1 = shapeEle.GetAttributeNode("x1");
@@ -162,12 +153,6 @@ namespace PxPre
                 return true;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="shapeEle"></param>
-            /// <param name="invertY"></param>
-            /// <returns></returns>
             public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
             {
                 shapeEle.SetAttributeNode("x1", this.pt0.x.ToString());
