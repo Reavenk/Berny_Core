@@ -2259,6 +2259,44 @@ namespace PxPre
             /// </remarks>
             public static int SolveCubicFormula(float p0, float p1, float p2, float p3, out Vector3 t)
             {
+                if (p0 == 0.0f)
+                {
+                    // if a is 0, we downgrade the query to solving a quadratic equation,
+                    // dropping p0.
+                    // https://en.wikipedia.org/wiki/Quadratic_formula
+                    //
+                    // NOTE: May want to make this a stand-alone function
+                    // This goes for the double version too. If that's the case, we may just want to 
+                    // make a "doubles-internals" version of every solver, even if we don't want to
+                    // commit to using double to store all the points. The precision tends to be
+                    // super-valuable for non-avoidable float precision edge cases.
+                    // (wleu 12/30/2020)
+                    float qa = p1;
+                    float qb = p2;
+                    float qc = p3;
+                    float inner = (qb * qb - 4.0f * qa * qc) / (4.0f * qa * qa);
+
+                    if (inner < 0.0)
+                    {
+                        t = Vector3.zero;
+                        return 0; // No real roots
+                    }
+
+                    inner = Mathf.Sqrt(inner);
+
+                    float first = -qb / (2.0f * qa);
+                    float second = first + inner;
+                    first -= inner;
+                    if (first == second) // There should probably be some epsilon used here.
+                    {
+                        t = new Vector3(first, 0.0f, 0.0f);
+                        return 1;
+                    }
+
+                    t = new Vector3(first, second, 0.0f);
+                    return 2;
+                }
+
                 // https://mathworld.wolfram.com/CubicFormula.html
                 // https://www.particleincell.com/2013/cubic-line-intersection/
                 float a = p0;
@@ -2298,6 +2336,99 @@ namespace PxPre
                     t[0] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos(th / 3) - A / 3;
                     t[1] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos((th + 2 * Mathf.PI) / 3.0f) - A / 3.0f;
                     t[2] = 2.0f * Mathf.Sqrt(-Q) * Mathf.Cos((th + 4 * Mathf.PI) / 3.0f) - A / 3.0f;
+                    // 3 real roots
+                }
+
+                //SortVector3(ref t);
+                // We don't do [0,1] bounds checking here, we leave that for 
+                return 3;
+            }
+
+            /// <summary>
+            /// An implementation of SolveCubicFormula() that calculates with double precision.
+            /// 
+            /// There are cases, usually involving vertical or horizontal lines, where the 
+            /// values get extreme and butt up against floating point precision issues.
+            /// </summary>
+            /// <param name="p0"></param>
+            /// <param name="p1"></param>
+            /// <param name="p2"></param>
+            /// <param name="p3"></param>
+            /// <param name="t"></param>
+            /// <returns></returns>
+            public static int SolveCubicFormulaD(float p0, float p1, float p2, float p3, out Vector3 t)
+            {
+                // https://mathworld.wolfram.com/CubicFormula.html
+                // https://www.particleincell.com/2013/cubic-line-intersection/
+                if(p0 == 0.0f)
+                {
+                    // if a is 0, we downgrade the query to solving a quadratic equation,
+                    // dropping p0.
+                    // https://en.wikipedia.org/wiki/Quadratic_formula
+                    double qa = p1;
+                    double qb = p2;
+                    double qc = p3;
+                    double inner = (qb * qb - 4.0 * qa * qc) / (4.0 * qa * qa);
+
+                    if(inner < 0.0)
+                    {
+                        t = Vector3.zero;
+                        return 0; // No real roots
+                    }
+
+                    inner = System.Math.Sqrt(inner);
+
+                    double first = -qb / (2.0 * qa);
+                    double second = first + inner;
+                    first -= inner;
+                    if(first == second) // There should probably be some epsilon used here.
+                    { 
+                        t = new Vector3((float)first, 0.0f, 0.0f);
+                        return 1;
+                    }
+
+                    t = new Vector3((float)first, (float)second, 0.0f);
+                    return 2;
+                }
+
+                double a = p0;
+                double b = p1;
+                double c = p2;
+                double d = p3;
+
+
+                double A = b / a;
+                double B = c / a;
+                double C = d / a;
+
+                double Q = (3.0 * B - System.Math.Pow(A, 2.0)) / 9.0;
+                double R = (9.0 * A * B - 27.0 * C - 2.0 * System.Math.Pow(A, 3.0)) / 54.0;
+                double D = System.Math.Pow(Q, 3.0) + System.Math.Pow(R, 2.0);    // polynomial discriminant
+
+                t = new Vector3();
+
+                if (D >= 0)                         // complex or duplicate roots
+                {
+                    double S = System.Math.Sign(R + System.Math.Sqrt(D)) * System.Math.Pow(System.Math.Abs(R + System.Math.Sqrt(D)), (1.0 / 3.0));
+                    double T = System.Math.Sign(R - System.Math.Sqrt(D)) * System.Math.Pow(System.Math.Abs(R - System.Math.Sqrt(D)), (1.0 / 3.0));
+
+                    t[0] = (float)(-A / 3.0 + (S + T));                                // real root
+                    double Im = System.Math.Abs(System.Math.Sqrt(3.0) * (S - T) / 2.0);      // complex part of root pair   
+                    if (Im != 0)
+                        return 1;
+
+                    t[1] = (float)(-A / 3.0 - (S + T) / 2.0);  // real part of complex root
+                    t[2] = (float)(-A / 3.0 - (S + T) / 2.0);  // real part of complex root
+                    // 3 real roots
+
+                }
+                else                                          // distinct real roots
+                {
+                    float th = (float)(System.Math.Acos(R / System.Math.Sqrt(-System.Math.Pow(Q, 3.0))));
+
+                    t[0] = (float)(2.0 * System.Math.Sqrt(-Q) * System.Math.Cos(th / 3.0) - A / 3.0);
+                    t[1] = (float)(2.0 * System.Math.Sqrt(-Q) * System.Math.Cos((th + 2 * Mathf.PI) / 3.0f) - A / 3.0);
+                    t[2] = (float)(2.0 * System.Math.Sqrt(-Q) * System.Math.Cos((th + 4 * Mathf.PI) / 3.0f) - A / 3.0);
                     // 3 real roots
                 }
 
@@ -2477,10 +2608,15 @@ namespace PxPre
                         A * bx.w + B * by.w + C);       // 1
 
                 // Solve for collisions
-                Vector3 r;
-                int roots = SolveCubicFormula(P.x, P.y, P.z, P.w, out r);
 
-                RefineCubicRoots(P.x, P.y, P.z, P.w, ref r, roots, 10, 0.0001f);
+
+                // We used to calculate and refine the values
+                // int roots = SolveCubicFormula(P.x, P.y, P.z, P.w, out r);
+                //RefineCubicRoots(P.x, P.y, P.z, P.w, ref r, roots, 10, 0.0001f);
+
+                // But in the end, just brute force doubles is the only sure-fire way
+                Vector3 r;
+                int roots = SolveCubicFormulaD(P.x, P.y, P.z, P.w, out r);
 
                 int ret = 0;
                 for (int i = 0; i < roots; ++i)
