@@ -278,7 +278,7 @@ namespace PxPre
                     // iterate over it - so we make a copy.
                     HashSet<FillIsland> originalIslands = new HashSet<FillIsland>(this.islands);
 
-                    // Currently completly disabled.
+                    // Currently completely disabled.
                     //foreach(FillIsland fi in originalIslands)
                     //    this.SanatizeIslandIntersections(fi);
                 }

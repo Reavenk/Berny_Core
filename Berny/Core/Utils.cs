@@ -405,7 +405,7 @@ namespace PxPre
 
                 // Go from the other side, so we're going to invert
                 // The left side changed some values, including the ratio of how much the
-                // right is compared to the enture curve of what's left.
+                // right is compared to the entire curve of what's left.
                 float invr = (1.0f - lright) / (1.0f - lleft);
                 Vector2 r11 = Vector2.Lerp(p3, op2, invr);// Reversed from left version
                 Vector2 r12 = Vector2.Lerp(op2, l22, invr);// Reversed from left version
