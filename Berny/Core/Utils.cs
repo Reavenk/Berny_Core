@@ -55,6 +55,13 @@ namespace PxPre
                 Luminosity
             }
 
+            public enum SegmentIntersection
+            { 
+                Degenerate = -1,
+                Parallel = 0,
+                Collision = 1
+            }
+
             /// <summary>
             /// The unit type supported in SVG
             /// </summary>
@@ -533,7 +540,7 @@ namespace PxPre
             /// We're heavily modifying the function to our needs of detecting line intersection.
             /// The biggest change is that s and t are unbounded.
             /// </remarks>
-            public static bool ProjectSegmentToSegment(
+            public static SegmentIntersection ProjectSegmentToSegment(
                 Vector2 p1, Vector2 q1, 
                 Vector2 p2, Vector2 q2, 
                 out float s, out float t)
@@ -550,7 +557,7 @@ namespace PxPre
                 { 
                     s = float.PositiveInfinity;
                     t = float.PositiveInfinity;
-                    return false;
+                    return SegmentIntersection.Parallel;
                 }
 
                 if(a <= Mathf.Epsilon)
@@ -558,7 +565,7 @@ namespace PxPre
                     // First segment degenerates into a point.
                     s = float.PositiveInfinity;
                     t = f / e;
-                    return false;
+                    return SegmentIntersection.Degenerate;
                 }
             
                 float c = Vector2.Dot(d1, r);
@@ -567,7 +574,7 @@ namespace PxPre
                     // Second segment degenerates into a point.
                     t = float.PositiveInfinity;
                     s = -c/a;
-                    return false;
+                    return SegmentIntersection.Degenerate;
                 }
 
                 float b =  Vector2.Dot(d1, d2);
@@ -584,7 +591,7 @@ namespace PxPre
                     // Parallel
                     s = float.PositiveInfinity;
                     t = float.PositiveInfinity;
-                    return false;
+                    return SegmentIntersection.Parallel;
                 }
 
                 t = (b * s + f)/e;
@@ -594,7 +601,7 @@ namespace PxPre
                 else if(t > 1.0f)
                     s = (b-c)/a;
 
-                return true;
+                return SegmentIntersection.Collision;
             }
 
             /// <summary>
@@ -1351,7 +1358,7 @@ namespace PxPre
                     Vector2 B1 = a * rgnB.pt0 + b * rgnB.pt1 + c * rgnB.pt2 + d * rgnB.pt3;
 
                     float s, t;
-                    if(Utils.ProjectSegmentToSegment(A0, A1, B0, B1, out s, out t) == true)
+                    if(Utils.ProjectSegmentToSegment(A0, A1, B0, B1, out s, out t) == SegmentIntersection.Collision)
                     {
                         if(rgnA.node == rgnB.node)
                         {
@@ -1496,7 +1503,7 @@ namespace PxPre
                         nodeB.Pos,
                         nodeB.next.Pos,
                         out s,
-                        out t) == true)
+                        out t) == SegmentIntersection.Collision)
                     {
                         if(s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f)
                         {

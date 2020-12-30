@@ -199,7 +199,7 @@ namespace PxPre
                                 itOther.pos, 
                                 itOther.next.pos, 
                                 out s, 
-                                out t) == false)
+                                out t) != Utils.SegmentIntersection.Collision)
                         { 
                             continue;
                         }

@@ -2101,7 +2101,8 @@ namespace PxPre
                 Vector2 rayStart, 
                 Vector2 rayControl, 
                 List<float> interCurve, 
-                List<float> interLine)
+                List<float> interLine,
+                bool clampParallelPositives = true)
             {
                 if(this.next == null)
                     return 0;
@@ -2111,17 +2112,72 @@ namespace PxPre
                 if (pb.pathType == BNode.PathType.Line)
                 {
                     float s, t;
-                    if (Utils.ProjectSegmentToSegment(
-                        rayStart, 
-                        rayControl, 
-                        this.Pos, 
-                        this.next.Pos, 
-                        out s, 
-                        out t) == true)
+                    Utils.SegmentIntersection segInter = 
+                        Utils.ProjectSegmentToSegment(
+                            rayStart, 
+                            rayControl, 
+                            this.Pos, 
+                            this.next.Pos, 
+                            out s, 
+                            out t);
+                    
+                    if(segInter == Utils.SegmentIntersection.Collision)
                     {
                         interLine.Add(s);
                         interCurve.Add(t);
                         return 1;
+                    }
+                    else if(
+                        // If it's parallel and we've specified parallel collisions
+                        // are accepted
+                        segInter == Utils.SegmentIntersection.Parallel && 
+                        clampParallelPositives)
+                    { 
+                        Vector2 rayDir = rayControl - rayStart;
+
+                        // In order for a collision to happen with parallel lines, the
+                        // node segment and test line need to be collinear.
+                        Vector2 rStToNode = this.pos - rayStart;
+                        float cross = rayDir.x * rStToNode.y - rayDir.y * rStToNode.x;
+                        const float colinCrossEps = 0.000001f;
+                        if(Mathf.Abs(cross) > colinCrossEps)
+                            return 0;
+
+                        Vector2 toA = this.pos - rayStart;
+                        Vector2 toB = this.next.pos - rayStart;
+                        float rdsqrm = rayDir.sqrMagnitude;
+                        float dstA = Vector2.Dot(toA, rayDir) / rdsqrm;
+                        float dstB = Vector2.Dot(toB, rayDir) / rdsqrm;
+
+                        // If both are behind the testing ray, we don't consider it a collision
+                        if(dstA < 0.0f && dstB < 0.0f || dstA == dstB) 
+                        {
+                            // The == check is just a sanity check, shouldn't really
+                            // or else it would have been classified as degenerate.
+                            return 0;
+                        }
+                        if(dstA < 0.0f)
+                        {
+                            // If A is behind the test ray, B is our guy
+                            interLine.Add(dstB);
+                            interCurve.Add(1.0f);
+                            return 1;
+                        }
+                        else if(dstB < 0.0f || dstA < dstB)
+                        {
+                            // If B is behind the test ray, A is our guy
+                            // Or, both A B are positive and A is closer.
+                            interLine.Add(dstA);
+                            interCurve.Add(0.0f);
+                            return 1;
+                        }
+                        else
+                        {
+                            // Both A and B are positive, and B is closer.
+                            interLine.Add(dstB);
+                            interCurve.Add(1.0f);
+                            return 1;
+                        }
                     }
                 }
                 else if (pb.pathType == BNode.PathType.BezierCurve)
