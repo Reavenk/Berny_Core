@@ -37,7 +37,14 @@ namespace PxPre
                     /// control point.
                     /// </summary>
                     /// <remarks>For CFF fonts, ignore for TTF/OTF.</remarks>
-                    UsesTangentOut = 1 << 2
+                    UsesTangentOut = 1 << 2,
+
+                    /// <summary>
+                    /// Marks the point as implied - which are points that weren't explicitly
+                    /// in the font data, but who's points could be calculated from its data -
+                    /// usually by averaging consecutive quadratic control points.
+                    /// </summary>
+                    Implied = 1 << 3
                 }
 
                 /// <summary>
@@ -128,6 +135,21 @@ namespace PxPre
                             this.flags = this.flags | Flags.UsesTangentOut;
                         else
                             this.flags = this.flags & ~Flags.UsesTangentOut;
+                    }
+                }
+
+                /// <summary>
+                /// Control the implied flag.
+                /// </summary>
+                public bool implied
+                { 
+                    get => (this.flags & Flags.Implied) != 0;
+                    set
+                    { 
+                        if(value == true)
+                            this.flags = this.flags | Flags.Implied;
+                        else
+                            this.flags = this.flags & ~Flags.Implied;
                     }
                 }
             }

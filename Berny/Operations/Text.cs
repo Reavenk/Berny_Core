@@ -136,6 +136,10 @@ namespace PxPre
                             pt.isControl = false;
                             pt.position = (cont.points[k].position + cont.points[k + 1].position) * 0.5f;
 
+                            // Things that process this data may want to know it's implied, especially
+                            // diagnostic tools.
+                            pt.implied = true;
+
                             cont.points.Insert(k + 1, pt);
                             ++k;
                         }
