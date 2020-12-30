@@ -28,25 +28,45 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Implements a procedural shape generator for the SVG polyline shape.
+        /// 
+        // https://www.w3schools.com/graphics/svg_polyline.asp
+        /// </summary>
         public class BShapeGenPolyline : BShapeGen
         {
-            // https://www.w3schools.com/graphics/svg_polyline.asp
-
             public override string ShapeType => "polyline";
 
+            /// <summary>
+            /// The ordered points of the line segments.
+            /// </summary>
             public List<Vector2> polyPoints = new List<Vector2>();
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="shape">The shape to attach to.</param>
+            /// <param name="points">The ordered point of the shape.</param>
             public BShapeGenPolyline(BShape shape, params Vector2 [] points)
                 : base(shape)
             { 
                 this.polyPoints = new List<Vector2>(points);
             }
 
+            /// <summary>
+            /// The number of points.
+            /// </summary>
+            /// <returns>The number of points.</returns>
             public int PointCt()
             {
                 return this.polyPoints.Count;
             }
 
+            /// <summary>
+            /// Adds an additional point to the end of the line strip.
+            /// </summary>
+            /// <param name="v2">The point to add.</param>
+            /// <returns>The index of the point added.</returns>
             public int AddPoint(Vector2 v2)
             {
                 int idx = this.polyPoints.Count;
@@ -55,6 +75,11 @@ namespace PxPre
                 return idx;
             }
 
+            /// <summary>
+            /// Gets a point at a specified index.
+            /// </summary>
+            /// <param name="idx">The index of the point to retrieve.</param>
+            /// <returns>The point at the specified index.</returns>
             public Vector2 GetPoint(int idx)
             {
                 return this.polyPoints[idx];

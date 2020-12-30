@@ -28,26 +28,65 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Procedural path generator for shapes.
+        /// </summary>
         public abstract class BShapeGen
         { 
+            /// <summary>
+            /// The shape that the generator is modifying.
+            /// </summary>
             public readonly BShape shape;
 
+            /// <summary>
+            /// The identifier for the shape.
+            /// </summary>
+            /// <remarks>Since procedural shapes were designed to implement SVG shapes,
+            /// the type name will often match the attribute name for SVG files, for
+            /// convenience.</remarks>
             public abstract string ShapeType {get;}
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="shape">The parent shape for the generator to modify.</param>
             public BShapeGen(BShape shape)
             { 
                 this.shape = shape;
             }
 
+            /// <summary>
+            /// Flag the generator's shape as dirty.
+            /// </summary>
             public void FlagDirty()
             { 
                 this.shape.FlagDirty();
             }
 
+            /// <summary>
+            /// Regenerate the path in the shape.
+            /// </summary>
             public abstract void Reconstruct();
 
+            /// <summary>
+            /// The name of the shape for SVGs.
+            /// </summary>
             public virtual string GetSVGXMLName {get => this.ShapeType;}
+
+            /// <summary>
+            /// Load the generator's properties from an SVG/XML source.
+            /// </summary>
+            /// <param name="shapeEle">The XML source.</param>
+            /// <param name="invertY">If true, loaded Y values should be inverted when loaded.</param>
+            /// <returns>True if successful. Else, false.</returns>
             public abstract bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY);
+
+            /// <summary>
+            /// Save the generator's properties into an XML source for an SVG file.
+            /// </summary>
+            /// <param name="shapeEle">The XML destination.</param>
+            /// <param name="invertY">If true, the saved values should be inverted when loaded.</param>
+            /// <returns>True if successful. Else, false.</returns>
             public abstract bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY);
         }
     }

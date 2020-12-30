@@ -28,26 +28,48 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Implements a procedural shape generator for the SVG line shape.
+        ///         
+        /// https://www.w3schools.com/graphics/svg_polygon.asp
+        /// </summary>
         public class BShapeGenPolygon : BShapeGen
         {
-            // https://www.w3schools.com/graphics/svg_polygon.asp
-
+            /// <summary>
+            /// The rule for how to fill the polygon if there are intersections.
+            /// </summary>
             public enum FillRule
             { 
+                /// <summary>
+                /// Fill anywhere inside the shape.
+                /// </summary>
                 NonZero,
+
+                /// <summary>
+                /// Fill in odd numbered overlaps and leave even numbered overlaps as hollow.
+                /// </summary>
                 EvenOdd
             }
 
+            /// <summary>
+            /// The polygon's fill rule.
+            /// </summary>
             FillRule fillRule = FillRule.NonZero;
 
             public override string ShapeType => "polygon";
 
+            /// <summary>
+            /// Property for the polygon's fill rule.
+            /// </summary>
             public FillRule FillingRule
             { 
                 get => this.fillRule;
                 set { this.fillRule = value; this.FlagDirty(); }
             }
 
+            /// <summary>
+            /// 
+            /// </summary>
             List<Vector2> points = new List<Vector2>();
 
             public BShapeGenPolygon(BShape shape, params Vector2 [] points)
@@ -56,11 +78,20 @@ namespace PxPre
                 this.points = new List<Vector2>(points);
             }
 
+            /// <summary>
+            /// Get the number of points in the polygon.
+            /// </summary>
+            /// <returns>The number of points.</returns>
             public int PointCt()
             { 
                 return this.points.Count;
             }
 
+            /// <summary>
+            /// Adds a point at the end of the polygon list.
+            /// </summary>
+            /// <param name="v2">The point to add.</param>
+            /// <returns>The added point's index.</returns>
             public int AddPoint(Vector2 v2)
             { 
                 int idx = this.points.Count;
@@ -69,6 +100,11 @@ namespace PxPre
                 return idx;
             }
 
+            /// <summary>
+            /// Gets a point from the polygon based on a specified index.
+            /// </summary>
+            /// <param name="idx">The index to retrieve.</param>
+            /// <returns>The point at the specified index.</returns>
             public Vector2 GetPoint(int idx)
             { 
                 return this.points[idx];

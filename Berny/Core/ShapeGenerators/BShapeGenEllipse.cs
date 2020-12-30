@@ -28,15 +28,38 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Implements a procedural shape generator for the SVG ellipse shape.
+        /// 
+        /// https://www.w3schools.com/graphics/svg_ellipse.asp
+        /// </summary>
         public class BShapeGenEllipse : BShapeGen
         {
+            /// <summary>
+            /// The x component of the ellipse's center.
+            /// </summary>
             public float cx = 1.0f;
+
+            /// <summary>
+            /// The y component of the ellipse's center.
+            /// </summary>
             public float cy = 1.0f;
+
+            /// <summary>
+            /// The x radius of the ellipse.
+            /// </summary>
             public float rx = 1.0f;
+
+            /// <summary>
+            /// The y radius of the ellipse.
+            /// </summary>
             public float ry = 1.0f;
 
             public override string ShapeType => "ellipse";
 
+            /// <summary>
+            /// Property for the ellipse's center.
+            /// </summary>
             public Vector2 Center
             { 
                 get => new Vector2(this.cx, this.cy);
@@ -48,6 +71,9 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// Property for the ellipse's radii.
+            /// </summary>
             public Vector2 Radius
             { 
                 get => new Vector2(this.rx, this.ry);
@@ -59,30 +85,48 @@ namespace PxPre
                 }
             }
 
+            /// <summary>
+            /// Property for the x component of the ellipse's center.
+            /// </summary>
             public float CX 
             { 
                 get => this.cx; 
                 set { this.cx = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// Property for the y component of the ellipse's center.
+            /// </summary>
             public float CY 
             { 
                 get => this.cy; 
                 set { this.cy = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// Property for the x component of the ellipse's radius.
+            /// </summary>
             public float RadX 
             { 
                 get => this.rx; 
                 set { this.rx = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// Property for the y component of the ellipse's radius.
+            /// </summary>
             public float RadY 
             { 
                 get => this.ry; 
                 set { this.ry = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="shape">The shape to attach to.</param>
+            /// <param name="center"></param>
+            /// <param name="radius"></param>
             public BShapeGenEllipse(BShape shape, Vector2 center, Vector2 radius)
                 : base(shape)
             { 

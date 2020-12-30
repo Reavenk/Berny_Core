@@ -28,6 +28,11 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Implements a procedural shape generator for the SVG circle shape.
+        /// 
+        /// https://www.w3schools.com/graphics/svg_circle.asp
+        /// </summary>
         public class BShapeGenCircle : BShapeGen
         {
             /// <summary>
@@ -88,6 +93,12 @@ namespace PxPre
 
             public override string ShapeType => "circle";
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="shape">The shape to attach to.</param>
+            /// <param name="center">The center of the circle.</param>
+            /// <param name="rad">The radius of the circle.</param>
             public BShapeGenCircle(BShape shape, Vector2 center, float rad)
                 : base(shape)
             { }

@@ -28,53 +28,105 @@ namespace PxPre
 {
     namespace Berny
     {
+        /// <summary>
+        /// Generates a rectangle path, matching the parameters of an SVG rectangle.
+        /// https://www.w3schools.com/graphics/svg_rect.asp
+        /// </summary>
         public class BShapeGenRect : BShapeGen
         {
+            /// <summary>
+            /// The left of the rectangle.
+            /// </summary>
             float fx = 0.0f;
+
+            /// <summary>
+            /// The top of the rectangle.
+            /// </summary>
             float fy = 0.0f;
+
+            /// <summary>
+            /// The width of the rectangle.
+            /// </summary>
             float width = 1.0f;
+
+            /// <summary>
+            /// The height of the rectangle.
+            /// </summary>
             float height = 1.0f;
+
+            /// <summary>
+            /// The horizontal rounding factor of the rectangle.
+            /// </summary>
             float rx = 0.0f;
+
+            /// <summary>
+            /// The vertical rounding factor of the rectangle.
+            /// </summary>
             float ry = 0.0f;
 
             public override string ShapeType => "rect";
 
+            /// <summary>
+            /// The property for the rectangle's left.
+            /// </summary>
             public float FX 
             {
                 get => this.fx; 
                 set{ this.fx = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// The property for the rectangle's top.
+            /// </summary>
             public float FY 
             { 
                 get => this.fy; 
                 set { this.fy = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// The property for the rectangle's width.
+            /// </summary>
             public float Width 
             { 
                 get => this.width; 
                 set { this.width = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// The property for the rectangle's height.
+            /// </summary>
             public float Height 
             { 
                 get => this.height; 
                 set { this.height = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// The property for the rectangle's horizontal rounding.
+            /// </summary>
             public float RoundX 
             { 
                 get => this.rx; 
                 set { this.rx = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// The property for the rectangle's vertical rounding.
+            /// </summary>
             public float RoundY 
             { 
                 get => this.ry; 
                 set { this.ry = value; this.FlagDirty(); } 
             }
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="shape">The shape to attach to.</param>
+            /// <param name="topLeft">The top left of the retangle.</param>
+            /// <param name="dim">The dimensions of the rectangle.</param>
+            /// <param name="round">The rounding factor of the retangle.</param>
             public BShapeGenRect(BShape shape, Vector2 topLeft, Vector2 dim, Vector2 ? round = null)
                 : base(shape)
             { 
