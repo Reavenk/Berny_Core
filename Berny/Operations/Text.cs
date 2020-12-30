@@ -243,16 +243,28 @@ namespace PxPre
                 List<BNode> posIslands = new List<BNode>();
                 List<BNode> negIslands = new List<BNode>();
 
+                float wind = 0.0f;
+
                 foreach(BLoop bl in shape.loops)
                 { 
                     List<BNode> islands = bl.GetIslands();
                     foreach(BNode isl in islands)
                     { 
-
-
                         List<BNode> islSegs = new List<BNode>(isl.Travel());
                         float f = BNode.CalculateWinding(islSegs);
-                        if(f < 0.0)
+
+                        // The first glyf will be used to define the positive winding.
+                        // From testing of fonts, it seems like a hard coded CW/CCW
+                        // winding isn't reliable.
+                        //
+                        // Current hypothesis is that this is a difference between
+                        // glyf and CFF conventions.
+                        if(wind == 0.0f)
+                        {
+                            wind = f;
+                            posIslands.Add(isl);
+                        }
+                        else if (Mathf.Sign(wind) == Mathf.Sign(f))
                             posIslands.Add(isl);
                         else
                             negIslands.Add(isl);
