@@ -281,13 +281,6 @@ namespace PxPre
                     Table tabEntGlyf;
                     if(this.tables.TryGetValue(TTF.Table.glyf.TagName, out tabEntGlyf) == true)
                     {
-                        //r.SetPosition(tabEntGlyf.offset);
-                        //TTF.Table.glyf tableGlyf = new TTF.Table.glyf();
-                        //tableGlyf.Read(r);
-                        //tableGlyf.xMin;
-                        //tableGlyf.yMin;
-                        //tableGlyf.xMax;
-                        //tableGlyf.yMax;
 
                         ret = new Font.Typeface();
 
@@ -355,13 +348,38 @@ namespace PxPre
                                     curContour.points.Add(pt);
 
                                 }
-                        
-                                ret.glyphs.Add(fontGlyph);
                             }
                             else
-                            { 
+                            {
                                 // Complex
+                                foreach(TTF.Table.glyf.CompositeEntry ce in glyf.compositeEntries)
+                                {
+                                    float invEm = 1.0f / tableHead.unitsPerEm;
+                                    Vector2 vx = new Vector2(ce.xscale, ce.scale01) * invEm;
+                                    Vector2 vy = new Vector2(ce.scale10, ce.yscale) * invEm;
+                                    Vector2 vo = new Vector2(ce.argument1, ce.argument2) * invEm;
+
+                                    Font.Glyph gToCopy = ret.glyphs[ce.glyphIndex];
+                                    foreach(Font.Contour cToCpy in gToCopy.contours)
+                                    { 
+                                        Font.Contour newCont = new Font.Contour();
+                                        fontGlyph.contours.Add(newCont);
+
+                                        foreach(Font.Point p in cToCpy.points)
+                                        { 
+                                            Font.Point newPt = new Font.Point();
+                                            newPt.flags = p.flags;
+                                            newPt.position = p.position.x * vx + p.position.y * vy + vo;
+                                            newPt.tangentIn = p.tangentIn.x * vx + p.tangentIn.y * vy;
+                                            newPt.tangentOut = p.tangentOut.x * vx + p.tangentOut.y * vy;
+
+                                            newCont.points.Add(newPt);
+                                        }
+                                    }
+
+                                }
                             }
+                            ret.glyphs.Add(fontGlyph);
                         }
                     }
 

@@ -34,6 +34,87 @@ namespace PxPre
             {
                 public struct glyf
                 {
+                    public struct CompositeEntry
+                    {
+                        public ushort flags;                    // composite flag
+                        public ushort glyphIndex;               // glyph index of component
+                        public int argument1;                   // x-offset for component or point number; type depends on bits 0 and 1 in component flags
+                        public int argument2;                   // y-offset for component or point number; type depends on bits 0 and 1 in component flags
+                        
+                        public float scale;
+                        public float xscale;
+                        public float scale01;
+                        public float scale10;
+                        public float yscale;
+
+                        public bool Read(TTFReader r)
+                        {
+                            // Set defaults in case we don't read them
+                            // because it's filtered out from the flags.
+                            this.argument1 = 0;
+                            this.argument2 = 0;
+                            this.scale = 1.0f;
+                            this.xscale = 1.0f;
+                            this.yscale = 1.0f;
+                            this.scale01 = 0.0f;
+                            this.scale10 = 0.0f;
+
+                            r.ReadInt(out this.flags);
+                            r.ReadInt(out this.glyphIndex);
+
+                            if ((this.flags & ARG_1_AND_2_ARE_WORDS) != 0)
+                            {
+                                short a1 = r.ReadInt16();
+                                short a2 = r.ReadInt16();
+
+                                if((this.flags & ARGS_ARE_XY_VALUES) != 0)
+                                {
+                                    this.argument1 = a1;
+                                    this.argument2 = a2;
+                                }
+                                else
+                                { 
+                                    this.argument1 = (ushort)a1;
+                                    this.argument2 = (ushort)a2;
+                                }
+                            }
+                            else
+                            {
+                                sbyte a1 = r.ReadInt8();
+                                sbyte a2 = r.ReadInt8();
+
+                                if ((this.flags & ARGS_ARE_XY_VALUES) != 0)
+                                {
+                                    this.argument1 = a1;
+                                    this.argument2 = a2;
+                                }
+                                else
+                                {
+                                    this.argument1 = (byte)a1;
+                                    this.argument2 = (byte)a2;
+                                }
+                            }
+                            if ((this.flags & WE_HAVE_A_SCALE) != 0)
+                            {
+                                this.scale = r.ReadFDot14();
+                            }
+                            else if ((this.flags & WE_HAVE_AN_X_AND_Y_SCALE) != 0)
+                            {
+                                this.xscale = r.ReadFDot14();   // Format 2.14
+                                this.yscale = r.ReadFDot14();   // Format 2.14
+                            }
+                            else if ((this.flags & WE_HAVE_A_TWO_BY_TWO) != 0)
+                            {
+                                this.xscale = r.ReadFDot14();   // Format 2.14
+                                this.scale01 = r.ReadFDot14();   // Format 2.14
+                                this.scale10 = r.ReadFDot14();   // Format 2.14
+                                this.yscale = r.ReadFDot14();   // Format 2.14
+                            }
+
+                            return (this.flags & MORE_COMPONENTS) != 0;
+                        }
+                    }
+
                     // Simple Glyph Flags
                     public const byte ON_CURVE_POINT                            = 0x01; // Bit 0: If set, the point is on the curve; otherwise, it is off the curve.
                     public const byte X_SHORT_VECTOR                            = 0x02; // Bit 1: If set, the corresponding x-coordinate is 1 byte long. If not set, it is two bytes long. For the sign of this value, see the description of the X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR flag.
@@ -75,27 +156,11 @@ namespace PxPre
                     public List<int> xCoordinates;          // Contour point x-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
                     public List<int> yCoordinates;          // Contour point y-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
 
-                    // Composite Glyph
-                    public ushort compflags;                // component flag
-                    public ushort glyphIndex;               // glyph index of component
-                    public int argument1;                   // x-offset for component or point number; type depends on bits 0 and 1 in component flags
-                    public int argument2;                   // y-offset for component or point number; type depends on bits 0 and 1 in component flags
+                    public bool IsComplex { get => this.numberOfContours == -1; }
 
-                    public ushort arg1and2 { get=> (ushort)((this.argument2 << 8) | this.argument2);}
-
-                    // It's hard to tell what exactly we may need because of different
-                    // features and format spec versions. So we're just going to 
-                    // include everything we might need. Not efficient but saner.
+                    public List<CompositeEntry> compositeEntries;
                     public ushort numInstr;
                     public List<byte> instr;
-
-                    public float scale;
-                    public float xscale;
-                    public float scale01;
-                    public float scale10;
-                    public float yscale;
-
-                    public bool IsComplex { get => this.numberOfContours == -1; }
 
                     public void Read(TTFReader r)
                     {
@@ -184,47 +249,21 @@ namespace PxPre
                         else
                         {
                             // Composite
-                            
 
-                            // https://docs.microsoft.com/en-us/typography/opentype/spec/glyf
-                            do
+
+                            this.compositeEntries = new List<CompositeEntry>();
+
+                            bool moreComps = true;
+                            while(moreComps == true)
                             {
-                                r.ReadInt(out this.compflags);
-                                r.ReadInt(out this.glyphIndex);
+                                CompositeEntry compE = new CompositeEntry();
+                                moreComps = compE.Read(r);
 
-                                if ((this.compflags & ARG_1_AND_2_ARE_WORDS) != 0)
-                                {
-                                    this.argument1 = r.ReadInt16();
-                                    this.argument2 = r.ReadInt16();
-                                }
-                                else
-                                {
-                                    this.argument1 = (r.ReadUInt8() << 8) | r.ReadUInt8();
-                                }
-                                if ((this.compflags & WE_HAVE_A_SCALE) != 0)
-                                {
-                                    this.scale = r.ReadFDot14();
-                                }
-                                else if ((this.compflags & WE_HAVE_AN_X_AND_Y_SCALE) != 0)
-                                {
-                                    this.xscale = r.ReadFDot14();   // Format 2.14
-                                    this.yscale = r.ReadFDot14();   // Format 2.14
-                                }
-                                else if((this.compflags & WE_HAVE_A_TWO_BY_TWO) != 0)
-                                {
-                                    this.xscale = r.ReadFDot14();   // Format 2.14
-                                    this.scale01 = r.ReadFDot14();   // Format 2.14
-                                    this.scale10 = r.ReadFDot14();   // Format 2.14
-                                    this.yscale = r.ReadFDot14();   // Format 2.14
-                                }
+                                this.compositeEntries.Add(compE);
                             } 
-                            while ((this.compflags & MORE_COMPONENTS) != 0);
-                            // Not actually sure how that white loop is supposed to be structured,
-                            // since the flags don't currently change if not in the loop, but
-                            // we overwrite previous stuff if it is - and nothing get appended
-                            // anywhere.
 
-                            if ((this.compflags & WE_HAVE_INSTRUCTIONS) != 0)
+                            CompositeEntry ceLast = this.compositeEntries[compositeEntries.Count - 1];
+                            if ((ceLast.flags & WE_HAVE_INSTRUCTIONS) != 0)
                             {
                                 r.ReadInt(out this.numInstr);
 
