@@ -230,8 +230,12 @@ namespace PxPre
                     if (this.tables.TryGetValue(TTF.Table.loca.TagName, out tabEntLoca) == true)
                     {
                         r.SetPosition(tabEntLoca.offset);
-                        tableLoca = new TTF.Table.loca();
-                        tableLoca.Value.Read(r, numGlyphs, this.offsetByteWidth == 4);
+
+                        // Since tableLoca is an optional,we can't set and read from it, instead we
+                        // need to read from outside the optional and then set it.
+                        TTF.Table.loca locaVal = new TTF.Table.loca();
+                        locaVal.Read(r, numGlyphs, this.offsetByteWidth == 4);
+                        tableLoca = locaVal;
                     }
 
                     // hhea will tell us how many horizontal metrics there are defined in the hmtx 
@@ -317,39 +321,47 @@ namespace PxPre
                             TTF.Table.glyf glyf = new TTF.Table.glyf();
                             glyf.Read(r);
 
-                            Font.Contour curContour = new Font.Contour();
-                            fontGlyph.contours.Add(curContour);
-                            int lastContourId = 0;
-                            int curEnd = glyf.endPtsOfCountours[lastContourId];
-
-                            for (int j = 0; j < glyf.xCoordinates.Count; ++j)
+                            if(glyf.numberOfContours != -1)
                             {
-                                if(j > curEnd)
+                                // Simple
+                                Font.Contour curContour = new Font.Contour();
+                                fontGlyph.contours.Add(curContour);
+                                int lastContourId = 0;
+                                int curEnd = glyf.endPtsOfCountours[lastContourId];
+
+                                for (int j = 0; j < glyf.xCoordinates.Count; ++j)
                                 {
-                                    curContour = new Font.Contour();
-                                    fontGlyph.contours.Add(curContour);
+                                    if(j > curEnd)
+                                    {
+                                        curContour = new Font.Contour();
+                                        fontGlyph.contours.Add(curContour);
 
-                                    ++lastContourId;
-                                    curEnd = glyf.endPtsOfCountours[lastContourId];
+                                        ++lastContourId;
+                                        curEnd = glyf.endPtsOfCountours[lastContourId];
+                                    }
+
+
+                                    Font.Point pt = new Font.Point();
+
+                                    // If it's not on the curve, it's a control point for 
+                                    // a quadratic Bezier.
+                                    pt.isControl = (glyf.simpflags[j] & TTF.Table.glyf.ON_CURVE_POINT) == 0;
+
+                                    pt.position = 
+                                        new Vector2(
+                                            ((float)glyf.xMin + (float)glyf.xCoordinates[j])/(float)tableHead.unitsPerEm,
+                                            (float)glyf.yCoordinates[j]/(float)tableHead.unitsPerEm);
+
+                                    curContour.points.Add(pt);
+
                                 }
-
-
-                                Font.Point pt = new Font.Point();
-
-                                // If it's not on the curve, it's a control point for 
-                                // a quadratic Bezier.
-                                pt.isControl = (glyf.simpflags[j] & TTF.Table.glyf.ON_CURVE_POINT) == 0;
-
-                                pt.position = 
-                                    new Vector2(
-                                        ((float)glyf.xMin + (float)glyf.xCoordinates[j])/(float)tableHead.unitsPerEm,
-                                        (float)glyf.yCoordinates[j]/(float)tableHead.unitsPerEm);
-
-                                curContour.points.Add(pt);
-
-                            }
                         
-                            ret.glyphs.Add(fontGlyph);
+                                ret.glyphs.Add(fontGlyph);
+                            }
+                            else
+                            { 
+                                // Complex
+                            }
                         }
                     }
 
