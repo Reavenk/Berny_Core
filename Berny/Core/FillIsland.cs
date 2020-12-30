@@ -310,18 +310,73 @@ namespace PxPre
                             FillSegment fsPtCheck = it;
                             fsPtCheck = fsPtCheck.next.next; // If there's at least 2 segments, this should be valid
 
-                            while(true)
-                            { 
-                                if(
+                            bool cont = true;
+                            while(cont == true)
+                            {
+                                if( (fsPtCheck.pos - it.pos).sqrMagnitude <= float.Epsilon ||
+                                    (fsPtCheck.pos - it.prev.pos).sqrMagnitude <= float.Epsilon ||
+                                    (fsPtCheck.pos - it.next.pos).sqrMagnitude <= float.Epsilon )
+                                {
                                     // Sometimes a point can be right on top of another point and it's a legitimate
                                     // clipping position - especially if we're processing a cavity that's been bridged.
-                                    (fsPtCheck.pos - it.pos).sqrMagnitude > float.Epsilon &&
-                                    (fsPtCheck.pos - it.prev.pos).sqrMagnitude > float.Epsilon &&
-                                    (fsPtCheck.pos - it.next.pos).sqrMagnitude > float.Epsilon &&
-                                    Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
-                                { 
-                                    skip = true;
-                                    break;
+                                    //
+                                    // Eat up this situation to let it pass.
+                                }
+                                else
+                                {
+                                    do
+                                    {
+                                        const float windEps = 0.00001f;
+
+                                        // We're going to use a cross product to check if the point
+                                        // if the region we're checking is on an edge of the triangle.
+                                        //
+                                        // If it is, we need to do further checking.
+                                        //
+                                        // Checking if it's on the edge of the point to next.
+                                        Vector2 itToCheck = fsPtCheck.pos - it.pos;
+                                        Vector2 itToNext = it.next.pos - it.pos;
+                                        float degenTestWind = itToCheck.x * itToNext.y - itToNext.x * itToCheck.y;
+                                        if (Mathf.Abs(degenTestWind) < windEps)
+                                        { 
+                                            float dot1 = Vector2.Dot(itToCheck, itToNext);
+                                            float dot2 = Vector2.Dot(-itToNext, fsPtCheck.pos - it.next.pos);
+
+                                            if(dot1 >= 0.0f && dot2 >= 0.0f)
+                                            { 
+                                                cont = false;
+                                                skip = true;
+                                                break;
+                                            }
+                                        }
+
+                                        // Checking if it's on the edge of the point to prev.
+                                        Vector2 prvToIt = it.pos - it.prev.pos;
+                                        degenTestWind = itToCheck.x * prvToIt.y - prvToIt.x * itToCheck.y;
+                                        if (Mathf.Abs(degenTestWind) < windEps)
+                                        {
+                                            float dot1 = Vector2.Dot(itToCheck, -prvToIt);
+                                            float dot2 = Vector2.Dot(prvToIt, fsPtCheck.pos - it.prev.pos);
+
+                                            if (dot1 >= 0.0f && dot2 >= 0.0f)
+                                            {
+                                                cont = false;
+                                                skip = true;
+                                                break;
+                                            }
+                                        }
+
+                                        // If it's not on the edge, check if it's in the triangle.
+                                        if (Utils.PointInTriangle(fsPtCheck.pos, it.prev.pos, it.pos, it.next.pos) == true)
+                                        {
+                                            // If it's not the the edge of the triangle and creates a wrong winding
+                                            // triangle, we need to move on.
+                                            cont = false;
+                                            skip = true;
+                                            break;
+                                        }
+                                    }
+                                    while(false);
                                 }
 
                                 fsPtCheck = fsPtCheck.next;
