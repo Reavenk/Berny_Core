@@ -1968,7 +1968,6 @@ namespace PxPre
                 }
             }
 
-
             /// <summary>
             /// Calculate the winding of a an ordered set of nodes.
             /// 
@@ -2251,12 +2250,29 @@ namespace PxPre
                 return mapping;
             }
 
+            public static List<BNode> CloneNodesList(
+                List<BNode> original, 
+                bool transferLoop, 
+                bool remap = true, 
+                bool allowOnlyRemaps = true)
+            {
+                List<BNode> lst = new List<BNode>();
+
+                Dictionary<BNode, BNode> dict =  
+                    CloneNodes((IEnumerable<BNode>)original, transferLoop, remap, allowOnlyRemaps);
+
+                foreach(BNode bn in original)
+                    lst.Add(dict[bn]);
+
+                return lst;
+            }
+
             /// <summary>
             /// Remove the entire island from its parent loop.
             /// </summary>
             /// <param name="rewind">Start removal from the beginning of the island. Only relevant if
             /// the node belongs to an open loop.</param>
-            public void RemoveIsland(bool rewind)
+            public void RemoveIsland(bool rewind, bool deconstruct = true)
             { 
                 BNode start = this;
                 if(rewind == true)
@@ -2274,8 +2290,11 @@ namespace PxPre
                     if(it.parent != null)
                         it.parent.nodes.Remove(it);
 
-                    it.next = null;
-                    it.prev = null;
+                    if(deconstruct == true)
+                    {
+                        it.next = null;
+                        it.prev = null;
+                    }
 
                     it = next;
                     if(it == null || it == start)

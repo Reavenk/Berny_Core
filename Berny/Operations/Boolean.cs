@@ -33,7 +33,7 @@ namespace PxPre
         /// </summary>
         public static class Boolean
         {
-            public delegate BoundingMode BooleanImpl(BLoop dstloop, List<BNode> dstSegs, List<BNode> otherSegs);
+            public delegate BoundingMode BooleanImpl(BLoop dstloop, List<BNode> dstSegs, List<BNode> otherSegs, out BNode onIslA);
 
             /// <summary>
             /// A description of the collision between two nodes (a left and right island parameter).
@@ -273,29 +273,33 @@ namespace PxPre
                 }
             }
 
-            public static void Union(BLoop dst, params BLoop [] others)
+            public static void Union(BLoop dst, out BNode onIslA, params BLoop [] others)
             {
-                foreach(BLoop bl in others)
+                onIslA = null;
+                foreach (BLoop bl in others)
                 {
                     PerIslandBoolean(
                         dst, 
                         bl, 
-                        (x, segsA, segsB)=>
-                        {
-                            return Union(x, segsA, segsB); 
-                        },
+                        Union,
+                        out onIslA,
                         true);
                 }
             }
 
-            public static void PerIslandBoolean(BLoop left, BLoop right, BooleanImpl op, bool removeRight)
+            public static void PerIslandBoolean(BLoop left, BLoop right, BooleanImpl op, out BNode onIslA, bool removeRight)
             {
                 if (left == right || left == null || right == null)
+                {
+                    onIslA = left.nodes[0];
                     return;
+                }
+
+                onIslA = null;
 
                 // If we're doing a boolean, it's no longer a generated shape - even if it ends
                 // up untouched.
-                if(left.shape != null)
+                if (left.shape != null)
                     left.shape.shapeGenerator = null;
 
                 right.shape = null;
@@ -305,23 +309,31 @@ namespace PxPre
 
 
                 foreach(BNode islA in islandsA)
-                { 
-                    foreach(BNode islB in islandB)
+                {
+                    onIslA = islA;
+                    foreach (BNode islB in islandB)
                     {
                         List<BNode> islandSegsA = new List<BNode>(islA.Travel());
                         List<BNode> islandSegsB = new List<BNode>(islB.Travel());
 
-                        op(left, islandSegsA, islandSegsB);
+                        op(left, islandSegsA, islandSegsB, out onIslA);
                     }
                 }
                 if(removeRight == true)
                     RemoveLoop(right, true);
             }
 
-            public static BoundingMode Union(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB, bool mergeNonCol = true)
+            public static BoundingMode Union(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB, out BNode onIslA)
+            { 
+                return Union(dst, islandSegsA, islandSegsB, out onIslA, true);
+            }
+
+            public static BoundingMode Union(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB, out BNode onIslA, bool mergeNonCol)
             { 
                 float leftWind = BNode.CalculateWinding(islandSegsA[0].Travel());
                 float rightWind = BNode.CalculateWinding(islandSegsB[0].Travel());
+
+                onIslA = islandSegsA[0];
 
                 // It can be either winding, but they must be the same - since islandB is going to be used up in the process,
                 // we'll modify that winding to keep islandA the same.
@@ -356,7 +368,10 @@ namespace PxPre
                             bn.SetParent(null, false);
 
                         foreach (BNode bn in islandSegsB)
+                        {
+                            onIslA = bn;
                             bn.SetParent(dst, false);
+                        }
 
                         return BoundingMode.RightSurroundsLeft;
                     }
@@ -388,6 +403,7 @@ namespace PxPre
                     BNode.SubdivideInfo sdiB = colSlideInfo[bss.GetTPosB()];
                     float wind = Utils.Vector2Cross(sdiA.subOut, sdiB.subOut);
                     BNode colNode = createdSubdivs[bss.GetTPosA()];
+                    onIslA = colNode;
 
                     if (leftWind <= 0.0f != wind <= 0.0f)
                     {
@@ -444,24 +460,27 @@ namespace PxPre
 
             }
 
-            public static void Difference(BLoop left, BLoop right)
+            public static void Difference(BLoop left, BLoop right, out BNode onIslA)
             { 
                 // we always remove B, which may contain extra stuff from 
                 // subtraction shapes that didn't find a target to remove.
                 PerIslandBoolean(
                     left, 
                     right, 
-                    (x, y, z)=>
-                    {
-                        return Difference(x, y, z, true);
-                    }, 
+                    Difference,
+                    out onIslA,
                     true);
 
                 right.Clear();
                 RemoveLoop(right, true);
             }
 
-            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB, bool processFullOverlaps = true)
+            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB, out BNode onIslA)
+            {
+                return Difference(dstloop, islandSegsA, islandSegsB, out onIslA, true);
+            }
+
+            public static BoundingMode Difference(BLoop dstloop, List<BNode> islandSegsA, List<BNode> islandSegsB, out BNode onIslA, bool processFullOverlaps)
             {
                 // If there is any interaction, a copy of islandB is made and used - this means 
                 // if islandB should be removed, it is up to the caller to remove it themselves.
@@ -482,22 +501,31 @@ namespace PxPre
                 GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
                 Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
 
+                onIslA = null;
+
                 if (delCollisions.Count == 0)
                 { 
                     BoundingMode bm = GetLoopBoundingMode(islandSegsA, islandSegsB);
 
                     if(processFullOverlaps == false)
+                    {
+                        onIslA = islandSegsA[0];
                         return bm;
+                    }
 
                     if (bm == BoundingMode.NoCollision)
-                    { 
+                    {
+                        onIslA = islandSegsA[0];
                         return BoundingMode.NoCollision;
                     }
                     else if(bm == BoundingMode.RightSurroundsLeft)
                     { 
                         // Everything was subtracted out
                         foreach(BNode bn in islandSegsA)
+                        {
+                            onIslA = bn;
                             bn.SetParent(null);
+                        }
 
                         return BoundingMode.RightSurroundsLeft;
                     }
@@ -508,6 +536,8 @@ namespace PxPre
                         Dictionary<BNode, BNode> insertCloneMap = BNode.CloneNodes(islandSegsB, false);
                         foreach (BNode bn in insertCloneMap.Values)
                             bn.SetParent(dstloop);
+
+                        onIslA = islandSegsA[0];
 
                         return BoundingMode.LeftSurroundsRight;
                     }
@@ -543,6 +573,7 @@ namespace PxPre
                     BNode.SubdivideInfo sdiB = colSlideInfo[bss.GetTPosB()];
                     float wind = Utils.Vector2Cross(sdiA.subOut, sdiB.subOut);
                     BNode colNode = createdSubdivs[bss.GetTPosA()];
+                    onIslA = colNode;
 
                     if (leftWind > 0 == wind > 0.0f)
                     {
@@ -598,8 +629,9 @@ namespace PxPre
                 return BoundingMode.Collision;
             }
 
-            public static void Intersection(BLoop left, BLoop right, bool removeRight)
-            { 
+            public static void Intersection(BLoop left, BLoop right, out BNode onIslA, bool removeRight)
+            {
+                onIslA = null;
                 // Sanity check on geometry, try to union each loop with its islands
                 // so there's no overlapping regions within them.
 
@@ -611,7 +643,7 @@ namespace PxPre
                         List<BNode> RSegsA = new List<BNode>(rightIslands[0].Travel());
                         List<BNode> RSegsB = new List<BNode>(rightIslands[i].Travel());
 
-                        Union(right, RSegsA, RSegsB, true);
+                        Union(right, RSegsA, RSegsB, out onIslA, true);
                     }
                 }
 
@@ -623,7 +655,7 @@ namespace PxPre
                         List<BNode> LSegsA = new List<BNode>(leftIslands[0].Travel());
                         List<BNode> LSegsB = new List<BNode>(leftIslands[i].Travel());
 
-                        Union(right, LSegsA, LSegsB, true);
+                        Union(right, LSegsA, LSegsB, out onIslA, true);
                     }
                 }
 
@@ -640,7 +672,8 @@ namespace PxPre
                         Intersection(
                             left,
                             leftIslandSegs,
-                            rightIslandSegs);
+                            rightIslandSegs,
+                            out onIslA);
                     }
                 }
 
@@ -660,7 +693,7 @@ namespace PxPre
                 }
             }
 
-            public static BoundingMode Intersection(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB)
+            public static BoundingMode Intersection(BLoop dst, List<BNode> islandSegsA, List<BNode> islandSegsB, out BNode onIslA)
             {
                 // For the intersection, if there's ANY geometry return, it's a copy.
                 // It's expected after this operation that the original islands will
@@ -671,6 +704,8 @@ namespace PxPre
 
                 if(leftWinding > 0.0f != rightWinding > 0.0f)
                     islandSegsB[0].ReverseChainOrder();
+
+                onIslA = null;
 
                 List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
                 GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
@@ -689,8 +724,12 @@ namespace PxPre
                         // If the right is fully surrounded, the right is kept.
                         Dictionary<BNode, BNode> insertCloneMap = BNode.CloneNodes(islandSegsA, false);
                         foreach (BNode bn in insertCloneMap.Values)
+                        {
+                            onIslA = bn;
                             bn.SetParent(dst);
+                        }
 
+                        onIslA = islandSegsA[0];
                         return BoundingMode.RightSurroundsLeft;
                     }
                     else if (bm == BoundingMode.LeftSurroundsRight)
@@ -698,8 +737,12 @@ namespace PxPre
                         // If the left is fully surrounded, the left is kept.
                         Dictionary<BNode, BNode> insertCloneMap = BNode.CloneNodes(islandSegsB, false);
                         foreach (BNode bn in insertCloneMap.Values)
+                        {
+                            onIslA = bn;
                             bn.SetParent(dst);
+                        }
 
+                        onIslA = islandSegsA[0];
                         return BoundingMode.LeftSurroundsRight;
                     }
                 }
@@ -744,6 +787,7 @@ namespace PxPre
                     BNode.SubdivideInfo sdiB = colSlideInfo[bss.GetTPosB()];
                     float wind = Utils.Vector2Cross(sdiA.subOut, sdiB.subOut);
                     BNode colNode = createdSubdivs[bss.GetTPosA()];
+                    onIslA = colNode;
 
                     if (wind < 0.0f != leftWinding < 0.0f)
                     {
