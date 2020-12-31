@@ -261,6 +261,32 @@ namespace PxPre
                 this.layers.Clear();
                 this.FlagDirty();
             }
+
+            public void Clean()
+            { 
+                for(int itLayer = this.layers.Count - 1; itLayer >= 0 ; --itLayer)
+                { 
+                    Layer l = this.layers[itLayer];
+
+                    for(int itShape = l.shapes.Count - 1; itShape >= 0; --itShape)
+                    { 
+                        BShape s = l.shapes[itShape];
+                        s.CleanEmptyLoops();
+
+                        if(s.loops.Count == 0)
+                        {
+                            l.shapes.RemoveAt(itShape);
+                            l.FlagDirty();
+                        }
+                    }
+
+                    if(l.shapes.Count == 0)
+                    {
+                        this.layers.RemoveAt(itLayer);
+                        this.FlagDirty();
+                    }
+                }
+            }
         }
     } 
 }
