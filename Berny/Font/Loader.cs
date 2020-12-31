@@ -281,16 +281,22 @@ namespace PxPre
                     Table tabEntGlyf;
                     if(this.tables.TryGetValue(TTF.Table.glyf.TagName, out tabEntGlyf) == true)
                     {
-
+                        // Create all typefaces in advance. This way we can reference future
+                        // glyphs before we load them.
                         ret = new Font.Typeface();
-
                         int glyphCount = tableLoca.Value.GetGlyphCount();
+                        for(int i = 0; i < glyphCount; ++i)
+                        {
+                            Font.Glyph fontGlyph = new Font.Glyph();
+                            ret.glyphs.Add(fontGlyph);
+                        }
+
                         for (int i = 0; i < glyphCount; ++i)
                         {
                             uint lid = tableLoca.Value.GetGlyphOffset(tabEntGlyf, i);
                             r.SetPosition(lid);
 
-                            Font.Glyph fontGlyph = new Font.Glyph();
+                            Font.Glyph fontGlyph = ret.glyphs[i];
                             fontGlyph.advance = (float)tableHmtx.hMetrics[i].advanceWidth / (float)tableHead.unitsPerEm;
                             fontGlyph.leftSideBearing = (float)tableHmtx.hMetrics[i].lsb / (float)tableHead.unitsPerEm;
 
@@ -351,35 +357,20 @@ namespace PxPre
                             }
                             else
                             {
+                                fontGlyph.compositeRefs = new List<Font.Glyph.CompositeReference>();
+
                                 // Complex
-                                foreach(TTF.Table.glyf.CompositeEntry ce in glyf.compositeEntries)
+                                foreach (TTF.Table.glyf.CompositeEntry ce in glyf.compositeEntries)
                                 {
-                                    float invEm = 1.0f / tableHead.unitsPerEm;
-                                    Vector2 vx = new Vector2(ce.xscale, ce.scale01) * invEm;
-                                    Vector2 vy = new Vector2(ce.scale10, ce.yscale) * invEm;
-                                    Vector2 vo = new Vector2(ce.argument1, ce.argument2) * invEm;
+                                    Font.Glyph.CompositeReference cref = new Font.Glyph.CompositeReference();
+                                    cref.xAxis = new Vector2(ce.xscale, ce.scale01) / (float)tableHead.unitsPerEm;
+                                    cref.yAxis = new Vector2(ce.scale10, ce.yscale) / (float)tableHead.unitsPerEm;
+                                    cref.offset = new Vector2(ce.argument1, ce.argument2) / (float)tableHead.unitsPerEm;
+                                    cref.glyphRef = ret.glyphs[ce.glyphIndex];
 
-                                    Font.Glyph gToCopy = ret.glyphs[ce.glyphIndex];
-                                    foreach(Font.Contour cToCpy in gToCopy.contours)
-                                    { 
-                                        Font.Contour newCont = new Font.Contour();
-                                        fontGlyph.contours.Add(newCont);
-
-                                        foreach(Font.Point p in cToCpy.points)
-                                        { 
-                                            Font.Point newPt = new Font.Point();
-                                            newPt.flags = p.flags;
-                                            newPt.position = p.position.x * vx + p.position.y * vy + vo;
-                                            newPt.tangentIn = p.tangentIn.x * vx + p.tangentIn.y * vy;
-                                            newPt.tangentOut = p.tangentOut.x * vx + p.tangentOut.y * vy;
-
-                                            newCont.points.Add(newPt);
-                                        }
-                                    }
-
+                                    fontGlyph.compositeRefs.Add(cref);
                                 }
                             }
-                            ret.glyphs.Add(fontGlyph);
                         }
                     }
 

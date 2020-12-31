@@ -170,6 +170,15 @@ namespace PxPre
             /// </summary>
             public class Glyph
             {
+
+                public struct CompositeReference
+                { 
+                    public Vector2 offset;
+                    public Vector2 xAxis;
+                    public Vector2 yAxis;
+                    public Glyph glyphRef;
+                }
+
                 /// <summary>
                 /// The minimum (bottom left) of the glyph's bounding box.
                 /// </summary>
@@ -200,6 +209,8 @@ namespace PxPre
                 /// Clockwise values are positive fills, counter clockwise are negative.
                 /// </summary>
                 public List<Contour> contours = new List<Contour>();
+
+                public List<CompositeReference> compositeRefs = null;
 
                 /// <summary>
                 /// Scale the contents of the font.
