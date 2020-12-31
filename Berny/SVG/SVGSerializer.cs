@@ -168,6 +168,9 @@ namespace PxPre
                             string lastSymbol = "";
                             foreach(BLoop loop in shape.loops)
                             { 
+                                if(string.IsNullOrEmpty(drawAttrib) == false)
+                                    drawAttrib += " ";
+
                                 HashSet<BNode> nodesLeft = new HashSet<BNode>(loop.nodes);
                                 while(nodesLeft.Count > 0)
                                 { 
