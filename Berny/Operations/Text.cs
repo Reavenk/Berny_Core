@@ -322,11 +322,13 @@ namespace PxPre
                     HashSet<BNode> usedNodes = new HashSet<BNode>();
                     do
                     { 
+                        if(interLine.Count == 0)
+                            break;
 
                         int idx = 0;
                         float dst = interLine[0];
 
-                        for(int i = 0; i < interCurve.Count; ++i)
+                        for (int i = 0; i < interCurve.Count; ++i)
                         { 
                             if(interLine[i] < dst)
                             {
