@@ -1180,31 +1180,24 @@ namespace PxPre
 
                 Vector2 rayEnd = mptL + new Vector2(1.0f, 0.0f);
                 List<float> interCurve = new List<float>();     
-                List<float> interLine = new List<float>();      
+                List<float> interLine = new List<float>();
+                List<BNode> interNodes = new List<BNode>();
                 foreach(BNode nOth in islandSegsB)
-                    nOth.ProjectSegment(mptL, rayEnd, interCurve, interLine);
-                
-                int leftcols = 0;
-                for(int i = 0; i < interLine.Count; ++i)
                 {
-                    float l = interLine[i];
-                    if (l <= 0.0f)
-                        continue;
-
-                    float c = interCurve[i];
-                    if(c < 0.0f || c > 1.0f)
-                        continue;
-
-                    ++leftcols;
+                    int proj = nOth.ProjectSegment(mptL, rayEnd, interCurve, interLine);
+                    for(int i = 0; i < proj; ++i)
+                        interNodes.Add(nOth);
                 }
+                _NarrowProjectIntersections(interCurve, interLine, interNodes);
+
                 // If the right loop is physically more to the right, it could still be untouching - but only if for
                 // every entry, there's an exit. Meaning if there's an odd number of collisions, the left is completely
                 // inside the right.
                 //
                 // Keep in mind this logic only works because of the constraint that left and right should not intersect.
-                if(leftcols > 0)
+                if (interCurve.Count > 0)
                 { 
-                    if((leftcols % 2) == 1)
+                    if((interCurve.Count % 2) == 1)
                         return BoundingMode.RightSurroundsLeft;
 
                     return BoundingMode.NoCollision;
@@ -1227,49 +1220,97 @@ namespace PxPre
                 rayEnd = mptR + new Vector2(1.0f, 0.0f);
                 interCurve.Clear();
                 interLine.Clear();
-                foreach(BNode nOth in islandSegsA)
+                interNodes.Clear();
+                foreach (BNode nOth in islandSegsA)
                 {
-                    //BNode.PathBridge pb = nOth.GetPathBridgeInfo();
-                    //
-                    //if(pb.pathType == BNode.PathType.Line)
-                    //{ 
-                    //    float s, t;
-                    //    if(Utils.ProjectSegmentToSegment(mptR, rayEnd, nOth.Pos, nOth.next.Pos, out s, out t) == true)
-                    //    { 
-                    //        interLine.Add(s);
-                    //        interCurve.Add(t);
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    Vector2 pt0 = nOth.Pos;
-                    //    Vector2 pt1 = nOth.Pos + pb.prevTanOut;
-                    //    Vector2 pt2 = nOth.next.Pos + pb.nextTanIn;
-                    //    Vector2 pt3 = nOth.next.Pos;
-                    //
-                    //    Utils.IntersectLine(interCurve, interLine, pt0, pt1, pt2, pt3, mptR, rayEnd, false);
-                    //}
-
-                    nOth.ProjectSegment(mptR, rayEnd, interCurve, interLine);
+                    int proj = nOth.ProjectSegment(mptR, rayEnd, interCurve, interLine);
+                    for(int i = 0; i < proj; ++i)
+                        interNodes.Add(nOth);
                 }
-                int rightcols = 0;
-                for(int i = 0; i < interLine.Count; ++i)
-                { 
-                    float l = interLine[i];
-                    if(l <= 0.0f)
-                        continue;
+                _NarrowProjectIntersections(interCurve, interLine, interNodes);
 
-                    float c = interCurve[i];
-                    if(c < 0.0f || c > 1.0f)
-                        continue;
-
-                    ++rightcols;
-                }
-
-                if((rightcols % 2) == 1)
+                if((interCurve.Count % 2) == 1)
                     return BoundingMode.LeftSurroundsRight;
 
                 return BoundingMode.NoCollision;
+            }
+
+            /// <summary>
+            /// Utility function used by GetLoopBoundingMode().
+            /// </summary>
+            /// <param name="lstC">List of curve interpolation points.</param>
+            /// <param name="lstL">Lise of line interpolation points.</param>
+            /// <param name="lstN">List of nodes interpolation points.</param>
+            private static void _NarrowProjectIntersections( List<float> lstC, List<float> lstL, List<BNode> lstN)
+            { 
+                // Take out invalid intersections
+                for(int i = lstC.Count - 1; i >= 0 ; --i)
+                {
+                    bool rm = false;
+
+                    do
+                    {
+                        float l = lstL[i];
+                        if (l < 0.0f)
+                        {
+                            rm = true;
+                            break;
+                        }
+
+                        float c = lstC[i];
+                        if (c < 0.0f || c > 1.0f)
+                        {
+                            rm = true;
+                            break;
+                        }
+                    }
+                    while(false);
+
+                    if(rm == true)
+                    {
+                        lstC.RemoveAt(i);
+                        lstL.RemoveAt(i);
+                        lstN.RemoveAt(i);
+                    }
+                }
+
+                // Take out neighboring connections that are for-all-intents-and-purposes,
+                // the same.
+                for(int i = 0; i < lstC.Count - 1; ++i)
+                { 
+                    // The edgeEps is not very sensitive - we may want to also compare the line
+                    // similarity as a redundancy
+                    const float edgeEps = 0.01f;
+                    float c = lstC[i];
+
+
+                    if(c <= edgeEps)
+                    {
+                        for (int j = i + 1; j < lstC.Count; ++i)
+                        {
+                            // If the candidate is at the left edge, and the previous is at the right edge
+                            if(lstN[i].prev == lstN[j] && lstC[j] >= 1.0f - edgeEps)
+                            {
+                                lstC.RemoveAt(j);
+                                lstL.RemoveAt(j);
+                                lstN.RemoveAt(j);
+                            }
+                        }
+                    }
+                    else if(c >= 1.0f - edgeEps)
+                    {
+                        for (int j = i + 1; j < lstC.Count; ++i)
+                        {
+                            // If the candidate is at the right edge, and the next is at the left edge
+                            if(lstN[i].next == lstN[j] && lstC[j] <= edgeEps)
+                            {
+                                lstC.RemoveAt(j);
+                                lstL.RemoveAt(j);
+                                lstN.RemoveAt(j);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
