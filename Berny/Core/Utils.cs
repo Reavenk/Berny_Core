@@ -604,6 +604,83 @@ namespace PxPre
                 return SegmentIntersection.Collision;
             }
 
+            public static SegmentIntersection ProjectSegmentToSegmentD(
+                Vector2 p1, Vector2 q1,
+                Vector2 p2, Vector2 q2,
+                out float s, out float t)
+            {
+                double eps = Mathf.Epsilon;
+
+                double p1x = p1.x;  double p1y = p1.y;
+                double q1x = q1.x;  double q1y = q1.y;
+                double p2x = p2.x;  double p2y = p2.y;
+                double q2x = q2.x;  double q2y = q2.y;
+
+                double d1x = q1x - p1x; double d1y = q1y - p1y;
+                double d2x = q2x - p2x; double d2y = q2y - p2y;
+
+                double rx = p1x - p2x; double ry = p1y - p2y;
+                double a = d1x * d1x + d1y * d1y;
+                double e = d2x * d2x + d2y * d2y;
+                double f = d2x * rx + d2y * ry;
+
+                // Check if either or both segments degenerate into points.
+                if (a <= eps && e <= eps)
+                {
+                    s = float.PositiveInfinity;
+                    t = float.PositiveInfinity;
+                    return SegmentIntersection.Parallel;
+                }
+
+                if (a <= eps)
+                {
+                    // First segment degenerates into a point.
+                    s = float.PositiveInfinity;
+                    t = (float)(f / e);
+                    return SegmentIntersection.Degenerate;
+                }
+
+                double c = d1x * rx + d1y * ry;
+                if (e <= Mathf.Epsilon)
+                {
+                    // Second segment degenerates into a point.
+                    t = float.PositiveInfinity;
+                    s = (float)(-c / a);
+                    return SegmentIntersection.Degenerate;
+                }
+
+                double b = d1x * d2x + d1y * d2y;
+                double denom = a * e - b * b;
+
+                // Even if lines are perfectly parallel, we need some leniency with the epsilon
+                // because of floating point error.
+                // If segments not parallel, compute closest point on L1 and L2.
+
+                double ds;
+                double dt;
+                if (System.Math.Abs(denom) > eps)
+                    ds = (b * f - c * e) / denom;
+                else
+                {
+                    // Parallel
+                    s = float.PositiveInfinity;
+                    t = float.PositiveInfinity;
+                    return SegmentIntersection.Parallel;
+                }
+
+                dt = (b * ds + f) / e;
+
+                if (dt < 0.0f)
+                    ds = -c / a;
+                else if (dt > 1.0f)
+                    ds = (b - c) / a;
+
+                s = (float)ds;
+                t = (float)dt;
+
+                return SegmentIntersection.Collision;
+            }
+
             /// <summary>
             /// Convert a color to an opaque 6 character hex.
             /// </summary>
@@ -1497,7 +1574,7 @@ namespace PxPre
                 if (isLineA == true && isLineB == true)
                 { 
                     float s, t;
-                    if(Utils.ProjectSegmentToSegment(
+                    if(Utils.ProjectSegmentToSegmentD(
                         nodeA.Pos,
                         nodeA.next.Pos,
                         nodeB.Pos,

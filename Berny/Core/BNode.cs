@@ -2112,7 +2112,7 @@ namespace PxPre
                 {
                     float s, t;
                     Utils.SegmentIntersection segInter = 
-                        Utils.ProjectSegmentToSegment(
+                        Utils.ProjectSegmentToSegmentD(
                             rayStart, 
                             rayControl, 
                             this.Pos, 
