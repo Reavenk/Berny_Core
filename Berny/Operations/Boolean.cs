@@ -1188,7 +1188,7 @@ namespace PxPre
                     for(int i = 0; i < proj; ++i)
                         interNodes.Add(nOth);
                 }
-                _NarrowProjectIntersections(interCurve, interLine, interNodes);
+                _CleanProjectIntersections(interCurve, interLine, interNodes, mptL);
 
                 // If the right loop is physically more to the right, it could still be untouching - but only if for
                 // every entry, there's an exit. Meaning if there's an odd number of collisions, the left is completely
@@ -1227,7 +1227,7 @@ namespace PxPre
                     for(int i = 0; i < proj; ++i)
                         interNodes.Add(nOth);
                 }
-                _NarrowProjectIntersections(interCurve, interLine, interNodes);
+                _CleanProjectIntersections(interCurve, interLine, interNodes, mptR);
 
                 if((interCurve.Count % 2) == 1)
                     return BoundingMode.LeftSurroundsRight;
@@ -1241,8 +1241,11 @@ namespace PxPre
             /// <param name="lstC">List of curve interpolation points.</param>
             /// <param name="lstL">Lise of line interpolation points.</param>
             /// <param name="lstN">List of nodes interpolation points.</param>
-            private static void _NarrowProjectIntersections( List<float> lstC, List<float> lstL, List<BNode> lstN)
-            { 
+            private static void _CleanProjectIntersections( List<float> lstC, List<float> lstL, List<BNode> lstN, Vector2 projPt)
+            {
+                // The edgeEps is not very sensitive - we may want to also compare the line
+                // similarity as a redundancy
+                const float edgeEps = 0.01f;
                 // Take out invalid intersections
                 for(int i = lstC.Count - 1; i >= 0 ; --i)
                 {
@@ -1263,6 +1266,14 @@ namespace PxPre
                             rm = true;
                             break;
                         }
+
+                        // If we're too far to the right (but in bounds), move it over to the next - 
+                        // this allows us to search less edge cases when getting rid of similar items.
+                        if(c >= 1.0f - edgeEps)
+                        { 
+                            lstC[i] = 0.0f;
+                            lstN[i] = lstN[i].next;
+                        }
                     }
                     while(false);
 
@@ -1274,42 +1285,48 @@ namespace PxPre
                     }
                 }
 
-                // Take out neighboring connections that are for-all-intents-and-purposes,
-                // the same.
+                // Take out neighboring connections that are similar.
                 for(int i = 0; i < lstC.Count - 1; ++i)
                 { 
-                    // The edgeEps is not very sensitive - we may want to also compare the line
-                    // similarity as a redundancy
-                    const float edgeEps = 0.01f;
+                    
                     float c = lstC[i];
 
+                    for (int j = lstC.Count - 1; j > i; --j)
+                    {
+                        // If the candidate is at the left edge, and the previous is at the right edge
+                        if(
+                            lstN[i] == lstN[j] && 
+                            Mathf.Abs(lstC[i] - lstC[j]) <= edgeEps)
+                        {
+                            lstC.RemoveAt(j);
+                            lstL.RemoveAt(j);
+                            lstN.RemoveAt(j);
+                        }
+                    }
+                }
 
-                    if(c <= edgeEps)
+                // If we're hitting things that are perfectly on projPt and perfectly horizontal,
+                // we need to make sure that only counts as one collision.
+                //
+                // If multiple items on the same segment-chain are colinear with the test ray, this
+                // should remove all but one of them. Which one it is does not matter since 
+                // GetLoopBoundingMode() is just interested in collision counting, and not its 
+                // position.
+                for (int i = 0; i < lstC.Count; )
+                {
+                    // We're hard-coding the fact that GetLoopBoundingMode() does its test by
+                    //raycasting to the right, so we just need to check similarities on the y.
+                    if (
+                        lstC[i] <= edgeEps && 
+                        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
+                        Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
                     {
-                        for (int j = i + 1; j < lstC.Count; ++i)
-                        {
-                            // If the candidate is at the left edge, and the previous is at the right edge
-                            if(lstN[i].prev == lstN[j] && lstC[j] >= 1.0f - edgeEps)
-                            {
-                                lstC.RemoveAt(j);
-                                lstL.RemoveAt(j);
-                                lstN.RemoveAt(j);
-                            }
-                        }
+                        lstC.RemoveAt(i);
+                        lstL.RemoveAt(i);
+                        lstN.RemoveAt(i);
                     }
-                    else if(c >= 1.0f - edgeEps)
-                    {
-                        for (int j = i + 1; j < lstC.Count; ++i)
-                        {
-                            // If the candidate is at the right edge, and the next is at the left edge
-                            if(lstN[i].next == lstN[j] && lstC[j] <= edgeEps)
-                            {
-                                lstC.RemoveAt(j);
-                                lstL.RemoveAt(j);
-                                lstN.RemoveAt(j);
-                            }
-                        }
-                    }
+                    else
+                        ++i;
                 }
             }
         }
