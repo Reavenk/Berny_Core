@@ -47,7 +47,7 @@ namespace PxPre
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
             /// <summary>
             /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
-            /// if each app session runs deterministicly the same. Used for identifying objects when
+            /// if each app session runs deterministically the same. Used for identifying objects when
             /// debugging.
             /// </summary>
             int debugCounter;
