@@ -257,18 +257,18 @@ namespace PxPre
                 {
                     foreach (Utils.BezierSubdivSample bss in delCollisions)
                     {
-                        Vector2 pos = bss.nodeA.CalculatetPoint(bss.lAEst);
+                        Vector2 pos = bss.a.node.CalculatetPoint(bss.a.lEst);
                         BNode newSubNode = new BNode(dstLoop, pos);
                         dstLoop.nodes.Add(newSubNode);
 
                         createdSubdivs.Add(bss.GetTPosA(), newSubNode);
                         createdSubdivs.Add(bss.GetTPosB(), newSubNode);
 
-                        SplitInfo sia = this.GetSplitInfo(bss.nodeA);
-                        sia.AddEntry(bss.lAEst, newSubNode);
+                        SplitInfo sia = this.GetSplitInfo(bss.a.node);
+                        sia.AddEntry(bss.a.lEst, newSubNode);
 
-                        SplitInfo sib = this.GetSplitInfo(bss.nodeB);
-                        sib.AddEntry(bss.lBEst, newSubNode);
+                        SplitInfo sib = this.GetSplitInfo(bss.b.node);
+                        sib.AddEntry(bss.b.lEst, newSubNode);
                     }
                 }
             }
@@ -414,8 +414,8 @@ namespace PxPre
                         nA.TanOut = sdiA.prevOut;
                         nB.TanIn = sdiB.nextIn;
 
-                        colNode.UseTanIn = bss.nodeA.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeB.IsLine() == false;
+                        colNode.UseTanIn = bss.a.node.IsLine() == false;
+                        colNode.UseTanOut = bss.b.node.IsLine() == false;
                         colNode.TanIn = sdiA.subIn;
                         colNode.TanOut = sdiB.subOut;
 
@@ -424,8 +424,8 @@ namespace PxPre
                         nB.prev = colNode;
                         colNode.next = nB;
 
-                        looseEnds.Add(bss.nodeB);
-                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeA).origNext);
+                        looseEnds.Add(bss.b.node);
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.a.node).origNext);
 
                     }
                     else
@@ -437,8 +437,8 @@ namespace PxPre
                         nA.TanIn = sdiA.nextIn;
                         nB.TanOut = sdiB.prevOut;
 
-                        colNode.UseTanIn = bss.nodeB.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeA.IsLine() == false;
+                        colNode.UseTanIn = bss.b.node.IsLine() == false;
+                        colNode.UseTanOut = bss.a.node.IsLine() == false;
                         colNode.TanIn = sdiB.subIn;
                         colNode.TanOut = sdiA.subOut;
 
@@ -447,8 +447,8 @@ namespace PxPre
                         nA.prev = colNode;
                         colNode.next = nA;
 
-                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeB).origNext);
-                        looseEnds.Add(bss.nodeA);
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.b.node).origNext);
+                        looseEnds.Add(bss.a.node);
                     }
                 }
 
@@ -501,7 +501,15 @@ namespace PxPre
                 GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
                 Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
 
+
                 onIslA = null;
+
+                // If we have an odd number of collisions, we have a problem because we have
+                // any entry without an exit which will lead to corrupt topology. For now we
+                // don't have a way to resolve that, but at least we can exit on 1 without
+                // causing issues (in theory at least).
+                if(delCollisions.Count == 1)
+                    return BoundingMode.NoCollision;
 
                 if (delCollisions.Count == 0)
                 { 
@@ -554,7 +562,7 @@ namespace PxPre
                 for (int i = 0; i < delCollisions.Count; ++i)
                 {
                     Utils.BezierSubdivSample bss = delCollisions[i];
-                    bss.nodeB = cloneMap[bss.nodeB];
+                    bss.b.node = cloneMap[bss.b.node];
                     delCollisions[i] = bss;
                 }
 
@@ -584,8 +592,8 @@ namespace PxPre
                         nA.TanOut = sdiA.prevOut;
                         nB.TanIn = sdiB.nextIn;
 
-                        colNode.UseTanIn = bss.nodeA.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeB.IsLine() == false;
+                        colNode.UseTanIn = bss.a.node.IsLine() == false;
+                        colNode.UseTanOut = bss.b.node.IsLine() == false;
                         colNode.TanIn = sdiA.subIn;
                         colNode.TanOut = sdiB.subOut;
 
@@ -594,8 +602,8 @@ namespace PxPre
                         nB.prev = colNode;
                         colNode.next = nB;
 
-                        looseEnds.Add(bss.nodeB);
-                        looseEnds.Add(bss.nodeA.next);
+                        looseEnds.Add(bss.b.node);
+                        looseEnds.Add(bss.a.node.next);
 
                     }
                     else
@@ -607,8 +615,8 @@ namespace PxPre
                         nA.TanIn = sdiA.nextIn;
                         nB.TanOut = sdiB.prevOut;
 
-                        colNode.UseTanIn = bss.nodeB.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeA.IsLine() == false;
+                        colNode.UseTanIn = bss.b.node.IsLine() == false;
+                        colNode.UseTanOut = bss.a.node.IsLine() == false;
                         colNode.TanIn = sdiB.subIn;
                         colNode.TanOut = sdiA.subOut;
 
@@ -617,8 +625,8 @@ namespace PxPre
                         nA.prev = colNode;
                         colNode.next = nA;
 
-                        looseEnds.Add(bss.nodeB.next);
-                        looseEnds.Add(bss.nodeA);
+                        looseEnds.Add(bss.b.node.next);
+                        looseEnds.Add(bss.a.node);
                     }
                 }
 
@@ -760,8 +768,8 @@ namespace PxPre
                 {
                     Utils.BezierSubdivSample bss = delCollisions[i];
 
-                    bss.nodeA = cloneMapA[bss.nodeA];
-                    bss.nodeB = cloneMapB[bss.nodeB];
+                    bss.a.node = cloneMapA[bss.a.node];
+                    bss.b.node = cloneMapB[bss.b.node];
 
 
                     delCollisions[i] = bss;
@@ -797,8 +805,8 @@ namespace PxPre
                         nA.TanIn = sdiA.nextIn;
                         nB.TanOut = sdiB.prevOut;
 
-                        colNode.UseTanIn = bss.nodeB.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeA.IsLine() == false;
+                        colNode.UseTanIn = bss.b.node.IsLine() == false;
+                        colNode.UseTanOut = bss.a.node.IsLine() == false;
                         colNode.TanIn = sdiB.subIn;
                         colNode.TanOut = sdiA.subOut;
 
@@ -807,8 +815,8 @@ namespace PxPre
                         nA.prev = colNode;
                         colNode.next = nA;
 
-                        looseEnds.Add(bss.nodeA);
-                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeB).origNext);
+                        looseEnds.Add(bss.a.node);
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.b.node).origNext);
 
                     }
                     else
@@ -819,8 +827,8 @@ namespace PxPre
                         nA.TanOut = sdiA.prevOut;
                         nB.TanIn = sdiB.nextIn;
 
-                        colNode.UseTanIn = bss.nodeA.IsLine() == false;
-                        colNode.UseTanOut = bss.nodeB.IsLine() == false;
+                        colNode.UseTanIn = bss.a.node.IsLine() == false;
+                        colNode.UseTanOut = bss.b.node.IsLine() == false;
                         colNode.TanIn = sdiA.subIn;
                         colNode.TanOut = sdiB.subOut;
 
@@ -829,8 +837,8 @@ namespace PxPre
                         nB.prev = colNode;
                         colNode.next = nB;
 
-                        looseEnds.Add(splitCol.GetSplitInfo(bss.nodeA).origNext);
-                        looseEnds.Add(bss.nodeB);
+                        looseEnds.Add(splitCol.GetSplitInfo(bss.a.node).origNext);
+                        looseEnds.Add(bss.b.node);
                     }
                 }
 
@@ -1008,22 +1016,22 @@ namespace PxPre
                 foreach(Utils.BezierSubdivSample bss in collisions)
                 { 
                     HashSet<float> hsA;
-                    if(subdivLocs.TryGetValue(bss.nodeA, out hsA) == false)
+                    if(subdivLocs.TryGetValue(bss.a.node, out hsA) == false)
                     { 
                         hsA = new HashSet<float>();
-                        subdivLocs.Add(bss.nodeA, hsA);
+                        subdivLocs.Add(bss.a.node, hsA);
                     }
 
-                    hsA.Add(bss.lAEst);
+                    hsA.Add(bss.a.lEst);
 
                     HashSet<float> hsB;
-                    if(subdivLocs.TryGetValue(bss.nodeB, out hsB) == false)
+                    if(subdivLocs.TryGetValue(bss.b.node, out hsB) == false)
                     { 
                         hsB = new HashSet<float>();
-                        subdivLocs.Add(bss.nodeB, hsB);
+                        subdivLocs.Add(bss.b.node, hsB);
                     }
 
-                    hsB.Add(bss.lBEst);
+                    hsB.Add(bss.b.lEst);
                 }
 
                 foreach(KeyValuePair<BNode, HashSet<float>> kvp in subdivLocs)

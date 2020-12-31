@@ -20,9 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//#define BWINDOW
+
 using System.Collections.Generic;
 using UnityEngine;
-
 namespace PxPre 
 { 
     namespace Berny
@@ -109,49 +110,67 @@ namespace PxPre
             /// </summary>
             public struct BezierSubdivSample
             {
-                // A node who's a part of the intersection.
-                public BNode nodeA;
-            #if BWINDOW
-                public float lA0;       // Lower t of A of the final subdivided window.
-                public float lA1;       // Higher t of A of the final subdivided window.
-            #endif
-                public float lAEst;     // The final estimated t value of A for the intersection.
-                public bool linearA;
+                public struct NodeSubRgn
+                {
+                    public BNode node;
 
-                // Another node who's part of the intersection
-                public BNode nodeB;     
-            #if BWINDOW
-                public float lB0;       // Lower t of B of the final subdivided window.
-                public float lB1;       // Higher t of B of the final subdivided window.
-            #endif
-                public float lBEst;     // The final estimated t value of B for the intersection.
-                public bool linearB;
+#if BWINDOW
+                    public float l0;    // Lower t of A of the final subdivided window.
+                    public float l1;    // Higher t of A of the final subdivided window.
+#endif
+                    public float lEst;     // The final estimated t value of A for the intersection.
+                    public bool linear;
+
+                    public bool SimilarTo(NodeSubRgn other, float eps)
+                    { 
+                        if(this.node == other.node && Mathf.Abs(this.lEst - other.lEst) <= eps)
+                            return true;
+
+                        if(this.lEst <= eps && this.node.prev == other.node && other.lEst >= 1.0f - eps)
+                            return true;
+
+                        if (other.lEst <= eps && other.node.prev == this.node && this.lEst >= 1.0f - eps)
+                            return true;
+
+                        if (other.lEst >= 1.0f - eps && other.node.next == this.node && this.lEst <= eps)
+                            return true;
+
+                        return false;
+                    }
+
+                    public NodeSubRgn(BezierSubdivRgn rgn, float est)
+                    { 
+                        this.node = rgn.node;
+                        this.lEst = est;
+
+                        this.linear = false;
+
+#if BWINDOW
+                        this.l0 = rgn.lambda0;
+                        this.l1 = rgn.lambda1;
+#endif
+                    }
+
+                    public NodeTPos TPos()
+                    { 
+                        return new NodeTPos(this.node, this.lEst);
+                    }
+                }
+
+                public NodeSubRgn a;
+                public NodeSubRgn b;
 
                 /// <summary>
                 /// Constructor
                 /// </summary>
                 /// <param name="A"></param>
-                /// <param name="AEst"></param>
+                /// <param name="aEst"></param>
                 /// <param name="B"></param>
                 /// <param name="bEst"></param>
-                public BezierSubdivSample(BezierSubdivRgn A, float AEst, BezierSubdivRgn B, float bEst)
-                { 
-                    this.nodeA = A.node;
-#if BWINDOW
-                    this.lA0 = A.lambda0;
-                    this.lA1 = A.lambda1;
-#endif
-                    this.lAEst = AEst;
-                    this.linearA = false;
-
-
-                    this.nodeB = B.node;
-#if BWINDOW
-                    this.lB0 = B.lambda0;
-                    this.lB1 = B.lambda1;
-#endif
-                    this.lBEst = bEst;
-                    this.linearB = false;
+                public BezierSubdivSample(BezierSubdivRgn A, float aEst, BezierSubdivRgn B, float bEst)
+                {
+                    this.a = new NodeSubRgn(A, aEst);
+                    this.b = new NodeSubRgn(B, bEst);
                 }
 
                 /// <summary>
@@ -166,19 +185,8 @@ namespace PxPre
                         // Note how we're starting from the end going back next to i
                         for (int j = lst.Count - 1; j > i; --j)
                         {
-                            // If they're different "enough" somehow, let it pass
-                            // and move on.
-                            if (lst[i].nodeA != lst[j].nodeA || lst[i].nodeB != lst[j].nodeB)
-                                continue;
-
-                            if (Mathf.Abs(lst[i].lAEst - lst[j].lAEst) > eps)
-                                continue;
-
-                            if (Mathf.Abs(lst[i].lBEst - lst[j].lBEst) > eps)
-                                continue;
-
-                            // Or else, they're too similar
-                            lst.RemoveAt(j);
+                            if(lst[i].a.SimilarTo(lst[j].a, eps) == true && lst[i].b.SimilarTo(lst[j].b, eps) == true)
+                                lst.RemoveAt(j);
                         }
                     }
                 }
@@ -187,13 +195,13 @@ namespace PxPre
                 /// Get the A side node and interpolation as a NodeTPos.
                 /// </summary>
                 /// <returns>The A side as a NodeTPos.</returns>
-                public NodeTPos GetTPosA() => new NodeTPos(this.nodeA, this.lAEst);
+                public NodeTPos GetTPosA() => this.a.TPos();
 
                 /// <summary>
                 /// Get the B side node and interpolation as a NodeTPos.
                 /// </summary>
                 /// <returns>The B side as a NodeTPos.</returns>
-                public NodeTPos GetTPosB() => new NodeTPos(this.nodeB, this.lBEst);
+                public NodeTPos GetTPosB() => this.b.TPos();
             }
 
             /// <summary>
@@ -1586,13 +1594,13 @@ namespace PxPre
                         {
                             BezierSubdivSample bss = new BezierSubdivSample();
                             //
-                            bss.linearA = true;
-                            bss.nodeA = nodeA;
-                            bss.lAEst = s;
+                            bss.a.linear = true;
+                            bss.a.node = nodeA;
+                            bss.a.lEst = s;
                             //
-                            bss.linearB = true;
-                            bss.nodeB = nodeB;
-                            bss.lBEst = t;
+                            bss.b.linear = true;
+                            bss.b.node = nodeB;
+                            bss.b.lEst = t;
                             outList.Add(bss);
                         }
                     }
@@ -1634,21 +1642,21 @@ namespace PxPre
                     for(int i = 0; i < intersectCurve.Count; ++i)
                     {
                         BezierSubdivSample bss = new BezierSubdivSample();
-                        bss.nodeA = nodeA;
-                        bss.nodeB = nodeB;
+                        bss.a.node = nodeA;
+                        bss.b.node = nodeB;
                         if(isLineA)
                         { 
-                            bss.lAEst = intersectLine[i];
-                            bss.linearA = true;
-                            bss.lBEst = intersectCurve[i];
-                            bss.linearB = false;
+                            bss.a.lEst = intersectLine[i];
+                            bss.a.linear = true;
+                            bss.b.lEst = intersectCurve[i];
+                            bss.b.linear = false;
                         }
                         else
                         {
-                            bss.lAEst = intersectCurve[i];
-                            bss.linearA = false;
-                            bss.lBEst = intersectLine[i];
-                            bss.linearB = true;
+                            bss.a.lEst = intersectCurve[i];
+                            bss.a.linear = false;
+                            bss.b.lEst = intersectLine[i];
+                            bss.b.linear = true;
                         }
                         outList.Add(bss);
                     }
