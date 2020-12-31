@@ -2445,7 +2445,8 @@ namespace PxPre
             {
                 // https://mathworld.wolfram.com/CubicFormula.html
                 // https://www.particleincell.com/2013/cubic-line-intersection/
-                if(p0 == 0.0f)
+                float useX3Eps = 0.001f;
+                if(Mathf.Abs(p0) <= useX3Eps)
                 {
                     // if a is 0, we downgrade the query to solving a quadratic equation,
                     // dropping p0.
