@@ -582,7 +582,7 @@ namespace PxPre
 
                 // Even if lines are perfectly parallel, we need some leniency with the epsilon
                 // because of floating point error.
-                float segsegEps = 0.000001f;
+                float segsegEps = Mathf.Epsilon;
                 // If segments not parallel, compute closest point on L1 and L2.
                 if (Mathf.Abs(denom) > segsegEps)
                     s = (b * f - c * e)/denom;
