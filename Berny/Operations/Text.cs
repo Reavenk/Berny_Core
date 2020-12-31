@@ -245,6 +245,10 @@ namespace PxPre
                 float maxXT;
                 Vector2 maxV;
                 BNode.GetMaxPoint(shape.EnumerateNodes(), out maxXNode, out maxV, out maxXT, 0);
+
+                if(maxXNode == null)
+                    return;
+
                 float wind = BNode.CalculateWinding(maxXNode.Travel());
 
                 // Separate positive from negative islands.
