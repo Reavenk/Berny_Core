@@ -1266,14 +1266,6 @@ namespace PxPre
                             rm = true;
                             break;
                         }
-
-                        // If we're too far to the right (but in bounds), move it over to the next - 
-                        // this allows us to search less edge cases when getting rid of similar items.
-                        if(c >= 1.0f - edgeEps)
-                        { 
-                            lstC[i] = 0.0f;
-                            lstN[i] = lstN[i].next;
-                        }
                     }
                     while(false);
 
@@ -1288,7 +1280,6 @@ namespace PxPre
                 // Take out neighboring connections that are similar.
                 for(int i = 0; i < lstC.Count - 1; ++i)
                 { 
-                    
                     float c = lstC[i];
 
                     for (int j = lstC.Count - 1; j > i; --j)
@@ -1301,6 +1292,28 @@ namespace PxPre
                             lstC.RemoveAt(j);
                             lstL.RemoveAt(j);
                             lstN.RemoveAt(j);
+                        }
+                        else if(c <= edgeEps)
+                        {
+                            if(
+                                lstN[i].prev == lstN[j] && 
+                                lstC[j] >= 1.0f - edgeEps)
+                            {
+                                lstC.RemoveAt(j);
+                                lstL.RemoveAt(j);
+                                lstN.RemoveAt(j);
+                            }
+                        }
+                        else if(c >= 1.0f - edgeEps)
+                        {
+                            if(
+                                lstN[i].next == lstN[i] &&
+                                lstC[j] <= edgeEps)
+                            {
+                                lstC.RemoveAt(j);
+                                lstL.RemoveAt(j);
+                                lstN.RemoveAt(j);
+                            }
                         }
                     }
                 }
@@ -1316,17 +1329,32 @@ namespace PxPre
                 {
                     // We're hard-coding the fact that GetLoopBoundingMode() does its test by
                     //raycasting to the right, so we just need to check similarities on the y.
-                    if (
-                        lstC[i] <= edgeEps && 
-                        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
-                        Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
+                    if (lstC[i] <= edgeEps)
                     {
-                        lstC.RemoveAt(i);
-                        lstL.RemoveAt(i);
-                        lstN.RemoveAt(i);
+                        if(
+                            Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
+                            Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
+                        {
+                            lstC.RemoveAt(i);
+                            lstL.RemoveAt(i);
+                            lstN.RemoveAt(i);
+                            continue;
+                        }
                     }
-                    else
-                        ++i;
+                    else if(lstC[i] >= edgeEps)
+                    {
+                        if (
+                            Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon &&
+                            Mathf.Abs(lstN[i].prev.Pos.y - projPt.y) < Mathf.Epsilon)
+                        {
+                            lstC.RemoveAt(i);
+                            lstL.RemoveAt(i);
+                            lstN.RemoveAt(i);
+                            continue;
+                        }
+                    }
+
+                    ++i;
                 }
             }
         }
