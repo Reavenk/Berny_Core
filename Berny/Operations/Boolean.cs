@@ -50,6 +50,8 @@ namespace PxPre
                 /// </summary>
                 Collision,
 
+                Degenerate,
+
                 /// <summary>
                 /// The nodes do not intersect paths, but the left island completely surround the right island.
                 /// </summary>
@@ -501,7 +503,6 @@ namespace PxPre
                 GetLoopCollisionInfo(islandSegsA, islandSegsB, delCollisions);
                 Utils.BezierSubdivSample.CleanIntersectionList(delCollisions);
 
-
                 onIslA = null;
 
                 // If we have an odd number of collisions, we have a problem because we have
@@ -551,9 +552,21 @@ namespace PxPre
                     }
                 }
 
+                // Make sure we have no overlaps of intersections. We currently 
+                // can't handle such things.
+                HashSet< Utils.NodeTPos> intersections = new HashSet<Utils.NodeTPos>();
+                foreach(Utils.BezierSubdivSample bss in delCollisions)
+                { 
+                    if(intersections.Add(bss.a.TPos()) == false)
+                        return BoundingMode.Degenerate;
+
+                    if(intersections.Add(bss.b.TPos()) == false)
+                        return BoundingMode.Degenerate;
+                }
+
                 // Add everything in the copy in. We'll clip loose ends later to get 
                 // rid of the trash.
-                Dictionary<BNode, BNode> cloneMap = BNode.CloneNodes(islandSegsB, false);
+                    Dictionary<BNode, BNode> cloneMap = BNode.CloneNodes(islandSegsB, false);
                 foreach (BNode bn in cloneMap.Values)
                     bn.SetParent(dstloop);
 

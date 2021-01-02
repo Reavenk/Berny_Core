@@ -341,9 +341,12 @@ namespace PxPre
                         BNode posRepl;
                         Boolean.BoundingMode bm = Boolean.Difference(posIslandSegs[0].parent, posIslandSegs, negIslSegs, out posRepl, false);
                         if(bm == Boolean.BoundingMode.Collision)
-                        { 
-                        }
-                        else if(bm == Boolean.BoundingMode.LeftSurroundsRight)
+                            break;
+
+                        if(bm == Boolean.BoundingMode.Degenerate)
+                            bm = Boolean.GetLoopBoundingMode(posIslandSegs, negIslSegs);
+
+                        if(bm == Boolean.BoundingMode.LeftSurroundsRight)
                         { 
                             foreach(BNode bn in negMaxX.Travel())
                                 bn.SetParent(interNode[idx].parent);
@@ -351,7 +354,7 @@ namespace PxPre
 
                             BNode.MakeBridge(negMaxX, t, interNode[idx], interCurve[idx]);
                         }
-                        else
+                        else if(bm == Boolean.BoundingMode.RightSurroundsLeft)
                         {
                             for (int i = 0; i < interCurve.Count;)
                             {
