@@ -297,8 +297,18 @@ namespace PxPre
                             r.SetPosition(lid);
 
                             Font.Glyph fontGlyph = ret.glyphs[i];
-                            fontGlyph.advance = (float)tableHmtx.hMetrics[i].advanceWidth / (float)tableHead.unitsPerEm;
-                            fontGlyph.leftSideBearing = (float)tableHmtx.hMetrics[i].lsb / (float)tableHead.unitsPerEm;
+
+                            if(i < tableHmtx.hMetrics.Count)
+                            {
+                                fontGlyph.advance = (float)tableHmtx.hMetrics[i].advanceWidth / (float)tableHead.unitsPerEm;
+                                fontGlyph.leftSideBearing = (float)tableHmtx.hMetrics[i].lsb / (float)tableHead.unitsPerEm;
+                            }
+                            else
+                            {
+                                int lsbIdx = i - tableHmtx.hMetrics.Count;
+                                fontGlyph.advance = 0.0f;
+                                fontGlyph.leftSideBearing = (float)tableHmtx.leftSideBearings[lsbIdx] / (float)tableHead.unitsPerEm;
+                            }
 
                             uint glyphSize = tableLoca.Value.GetGlyphSize(i);
                             if (glyphSize == 0)
