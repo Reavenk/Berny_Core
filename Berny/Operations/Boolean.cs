@@ -1307,7 +1307,7 @@ namespace PxPre
                         else if(c >= 1.0f - edgeEps)
                         {
                             if(
-                                lstN[i].next == lstN[i] &&
+                                lstN[i].next == lstN[j] &&
                                 lstC[j] <= edgeEps)
                             {
                                 lstC.RemoveAt(j);
@@ -1325,37 +1325,146 @@ namespace PxPre
                 // should remove all but one of them. Which one it is does not matter since 
                 // GetLoopBoundingMode() is just interested in collision counting, and not its 
                 // position.
-                for (int i = 0; i < lstC.Count; )
+                for (int i = 0; i < lstC.Count - 1; )
                 {
-                    // We're hard-coding the fact that GetLoopBoundingMode() does its test by
-                    //raycasting to the right, so we just need to check similarities on the y.
-                    if (lstC[i] <= edgeEps)
+                    //// We're hard-coding the fact that GetLoopBoundingMode() does its test by
+                    ////raycasting to the right, so we just need to check similarities on the y.
+                    //if (lstC[i] <= edgeEps)
+                    //{
+                    //    if(
+                    //        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
+                    //        Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
+                    //    {
+                    //        lstC.RemoveAt(i);
+                    //        lstL.RemoveAt(i);
+                    //        lstN.RemoveAt(i);
+                    //        continue;
+                    //    }
+                    //}
+                    //else if(lstC[i] >= 1.0f - edgeEps)
+                    //{
+                    //    if (
+                    //        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon &&
+                    //        Mathf.Abs(lstN[i].prev.Pos.y - projPt.y) < Mathf.Epsilon)
+                    //    {
+                    //        lstC.RemoveAt(i);
+                    //        lstL.RemoveAt(i);
+                    //        lstN.RemoveAt(i);
+                    //        continue;
+                    //    }
+                    //}
+
+                    float sameLineEps = 0.01f;
+
+                    bool removeIdx = false;
+                    // If we're exactly on the Y, every other neighboring item needs to go because it's 
+                    // on an edge case.
+                    if(_HasYEndOnLine(lstN[i], projPt.y, sameLineEps) == true)
                     {
-                        if(
-                            Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
-                            Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
-                        {
-                            lstC.RemoveAt(i);
-                            lstL.RemoveAt(i);
-                            lstN.RemoveAt(i);
-                            continue;
-                        }
-                    }
-                    else if(lstC[i] >= edgeEps)
-                    {
-                        if (
-                            Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon &&
-                            Mathf.Abs(lstN[i].prev.Pos.y - projPt.y) < Mathf.Epsilon)
-                        {
-                            lstC.RemoveAt(i);
-                            lstL.RemoveAt(i);
-                            lstN.RemoveAt(i);
-                            continue;
+                        List<BNode> sameHorizAndNeigh = 
+                            _OnSameChainAndY(lstN[i], projPt.y, sameLineEps);
+
+
+                        // If we start at one Y, and end at one Y, get rid of everything
+                        if(Mathf.Sign(sameHorizAndNeigh[0].prev.Pos.y - projPt.y) == Mathf.Sign(sameHorizAndNeigh[sameHorizAndNeigh.Count - 1].next.Pos.y - projPt.y))
+                            removeIdx = true;
+
+                        // Now that we've figured if everything should stay or go, and handled the first 
+                        // item (deffered for later), work on every other part of the segment.
+
+                        // We don't need to find the closest to the proj pt or anything
+                        // like that, we just need to collapse away edge cases.
+                        for (int j = lstN.Count - 1; j > i; --j)
+                        { 
+                            bool consolRm = false;
+                            if( sameHorizAndNeigh.Contains(lstN[j]) == true && 
+                                (lstC[j] <= sameLineEps || lstC[j] >= sameLineEps))
+                            {
+                                consolRm = true;
+                            }
+                            else if(
+                                sameHorizAndNeigh.Contains(lstN[j].next) == true && 
+                                lstC[j] >= 1.0f - sameLineEps)
+                            {
+                                consolRm = true;
+                            }
+                            else if(
+                                sameHorizAndNeigh.Contains(lstN[j].prev) == true && 
+                                lstC[j] <= sameLineEps)
+                            {
+                                consolRm = true;
+                            }
+
+                            if (consolRm == true)
+                            {
+                                lstC.RemoveAt(j);
+                                lstL.RemoveAt(j);
+                                lstN.RemoveAt(j);
+                            }
                         }
                     }
 
-                    ++i;
+                    if(removeIdx == true)
+                    {
+                        lstC.RemoveAt(i);
+                        lstL.RemoveAt(i);
+                        lstN.RemoveAt(i);
+                    }
+                    else
+                        ++i;
                 }
+            }
+
+            public static bool _HasYOnLine(BNode node, float y, float eps)
+            {
+                return Mathf.Abs(node.Pos.y - y) < eps;
+            }
+
+            public static bool _HasYEndOnLine(BNode node, float y, float eps)
+            { 
+                return 
+                    _HasYOnLine(node, y, eps) || 
+                    (node.next != null && _HasYOnLine(node.next, y, eps));
+            }
+
+            public static List<BNode> _OnSameChainAndY(BNode node, float y, float eps)
+            { 
+                List<BNode> ret = new List<BNode>();
+
+                if (Mathf.Abs(node.Pos.y - y) <= eps)
+                { }
+                else if(Mathf.Abs(node.next.Pos.y - y) <= eps)
+                    node = node.next;
+                else
+                    return ret;
+
+                // Move backwards
+                BNode bnIt = node;
+                while(
+                    bnIt.prev != null && 
+                    bnIt != node) // cyclic sanity check
+                { 
+                    if(Mathf.Abs(bnIt.prev.Pos.y - y) <= eps)
+                        bnIt = bnIt.prev;
+                }
+
+                ret.Add(bnIt);
+                bnIt = bnIt.next;
+
+                while(true)
+                {
+                    if (Mathf.Abs(bnIt.Pos.y - y) > eps)
+                        break;
+
+                    ret.Add(bnIt);
+
+                    bnIt = bnIt.next;
+                    if(bnIt.next == null || 
+                        bnIt.next == node) // Cyclic sanity check
+                        break;
+                }
+
+                return ret;
             }
         }
     }
