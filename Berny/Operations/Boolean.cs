@@ -1340,33 +1340,8 @@ namespace PxPre
                 // position.
                 for (int i = 0; i < lstC.Count - 1; )
                 {
-                    //// We're hard-coding the fact that GetLoopBoundingMode() does its test by
-                    ////raycasting to the right, so we just need to check similarities on the y.
-                    //if (lstC[i] <= edgeEps)
-                    //{
-                    //    if(
-                    //        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon && 
-                    //        Mathf.Abs(lstN[i].next.Pos.y - projPt.y) < Mathf.Epsilon)
-                    //    {
-                    //        lstC.RemoveAt(i);
-                    //        lstL.RemoveAt(i);
-                    //        lstN.RemoveAt(i);
-                    //        continue;
-                    //    }
-                    //}
-                    //else if(lstC[i] >= 1.0f - edgeEps)
-                    //{
-                    //    if (
-                    //        Mathf.Abs(lstN[i].Pos.y - projPt.y) < Mathf.Epsilon &&
-                    //        Mathf.Abs(lstN[i].prev.Pos.y - projPt.y) < Mathf.Epsilon)
-                    //    {
-                    //        lstC.RemoveAt(i);
-                    //        lstL.RemoveAt(i);
-                    //        lstN.RemoveAt(i);
-                    //        continue;
-                    //    }
-                    //}
-
+                    // We're hard-coding the fact that GetLoopBoundingMode() does its test by
+                    //raycasting to the right, so we just need to check similarities on the y.
                     float sameLineEps = 0.01f;
 
                     bool removeIdx = false;
@@ -1426,6 +1401,39 @@ namespace PxPre
                     else
                         ++i;
                 }
+
+                // Check if we're hitting any points. If so, they need to go because they're an edge
+                // case that doesn't actually change the containment test.
+                //
+                // For some reason, it seems the epsillon needs to be very high in some cases -
+                // although I might be doing something wrong. It's hard to imagine floating point
+                // precision being this bad.
+                // (wleu 01/02/2021)
+                float cornerEps = 0.1f;
+                for(int i = 0; i < lstC.Count; )
+                { 
+                    bool rem = false;
+                    if(lstC[i] <= cornerEps)
+                    { 
+                        if(Mathf.Abs(lstN[i].Pos.y - projPt.y) <= edgeEps && _IsVerticalPoint(lstN[i]) == true)
+                            rem = true;
+                    }
+
+                    else if(lstC[i] >= 1.0f - cornerEps)
+                    { 
+                        if(Mathf.Abs(lstN[i].next.Pos.y - projPt.y) <= edgeEps && _IsVerticalPoint(lstN[i].next) == true)
+                            rem = true;
+                    }
+
+                    if(rem == true)
+                    {
+                        lstC.RemoveAt(i);
+                        lstL.RemoveAt(i);
+                        lstN.RemoveAt(i);
+                    }
+                    else
+                        ++i;
+                }
             }
 
             public static bool _HasYOnLine(BNode node, float y, float eps)
@@ -1440,7 +1448,7 @@ namespace PxPre
                     (node.next != null && _HasYOnLine(node.next, y, eps));
             }
 
-            public static List<BNode> _OnSameChainAndY(BNode node, float y, float eps)
+            private static List<BNode> _OnSameChainAndY(BNode node, float y, float eps)
             { 
                 List<BNode> ret = new List<BNode>();
 
@@ -1480,6 +1488,104 @@ namespace PxPre
                 }
 
                 return ret;
+            }
+
+            private static bool _IsVerticalPoint(BNode bn)
+            { 
+                // There's a small optimization we can do by just calculating the Y 
+                // instead of vectors.
+                Vector2 ptPrev, ptNext;
+                BNode.PathBridge pbNext = bn.GetPathBridgeInfo();
+                BNode.PathBridge pbPrev = bn.prev.GetPathBridgeInfo();
+
+                if(pbNext.pathType == BNode.PathType.Line)
+                    ptNext = bn.next.Pos - bn.Pos;
+                else
+                { 
+                    float a, b, c, d;
+                    Utils.GetBezierDerivativeWeights(0.0f, out a, out b, out c, out d);
+
+                    Vector2 pt0 = bn.prev.Pos;
+                    Vector2 pt1 = bn.prev.Pos + pbNext.prevTanOut;
+                    Vector2 pt2 = bn.Pos + pbNext.nextTanIn;
+                    Vector2 pt3 = bn.Pos;
+
+                    ptNext = 
+                        a * pt0 +
+                        b * pt1 +
+                        c * pt2+
+                        d * pt2;
+
+                    if (ptNext.y == 0.0f)
+                    {
+                        float lroot = 1.0f;
+                        float ra, rb;
+                        int r = Utils.GetRoots1DCubic(pt0.y, pt1.y, pt2.y, pt3.y, out ra, out rb);
+                        for (int i = 0; i < r; ++i)
+                        {
+                            if (i == 0)
+                                lroot = Mathf.Min(ra, lroot);
+                            else if (i == 1)
+                                lroot = Mathf.Min(rb, lroot);
+                        }
+
+                        Utils.GetBezierWeights(lroot, out a, out b, out c, out d);
+                        Vector2 rpt =
+                            a * pt0 +
+                            b * pt1 +
+                            c * pt2 +
+                            d * pt3;
+
+                        ptNext = rpt - bn.Pos;
+                    }
+                }
+
+                if(bn.prev.IsLine() == true)
+                    ptPrev = bn.Pos - bn.prev.Pos;
+                else
+                {
+                    float a, b, c, d;
+                    Utils.GetBezierDerivativeWeights(1.0f, out a, out b, out c, out d);
+
+                    Vector2 pt0 = bn.prev.Pos;
+                    Vector2 pt1 = bn.prev.Pos + pbNext.prevTanOut;
+                    Vector2 pt2 = bn.Pos + pbNext.nextTanIn;
+                    Vector2 pt3 = bn.Pos;
+
+                    ptPrev =
+                        a * pt0 +
+                        b * pt1 +
+                        c * pt2 +
+                        d * pt3;
+
+                    if(ptPrev.y == 0.0f)
+                    { 
+                        float lroot = 0.0f;
+                        float ra, rb;
+                        int r = Utils.GetRoots1DCubic(pt0.y, pt1.y, pt2.y, pt3.y, out ra, out rb);
+                        for(int i = 0; i < r; ++i)
+                        { 
+                            if(i == 0)
+                                lroot = Mathf.Max(ra, lroot);
+                            else if(i == 1)
+                                lroot = Mathf.Max(rb, lroot);
+                        }
+
+                        Utils.GetBezierWeights(lroot, out a, out b, out c, out d);
+                        Vector2 rpt =
+                            a * pt0 +
+                            b * pt1 +
+                            c * pt2 +
+                            d * pt3;
+
+                        ptPrev = bn.Pos - rpt;
+                    }
+                }
+
+                if(ptPrev.y == 0.0f || ptNext.y == 0.0f)
+                    return false;
+
+                return Mathf.Sign(ptPrev.y) != Mathf.Sign(ptNext.y);
             }
         }
     }
