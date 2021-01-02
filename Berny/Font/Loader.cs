@@ -330,7 +330,7 @@ namespace PxPre
                             TTF.Table.glyf glyf = new TTF.Table.glyf();
                             glyf.Read(r);
 
-                            if(glyf.numberOfContours != -1)
+                            if(glyf.numberOfContours >= 0)
                             {
                                 // Simple
                                 Font.Contour curContour = new Font.Contour();

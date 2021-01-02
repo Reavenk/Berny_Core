@@ -156,7 +156,7 @@ namespace PxPre
                     public List<int> xCoordinates;          // Contour point x-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
                     public List<int> yCoordinates;          // Contour point y-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
 
-                    public bool IsComplex { get => this.numberOfContours == -1; }
+                    public bool IsComplex { get => this.numberOfContours < 0; } // In general, values are complex; Ideally negative values should be -1
 
                     public List<CompositeEntry> compositeEntries;
                     public ushort numInstr;

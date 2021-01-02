@@ -118,6 +118,19 @@ namespace PxPre
                     return (uint)((this.ReadUInt8() << 24) | (this.ReadUInt8() << 16) | (this.ReadUInt8() << 8) | (this.ReadUInt8() << 0));
                 }
 
+                public long ReadUInt64()
+                {
+                    return (
+                        ((long)this.ReadUInt8() << 56) | 
+                        ((long)this.ReadUInt8() << 48) | 
+                        ((long)this.ReadUInt8() << 40) | 
+                        ((long)this.ReadUInt8() << 32) |
+                        ((long)this.ReadUInt8() << 24) | 
+                        ((long)this.ReadUInt8() << 16) | 
+                        ((long)this.ReadUInt8() << 8) | 
+                        ((long)this.ReadUInt8() << 0));
+                }
+
                 /// <summary>
                 /// Read a 16 bit signed value from the current read position.
                 /// </summary>
@@ -292,7 +305,7 @@ namespace PxPre
                 public System.DateTime ReadDate()
                 {
                     System.DateTime dt = new System.DateTime(1904, 1, 1);
-                    dt.AddSeconds(this.ReadUInt32());
+                    dt = dt.AddSeconds(this.ReadUInt64());
                     
                     return dt;
                 }
