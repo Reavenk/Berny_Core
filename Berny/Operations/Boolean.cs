@@ -1455,10 +1455,12 @@ namespace PxPre
                 BNode bnIt = node;
                 while(
                     bnIt.prev != null && 
-                    bnIt != node) // cyclic sanity check
+                    bnIt.prev != node) // cyclic sanity check
                 { 
                     if(Mathf.Abs(bnIt.prev.Pos.y - y) <= eps)
                         bnIt = bnIt.prev;
+                    else
+                        break;
                 }
 
                 ret.Add(bnIt);
