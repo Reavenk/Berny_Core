@@ -1548,8 +1548,8 @@ namespace PxPre
                     Utils.GetBezierDerivativeWeights(1.0f, out a, out b, out c, out d);
 
                     Vector2 pt0 = bn.prev.Pos;
-                    Vector2 pt1 = bn.prev.Pos + pbNext.prevTanOut;
-                    Vector2 pt2 = bn.Pos + pbNext.nextTanIn;
+                    Vector2 pt1 = bn.prev.Pos + pbPrev.prevTanOut;
+                    Vector2 pt2 = bn.Pos + pbPrev.nextTanIn;
                     Vector2 pt3 = bn.Pos;
 
                     ptPrev =
