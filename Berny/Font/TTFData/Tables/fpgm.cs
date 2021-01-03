@@ -1,6 +1,6 @@
 ﻿// MIT License
 // 
-// Copyright (c) 2020 Pixel Precision LLC
+// Copyright (c) 2021 Pixel Precision LLC
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,27 +33,22 @@ namespace PxPre
             namespace Table
             {
                 /// <summary>
-                /// prep — Control Value Program
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/prep
+                /// fpgm — Font Program
+                /// https://docs.microsoft.com/en-us/typography/opentype/spec/fpgm
                 /// 
-                /// The Control Value Program consists of a set of TrueType instructions 
-                /// that will be executed whenever the font or point size or transformation 
-                /// matrix change and before each glyph is interpreted. Any instruction is 
-                /// valid in the CV Program but since no glyph is associated with it, 
-                /// instructions intended to move points within a particular glyph outline 
-                /// cannot be used in the CV Program. The name 'prep' is anachronistic (the 
-                /// table used to be known as the Pre Program table.)
+                /// This table is similar to the CVT Program, except that it is only run once, when the font is 
+                /// first used. It is used only for FDEFs and IDEFs. Thus the CVT Program need not contain function 
+                /// definitions. However, the CVT Program may redefine existing FDEFs or IDEFs.
                 /// </summary>
-                public struct prep
+                public struct fpgm
                 {
-                    public const string TagName = "prep";
+                    public const string TagName = "fpgm";
 
-                    // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM03/Chap3.html
                     public byte [] instructions;
 
-                    public void Read(TTFReader r, uint tableSz)
-                    {
-                        this.instructions = r.ReadBytes((int)tableSz);
+                    public void Read(TTFReader r, int tableSize)
+                    { 
+                        this.instructions = r.ReadBytes(tableSize);
                     }
                 }
             }

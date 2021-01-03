@@ -112,6 +112,12 @@ namespace PxPre
 
                     public short version;
                     public short nTables;
+
+                    public void Read(TTFReader r)
+                    { 
+                        r.ReadInt(out this.version);
+                        r.ReadInt(out this.nTables);
+                    }
                 }
             }
         }
