@@ -121,8 +121,9 @@ namespace PxPre
                     //https://stackoverflow.com/questions/20733790/truetype-fonts-glyph-are-made-of-quadratic-bezier-why-do-more-than-one-consecu
                     Font.Contour cont = glyph.contours[j];
 
-                    for (int k = 0; k < cont.points.Count - 1; ++k)
+                    for (int k = 0; k < cont.points.Count; ++k)
                     {
+                        int nextId = (k + 1) % cont.points.Count;
                         // If two control points are next to each other, there's an implied
                         // point in between them at their average. The easiest way to handle
                         // that is to make a representation where we manually inserted them
@@ -130,17 +131,17 @@ namespace PxPre
                         //
                         // NOTE: We should probably just directly "sanitize" this information
                         // when it's first loaded.
-                        if (cont.points[k].isControl == true && cont.points[k + 1].isControl == true)
+                        if (cont.points[k].isControl == true && cont.points[nextId].isControl == true)
                         {
                             Font.Point pt = new Font.Point();
                             pt.isControl = false;
-                            pt.position = (cont.points[k].position + cont.points[k + 1].position) * 0.5f;
+                            pt.position = (cont.points[k].position + cont.points[nextId].position) * 0.5f;
 
                             // Things that process this data may want to know it's implied, especially
                             // diagnostic tools.
                             pt.implied = true;
 
-                            cont.points.Insert(k + 1, pt);
+                            cont.points.Insert(nextId, pt);
                             ++k;
                         }
                     }
@@ -179,7 +180,9 @@ namespace PxPre
                             if (firstNode == null)
                                 firstNode = node;
 
-                            if (k != 0 && cont.points[k - 1].isControl == false && cont.points[k - 1].useTangentOut == false)
+                            int kPrev = (k - 1 + cont.points.Count)% cont.points.Count;
+
+                            if (k != 0 && cont.points[kPrev].isControl == false && cont.points[kPrev].useTangentOut == false)
                             {
                                 prevNode.UseTanOut = false;
                                 node.UseTanIn = false;
@@ -226,6 +229,13 @@ namespace PxPre
                         {
                             firstNode.UseTanIn = false;
                             prevNode.UseTanOut = false;
+                        }
+
+                        if(lastTan.HasValue == true)
+                        { 
+                            firstNode.UseTanIn = true;
+                            firstNode.TanIn = (lastTan.Value - firstNode.Pos) * (2.0f / 3.0f) * scale;
+
                         }
                     }
                 }
