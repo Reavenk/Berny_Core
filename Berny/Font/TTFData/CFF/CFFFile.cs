@@ -29,12 +29,12 @@ namespace PxPre
     namespace Berny
     {
         /// <summary>
-        /// While this functionality was written for the CFF tag in TFF/OTF parser, since the CFF
+        /// While this functionality was written for the CFF tag in TTF/OTF parser, since the CFF
         /// is allowed to be a standalone file, the file representation is split into a discrete
         /// implementation.
         /// 
         /// It tries to be mostly independent of outside TTF loading code, except for use of the 
-        /// TFFReader and subclasses - just because it's too useful to omit.
+        /// TTFReader and subclasses - just because it's too useful to omit.
         /// </summary>
         /// <remarks>It is undecided how far the library will go supporting any given feature
         /// besides basic font shape extraction. Besides effort, the biggest limiting factor is
@@ -131,7 +131,7 @@ namespace PxPre
                     return r.ReadUInt8();
                 }
 
-                // duplicate of TFF.ReadUInt16()
+                // duplicate of TTFReader.ReadUInt16()
                 static public ushort ReadCard16(TTF.TTFReader r)
                 {
                     return (ushort)(r.ReadUInt8() << 8 | r.ReadUInt8());

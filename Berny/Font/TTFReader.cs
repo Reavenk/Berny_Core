@@ -312,7 +312,7 @@ namespace PxPre
                 }
 
                 /// <summary>
-                /// Reads a date time from the TFF file.
+                /// Reads a date time from the TTF file.
                 /// </summary>
                 /// <returns>The datetime at the current read position.</returns>
                 public System.DateTime ReadDate()

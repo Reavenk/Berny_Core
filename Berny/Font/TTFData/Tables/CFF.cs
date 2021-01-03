@@ -135,7 +135,7 @@ namespace PxPre
                     // CFF Data Type
 
                     /// <summary>
-                    /// The TFF/OTF Table identifier
+                    /// The TTF/OTF Table identifier
                     /// </summary>
                     public const string TagName = "CFF ";
 
