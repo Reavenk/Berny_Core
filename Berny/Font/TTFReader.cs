@@ -82,6 +82,19 @@ namespace PxPre
                 /// <returns>The read bytes.</returns>
                 public abstract byte[] ReadBytes(int length);
 
+                public sbyte[] ReadSBytes(int length)
+                { 
+                    // Reading SBytes is far less-used than ReadBytes, so we just do 
+                    // our own implementation instead of forcing the implemenenters
+                    // to make their own.
+                    sbyte [] ret = new sbyte[length];
+
+                    for(int i = 0; i < length; ++i)
+                        ret[i] = this.ReadInt8();
+
+                    return ret;
+                }
+
                 /// <summary>
                 /// If true, the read position is past the readable area of the data stream. 
                 /// Else, false.
