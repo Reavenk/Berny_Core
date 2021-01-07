@@ -387,10 +387,7 @@ namespace PxPre
                     Table tabEntCFF;
                     if (this.tables.TryGetValue(TTF.Table.CFF.TagName, out tabEntCFF) == true)
                     {
-                        // TODO: Merge with top
-                        // The way glyf and CFF is branched from each other is currently excessive.
                         ret = new Font.Typeface(); 
-
                         r.SetPosition(tabEntCFF.offset);
 
                         TTF.Table.CFF cff = new TTF.Table.CFF();
