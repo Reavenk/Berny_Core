@@ -176,7 +176,7 @@ namespace PxPre
                     public Vector2 offset;
                     public Vector2 xAxis;
                     public Vector2 yAxis;
-                    public Glyph glyphRef;
+                    public int glyphRef;
                 }
 
                 /// <summary>

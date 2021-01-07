@@ -291,6 +291,8 @@ namespace PxPre
                             ret.glyphs.Add(fontGlyph);
                         }
 
+                        // Keeps a list of what's a composite, and we'll construct those when we're done.
+                        HashSet<int> composites = new HashSet<int>();
                         for (int i = 0; i < glyphCount; ++i)
                         {
                             uint lid = tableLoca.Value.GetGlyphOffset(tabEntGlyf, i);
@@ -368,19 +370,92 @@ namespace PxPre
                             else
                             {
                                 fontGlyph.compositeRefs = new List<Font.Glyph.CompositeReference>();
+                                composites.Add(i);
 
                                 // Complex
                                 foreach (TTF.Table.glyf.CompositeEntry ce in glyf.compositeEntries)
                                 {
                                     Font.Glyph.CompositeReference cref = new Font.Glyph.CompositeReference();
-                                    cref.xAxis = new Vector2(ce.xscale, ce.scale01) / (float)tableHead.unitsPerEm;
-                                    cref.yAxis = new Vector2(ce.scale10, ce.yscale) / (float)tableHead.unitsPerEm;
+                                    cref.xAxis = new Vector2(ce.xscale, ce.scale01);
+                                    cref.yAxis = new Vector2(ce.scale10, ce.yscale);
                                     cref.offset = new Vector2(ce.argument1, ce.argument2) / (float)tableHead.unitsPerEm;
-                                    cref.glyphRef = ret.glyphs[ce.glyphIndex];
+                                    cref.glyphRef = ce.glyphIndex;
 
                                     fontGlyph.compositeRefs.Add(cref);
                                 }
                             }
+                        }
+
+                        // As composites are succesfully processed, they will be removed from the collection.
+                        while(composites.Count > 0)
+                        {
+                            // Check if we've found anything to process, if not, we're done. Everything left
+                            // is unsalvagable. This will probably never happen, just a contingency.
+                            bool processed = false;
+
+                            // We just want to find a valid glyph and process it - why we go through multiple
+                            // composites when whe're already in a loop? To skip invalid ones. What's an invalid
+                            // glyph? A glyph that's a composite of composites - where its dependency composite
+                            // hasn't been processed yet.
+                            foreach(int c in composites)
+                            {
+                                Font.Glyph fontGlyph = ret.glyphs[c];
+                                if ( // Sanity
+                                    fontGlyph.compositeRefs == null || 
+                                    fontGlyph.compositeRefs.Count == 0 ||
+                                    c >= ret.glyphs.Count) 
+                                {
+                                    continue;
+                                }
+
+                                bool invalid = false;
+                                foreach(Font.Glyph.CompositeReference cr in fontGlyph.compositeRefs)
+                                { 
+                                    if(composites.Contains(cr.glyphRef) == true)
+                                    { 
+                                        invalid = true;
+                                        break;
+                                    }
+                                }
+                                if(invalid == true)
+                                    break;
+
+                                processed = true;
+                                foreach(Font.Glyph.CompositeReference cr in fontGlyph.compositeRefs)
+                                { 
+                                    Font.Glyph subglyf = ret.glyphs[cr.glyphRef];
+                                    foreach(Font.Contour subContour in subglyf.contours)
+                                    {
+                                        Font.Contour curContour = new Font.Contour();
+                                        fontGlyph.contours.Add(curContour);
+
+                                        foreach(Font.Point subPt in subContour.points)
+                                        {
+                                            Font.Point pt = new Font.Point();
+                                            pt.flags = subPt.flags;
+
+                                            pt.position = 
+                                                subPt.position.x * cr.xAxis + 
+                                                subPt.position.y * cr.yAxis + 
+                                                cr.offset;
+
+                                            curContour.points.Add(pt);
+
+                                            // No processing of tangents, the glyf format doesn't care about them.
+                                        }
+                                    }
+                                }
+
+                                processed = true;
+                                composites.Remove(c);
+                                break;
+
+                            }
+                            // If for some reason we wen't through everything without finding a composite 
+                            // we could process, nothing's going to change the next go-around.
+                            if(processed == false)
+                                break;
+
                         }
                     }
 
