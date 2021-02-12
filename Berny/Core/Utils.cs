@@ -173,6 +173,14 @@ namespace PxPre
                     this.b = new NodeSubRgn(B, bEst);
                 }
 
+                public BezierSubdivSample Reciprocal()
+                { 
+                    BezierSubdivSample bssRet = new BezierSubdivSample();
+                    bssRet.a = this.b;
+                    bssRet.b = this.a;
+                    return bssRet;
+                }
+
                 /// <summary>
                 /// 
                 /// </summary>
@@ -202,6 +210,30 @@ namespace PxPre
                 /// </summary>
                 /// <returns>The B side as a NodeTPos.</returns>
                 public NodeTPos GetTPosB() => this.b.TPos();
+
+                public int CountInvolving(BNode bn)
+                { 
+                    int ret = 0;
+
+                    if(this.a.node == bn)
+                        ++ret;
+
+                    if(this.b.node == bn)
+                        ++ret;
+
+                    return ret;
+                }
+
+                public NodeSubRgn ? GetRegionInvolving(BNode bn)
+                { 
+                    if(this.a.node == bn)
+                        return this.a;
+
+                    if(this.b.node == bn)
+                        return this.b;
+
+                    return null;
+                }
             }
 
             /// <summary>
