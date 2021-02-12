@@ -1309,6 +1309,56 @@ namespace PxPre
                     }
                     throw new System.Exception("Type2Charstring routine finished unexpectedly");
                 }
+
+                /// <summary>
+                /// Get list of all Operands. This extraction is not for functional purposes, but
+                /// for providing a synopsis of the bytecode to diagnostic systems.
+                /// </summary>
+                /// <param name="rb">The program data.</param>
+                /// <returns>All the encounterd opcodes.</returns>
+                /// <remarks>Hint and countour flags are thrown away.</remarks>
+                public static List<Operand> GetUnprocessedOperands(byte[] rb)
+                {
+                    TTF.TTFReaderBytes r = new TTF.TTFReaderBytes(rb);
+
+                    List<Operand> ops = new List<Operand>();
+
+                    int stems = 0;
+                    while (r.AtEnd() == false)
+                    {
+                        Operand opRead = Operand.ReadType2Op(r);
+                        ops.Add(opRead);
+
+                        // Certain operators have eccentric data consumption rules, specifically 
+                        // stuff dealing with masks.
+                        if(opRead.type == Operand.Type.Operator)
+                        { 
+                            switch(opRead.intVal)
+                            {
+                                case (int)Op.VStem:
+                                case (int)Op.VStemHM:
+                                case (int)Op.HStem:
+                                case (int)Op.HStemHM:
+                                    for(int i = ops.Count - 2; i >= 0; --i)
+                                    { 
+                                        // Consume all the non-ops between this operator and the last one.
+                                        if(ops[i].type != Operand.Type.Operator)
+                                            ++stems;
+                                    }
+                                    break;
+
+                                case (int)Op.HintMask:
+                                case (int)Op.CntrMask:
+                                    // Consume the data - we don't care what it is, we just need to move past it.
+                                    r.ReadBytes(Mathf.CeilToInt((float)stems / 8.0f));
+                                    break;
+                            }
+
+                        }
+                    }
+
+                    return ops;
+                }
             }
         }
     }
