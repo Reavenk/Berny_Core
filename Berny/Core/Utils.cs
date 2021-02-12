@@ -1416,7 +1416,12 @@ namespace PxPre
             /// <param name="outList">The initial list of collisions.</param>
             /// <remarks>It is recommended that the eventual outList be processed to condense
             /// entries that are too similar.</remarks>
-            public static void SubdivideSample(BezierSubdivRgn rgnA, BezierSubdivRgn rgnB, int iterLeft, float minDst, List<BezierSubdivSample> outList)
+            public static void SubdivideSample(
+                BezierSubdivRgn rgnA, 
+                BezierSubdivRgn rgnB, 
+                int iterLeft, 
+                float minDst, 
+                List<BezierSubdivSample> outList)
             { 
                 if(rgnA.bounds.Intersects(rgnB.bounds) == false)
                     return;
