@@ -1142,6 +1142,14 @@ namespace PxPre
                 return ret;
             }
 
+            /// <summary>
+            /// Check the bounding relationships between two islands.
+            /// </summary>
+            /// <param name="leftIsl">A node belonging to the first island.</param>
+            /// <param name="rightIsl">A node belonging to the second island.</param>
+            /// <param name="recheck">If true, validates that both islands are
+            /// closed loops before doing the actual check.</param>
+            /// <returns></returns>
             public static BoundingMode GetLoopBoundingMode(BNode leftIsl, BNode rightIsl, bool recheck)
             {
                 // The basic algorithm works by taking a point on the path at a most extreme 
