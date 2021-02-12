@@ -1678,6 +1678,65 @@ namespace PxPre
                 return ret;
             }
 
+            public void GetSubdivideInfo(float tL, out SubdivideInfo sdiL, float tR, out SubdivideInfo sdiR)
+            {
+                PathBridge pb = this.GetPathBridgeInfo();
+
+                sdiL = new SubdivideInfo();
+                sdiR = new SubdivideInfo();
+
+                if (pb.pathType == PathType.Line)
+                {
+                    
+                    sdiL.subIn = Vector2.zero;
+                    sdiL.subOut = Vector2.zero;
+                    sdiL.nextIn = Vector2.zero;
+                    sdiL.prevOut = Vector2.zero;
+                    sdiL.subPos = Vector2.Lerp(this.pos, this.next.pos, tL);
+                    
+                    sdiR.subIn = Vector2.zero;
+                    sdiR.subOut = Vector2.zero;
+                    sdiR.nextIn = Vector2.zero;
+                    sdiR.prevOut = Vector2.zero;
+                    sdiR.subPos = Vector2.Lerp(this.pos, this.next.pos, tR);
+
+                    return;
+                }
+
+                Vector2 p0 = this.pos;
+                Vector2 p1 = this.pos + pb.prevTanOut;
+                Vector2 p3 = ((this.next != null) ? this.next : this).pos;
+                Vector2 p2 = p3 + pb.nextTanIn;
+
+                Vector2 p00 = Vector2.Lerp(p0, p1, tL);
+                Vector2 p01 = Vector2.Lerp(p1, p2, tL);
+                Vector2 p02 = Vector2.Lerp(p2, p3, tL);
+                Vector2 p10 = Vector2.Lerp(p00, p01, tL);
+                Vector2 p11 = Vector2.Lerp(p01, p02, tL);
+                Vector2 pp = Vector2.Lerp(p10, p11, tL);
+
+                tR = (tR - tL)/(1.0f - tL);
+
+                Vector2 pr0 = Vector2.Lerp(pp, p11, tR);
+                Vector2 pr1 = Vector2.Lerp(p11, p02, tR);
+                Vector2 pr2 = Vector2.Lerp(p02, p3, tR);
+                Vector2 pr00 = Vector2.Lerp(pr0, pr1, tR);
+                Vector2 pr01 = Vector2.Lerp(pr1, pr2, tR);
+                Vector2 prp = Vector2.Lerp(pr00, pr01, tR);
+
+                sdiL.prevOut = p00 - p0;
+                sdiL.nextIn = pr00 - prp;
+                sdiL.subPos = pp;
+                sdiL.subIn = p10 - pp; 
+                sdiL.subOut = pr0 - pp;
+
+                sdiR.prevOut = pr0 - pp;
+                sdiR.nextIn = pr2 - p3;
+                sdiR.subPos = prp;
+                sdiR.subIn = pr00 - prp;
+                sdiR.subOut = pr01 - prp;
+            }
+
             /// <summary>
             /// Calculate the location of an interpolation value.
             /// </summary>

@@ -340,6 +340,25 @@ namespace PxPre
             }
 
             /// <summary>
+            /// Remove all the nodes of an island from the loop.
+            /// </summary>
+            /// <param name="bn">A node from the island to be removed.</param>
+            /// <returns>True if removed. Else, false.</returns>
+            public bool RemoveIsland(BNode bn)
+            { 
+                if(this.nodes.Contains(bn) == false)
+                    return false;
+
+                bn = bn.GetPathLeftmost().node;
+                List<BNode> isls = new List<BNode>(bn.Travel());
+
+                foreach(BNode toRm in isls)
+                    this.RemoveNode(toRm);
+
+                return true;
+            }
+
+            /// <summary>
             /// Flag the loop as dirty, meaning it has been changed since the last time
             /// it was prepared for presentation.
             /// 
