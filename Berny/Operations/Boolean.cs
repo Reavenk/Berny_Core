@@ -462,50 +462,31 @@ namespace PxPre
 
             }
 
-            public static bool TraceUnion(BNode islA, BNode islB, BLoop loopInto, out BNode onIsle, bool removeInputs = true)
+            public static void GatherTraceData(
+                BNode islA, 
+                BNode islB, 
+                List<BNode> allNodes,
+                List<Utils.BezierSubdivSample> outList,
+                Dictionary<BNode, List<Utils.BezierSubdivSample>> dictCol)
             {
-                // Every node for both islands
-                List<BNode> allNodes = new List<BNode>();
-
-                //
-                //  FIND THE MOST EXTREME POINT
-                //
-                //////////////////////////////////////////////////
-                // Rightmost node. We need to find a point on every segment that's on the most
-                // extreme somewhere (i.e., leftmost, topmost, rightmost, bottom-most). That way
-                // we know it's not inside the shape union.
-                BNode rtmst = islA; 
-                Vector2 rt = rtmst.Pos;     // Point of rightmost
-                float lam = 0.0f;           // Lambda of rightmost
-
-                foreach(BNode bnit in islA.Travel()) 
-                {
+                foreach (BNode bnit in islA.Travel())
                     allNodes.Add(bnit); // Also collect for allNodes
 
-                    if (bnit.GetMaxPoint(ref rt, ref lam, 0) == true)
-                        rtmst = bnit;
-                }
-
-                foreach(BNode bnit in islB.Travel())
-                {
+                foreach (BNode bnit in islB.Travel())
                     allNodes.Add(bnit); // Also collect for allNodes
-
-                    if (bnit.GetMaxPoint(ref rt, ref lam, 0) == true)
-                        rtmst = bnit;
-                }
 
                 //  SCAN AND LOG ALL COLLISIONS
                 //
                 //////////////////////////////////////////////////
-                List<Utils.BezierSubdivSample> outList = new List<Utils.BezierSubdivSample>();
-                for(int i = 0; i < allNodes.Count - 1; ++i)
-                { 
+                
+                for (int i = 0; i < allNodes.Count - 1; ++i)
+                {
                     BNode bni = allNodes[i];
                     // This check isn't as robust as it could be. While rare, a segment can create
                     // a loop that causes an intersection with itself. But, these loops are set up
                     // assuming loops can never do that.
-                    for(int j = i + 1; j < allNodes.Count; ++j)
-                    { 
+                    for (int j = i + 1; j < allNodes.Count; ++j)
+                    {
                         BNode bnj = allNodes[j];
 
                         // Make an output list that checks and cleans for each individual
@@ -524,7 +505,7 @@ namespace PxPre
                             // *near* the ends. To do this properly we need to bounds check at the
                             // (cubic) curve roots instead of at extreemly low (0.001) and high (0.99)
                             // interpolation points.
-                            if(
+                            if (
                                 (bss.a.lEst < 0.001f && bss.a.node.prev == bss.b.node) ||
                                 (bss.a.lEst > 0.99f && bss.a.node.next == bss.b.node))
                             {
@@ -536,16 +517,10 @@ namespace PxPre
                     }
                 }
 
-                if(outList.Count == 0)
-                {
-                    onIsle = null;
-                    return false;
-                }
-
                 //  ORGANIZE COLLISIONS TO BE USABLE
                 //
                 //////////////////////////////////////////////////
-                
+
                 // Each node that has a collision has a ordered list of where collisions
                 // happened. This makes the collision data FAR less unwieldy and more 
                 // usable. Note that because a collision involves two segments colliding
@@ -553,16 +528,13 @@ namespace PxPre
                 // where the list it's added to will be the "a" segment. If it's originally 
                 // labeled the "b" segment in the collision data, a and b are swapped.
 
-                Dictionary<BNode, List<Utils.BezierSubdivSample>> dictCol = 
-                    new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
-                
-                foreach(Utils.BezierSubdivSample bss in outList)
+                foreach (Utils.BezierSubdivSample bss in outList)
                 {
                     List<Utils.BezierSubdivSample> lstA;
-                    List<Utils.BezierSubdivSample> lstB; 
+                    List<Utils.BezierSubdivSample> lstB;
 
                     // Add a directly.
-                    if (dictCol.TryGetValue( bss.a.node, out lstA) == false)
+                    if (dictCol.TryGetValue(bss.a.node, out lstA) == false)
                     {
                         lstA = new List<Utils.BezierSubdivSample>();
                         dictCol.Add(bss.a.node, lstA);
@@ -574,27 +546,60 @@ namespace PxPre
                     // out which NodeSubRgn (a or b) to reference for a given
                     // key.
                     Utils.BezierSubdivSample bssRec = bss.Reciprocal();
-                    if(dictCol.TryGetValue(bss.b.node, out lstB) == false)
-                    { 
+                    if (dictCol.TryGetValue(bss.b.node, out lstB) == false)
+                    {
                         lstB = new List<Utils.BezierSubdivSample>();
                         dictCol.Add(bss.b.node, lstB);
                     }
                     lstB.Add(bssRec);
                 }
 
-                foreach(List<Utils.BezierSubdivSample> lst in dictCol.Values)
+                foreach (List<Utils.BezierSubdivSample> lst in dictCol.Values)
                 {
-                    lst.Sort( 
-                        (x, y) => 
+                    lst.Sort(
+                        (x, y) =>
                         {
-                            if(x.a.lEst == y.a.lEst)
+                            if (x.a.lEst == y.a.lEst)
                                 return 0;
 
-                            if(x.a.lEst < y.a.lEst)
+                            if (x.a.lEst < y.a.lEst)
                                 return -1;
 
                             return 1;
-                        } );
+                        });
+                }
+            }
+
+            public static bool TraceUnion(BNode islA, BNode islB, BLoop loopInto, out BNode onIsle, bool removeInputs = true)
+            {
+                // Every node for both islands
+                List<BNode> allNodes = new List<BNode>();
+                List<Utils.BezierSubdivSample> outList = new List<Utils.BezierSubdivSample>();
+                Dictionary<BNode, List<Utils.BezierSubdivSample>> dictCol = new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
+
+                GatherTraceData(islA, islB, allNodes, outList, dictCol);
+
+                if (outList.Count == 0)
+                {
+                    onIsle = null;
+                    return false;
+                }
+
+                //
+                //  FIND THE MOST EXTREME POINT
+                //
+                //////////////////////////////////////////////////
+                // Rightmost node. We need to find a point on every segment that's on the most
+                // extreme somewhere (i.e., leftmost, topmost, rightmost, bottom-most). That way
+                // we know it's not inside the shape union.
+                BNode rtmst = islA; 
+                Vector2 rt = rtmst.Pos;     // Point of rightmost
+                float lam = 0.0f;           // Lambda of rightmost
+
+                foreach (BNode bn in allNodes)
+                {
+                    if (bn.GetMaxPoint(ref rt, ref lam, 0) == true)
+                        rtmst = bn;
                 }
 
                 //  FIND THE ACTUAL STARTING POSITIONS
@@ -694,7 +699,7 @@ namespace PxPre
                     {
                         if(lstBss[i].a.lEst == itLam && i != lstBss.Count - 1)
                         {
-                            itEnd = itLam = lstBss[i + 1].a.lEst;
+                            itEnd = lstBss[i + 1].a.lEst;
 
                             // Figure out where we continue after jumping to the next item
                             bnIt = lstBss[i + 1].b.node;
@@ -777,6 +782,424 @@ namespace PxPre
                     foreach(BNode bn in allNodes)
                     {
                         if(bn.parent != null)
+                            bn.parent.RemoveNode(bn);
+                    }
+                }
+
+                return true;
+            }
+
+            public static bool TraceIntersection(BNode islA, BNode islB, BLoop loopInto, out BNode onIsle, bool removeInputs = true)
+            {
+                List<BNode> allNodes = new List<BNode>();
+                List<Utils.BezierSubdivSample> outList = new List<Utils.BezierSubdivSample>();
+                Dictionary<BNode, List<Utils.BezierSubdivSample>> dictCol = new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
+
+                GatherTraceData(islA, islB, allNodes, outList, dictCol);
+
+                onIsle = null;
+                if (outList.Count == 0)
+                {
+                    return false;
+                }
+
+                while(outList.Count > 0)
+                {
+                    BNode startnode = null;
+                    Vector2 rt = Vector2.zero;  // Point of rightmost
+                    float lam = 0.0f;           // Lambda of rightmost
+
+                    BNode.SubdivideInfo sdiStartA = outList[0].a.node.GetSubdivideInfo(outList[0].a.lEst);
+                    BNode.SubdivideInfo sdiStartB = outList[0].b.node.GetSubdivideInfo(outList[0].b.lEst);
+                    float wind = Utils.Vector2Cross(sdiStartA.windTangent, sdiStartB.windTangent);
+
+                    List<BNode> newPath = new List<BNode>();
+                    BNode firstNew = null;
+
+                    if (wind > 0.0f)
+                    { 
+                        startnode = outList[0].a.node;
+                        lam = outList[0].a.lEst;
+
+                        firstNew = new BNode(null, sdiStartA.subPos);
+                        firstNew.TanIn      = sdiStartA.subIn;
+                        firstNew.UseTanIn   = sdiStartA.subIn != Vector2.zero;
+                        firstNew.TanOut     = sdiStartA.subOut;
+                        firstNew.UseTanOut  = sdiStartA.subOut != Vector2.zero;
+                    }
+                    else
+                    { 
+                        startnode = outList[0].b.node;
+                        lam = outList[0].b.lEst;
+
+                        firstNew            = new BNode(null, sdiStartB.subPos);
+                        firstNew.TanIn      = sdiStartB.subIn;
+                        firstNew.UseTanIn   = sdiStartB.subIn != Vector2.zero;
+                        firstNew.TanOut     = sdiStartB.subOut;
+                        firstNew.UseTanOut  = sdiStartB.subOut != Vector2.zero;
+                    }
+                    outList.RemoveAt(0);
+                    newPath.Add(firstNew);
+
+
+                    BNode bnIt = startnode;
+                    float itLam = lam;
+
+                    BNode.SubdivideInfo sdiL;
+                    BNode.SubdivideInfo sdiR;
+
+                    while (true)
+                    {
+                        BNode bnPrev = bnIt;
+                        List<Utils.BezierSubdivSample> lstBss;
+                        if (dictCol.TryGetValue(bnIt, out lstBss) == false)
+                        {
+                            // If there are no collisions in the segment, just
+                            // add the whole segment
+                            itLam = 0.0f;
+                            bnIt = bnIt.next;
+
+                            if (bnIt == startnode && itLam == lam) // Are we back where we started?
+                            {
+                                // close the shape and we're done
+                                firstNew.TanIn = bnIt.TanIn;
+                                firstNew.UseTanIn = true;
+
+                                BNode prevToFirst = newPath[newPath.Count - 1];
+                                prevToFirst.TanOut = bnPrev.TanOut;
+                                prevToFirst.UseTanOut = true;
+                                break;
+                            }
+                            else
+                            {
+                                // Full copy. TanOut can be modified later.
+                                BNode bnDirAdd = new BNode(null, bnIt.Pos);
+                                bnDirAdd.TanOut = bnIt.TanOut;
+                                bnDirAdd.TanIn = bnIt.TanIn;
+                                bnDirAdd.UseTanIn = bnIt.UseTanIn;
+                                bnDirAdd.UseTanOut = bnIt.UseTanOut;
+                                newPath.Add(bnDirAdd);
+
+                                BNode prevToFirst = newPath[newPath.Count - 2];
+                                prevToFirst.TanOut = bnPrev.TanOut;
+                                prevToFirst.UseTanOut = true;
+                            }
+                            continue;
+                        }
+
+                        // If there are collision points, trace only the segment
+                        // and swap the segment chain we're tracing with the one
+                        // we collided with.
+                        // 
+                        // Where we've moved, in relationship to bnPrev.
+                        float itStart = itLam;
+                        float itEnd = 1.0f;
+
+                        bool nextProc = false;
+                        for (int i = 0; i < lstBss.Count - 1; ++i)
+                        {
+                            if (lstBss[i].a.lEst == itLam && i != lstBss.Count - 1)
+                            {
+                                itEnd = lstBss[i + 1].a.lEst;
+
+                                // Figure out where we continue after jumping to the next item
+                                bnIt = lstBss[i + 1].b.node;
+                                itLam = lstBss[i + 1].b.lEst;
+                                nextProc = true;
+
+                                if(outList.Remove(lstBss[i]) == false)
+                                    outList.Remove(lstBss[i].Reciprocal());
+
+                                break;
+                            }
+                        }
+
+                        if (nextProc == false)
+                        {
+                            if (itLam == 0.0f)
+                            {
+                                // The first collision in the segment
+                                itStart = 0.0f;
+                                itEnd = lstBss[0].a.lEst;
+
+                                // Swap as we were in the loop directly above
+                                bnIt = lstBss[0].b.node;
+                                itLam = lstBss[0].b.lEst;
+
+                            }
+                            else
+                            {
+                                // The last collision to the end
+                                itStart = lstBss[lstBss.Count - 1].a.lEst;
+                                itEnd = 1.0f;
+
+                                if (outList.Remove(lstBss[lstBss.Count - 1]) == false)
+                                    outList.Remove(lstBss[lstBss.Count - 1].Reciprocal());
+
+                                // Move on to the next node in the chain.
+                                bnIt = bnIt.next;
+                                itLam = 0.0f;
+                            }
+                        }
+
+                        bnPrev.GetSubdivideInfo(itStart, out sdiL, itEnd, out sdiR);
+
+                        if (bnIt == startnode && itLam == lam) // Are we back where we started?
+                        {
+                            // close the shape and we're done
+                            firstNew.TanIn = sdiR.subIn;
+                            firstNew.UseTanIn = true;
+
+                            newPath[newPath.Count - 1].TanOut = sdiL.subOut;
+                            newPath[newPath.Count - 1].UseTanOut = true;
+                            break;
+                        }
+                        else
+                        {
+                            // Add additional traced point.
+                            BNode bnNew = new BNode(null, sdiR.subPos);
+                            bnNew.TanIn = sdiR.subIn;
+                            bnNew.UseTanIn = true;
+
+                            newPath[newPath.Count - 1].TanOut = sdiL.subOut;
+                            newPath[newPath.Count - 1].UseTanOut = true;
+
+                            newPath.Add(bnNew);
+                        }
+                    }
+
+                    for (int i = 0; i < newPath.Count; ++i)
+                    {
+                        newPath[i].parent = loopInto;
+
+                        if (loopInto != null)
+                            loopInto.nodes.Add(newPath[i]);
+
+                        newPath[i].next = newPath[(i + 1) % newPath.Count];
+                        newPath[i].prev = newPath[((i - 1) + newPath.Count) % newPath.Count];
+                    }
+
+                    if (onIsle == null && newPath.Count > 0)
+                        onIsle = newPath[0];
+                }
+
+                if (removeInputs == true)
+                {
+                    foreach (BNode bn in allNodes)
+                    {
+                        if (bn.parent != null)
+                            bn.parent.RemoveNode(bn);
+                    }
+                }
+
+                return true;
+            }
+
+            public static bool TraceDifference(BNode islA, BNode islB, BLoop loopInto, out BNode onIsle, bool removeInputs = true)
+            {
+                List<BNode> allNodes = new List<BNode>();
+                List<Utils.BezierSubdivSample> outList = new List<Utils.BezierSubdivSample>();
+                Dictionary<BNode, List<Utils.BezierSubdivSample>> dictCol = new Dictionary<BNode, List<Utils.BezierSubdivSample>>();
+
+                HashSet<BNode> islANodes = new HashSet<BNode>(islA.Travel());
+
+                GatherTraceData(islA, islB, allNodes, outList, dictCol);
+
+                onIsle = null;
+                if (outList.Count == 0)
+                {
+                    return false;
+                }
+
+                while (outList.Count > 0)
+                {
+                    BNode startnode = null;
+                    Vector2 rt = Vector2.zero;  // Point of rightmost
+                    float lam = 0.0f;           // Lambda of rightmost
+
+                    BNode.SubdivideInfo sdiStartA = outList[0].a.node.GetSubdivideInfo(outList[0].a.lEst);
+                    BNode.SubdivideInfo sdiStartB = outList[0].b.node.GetSubdivideInfo(outList[0].b.lEst);
+                    float wind;
+                    if(islANodes.Contains(outList[0].a.node) == true)
+                        wind = Utils.Vector2Cross(sdiStartA.windTangent, sdiStartB.windTangent);
+                    else
+                        wind = Utils.Vector2Cross(sdiStartB.windTangent, sdiStartA.windTangent);
+
+                    List<BNode> newPath = new List<BNode>();
+                    BNode firstNew = null;
+
+                    if (wind > 0.0f)
+                    {
+                        startnode = outList[0].a.node;
+                        lam = outList[0].a.lEst;
+
+                        firstNew = new BNode(null, sdiStartA.subPos);
+                        firstNew.TanIn = sdiStartA.subIn;
+                        firstNew.UseTanIn = sdiStartA.subIn != Vector2.zero;
+                        firstNew.TanOut = sdiStartA.subOut;
+                        firstNew.UseTanOut = sdiStartA.subOut != Vector2.zero;
+                    }
+                    else
+                    {
+                        startnode = outList[0].b.node;
+                        lam = outList[0].b.lEst;
+
+                        firstNew = new BNode(null, sdiStartB.subPos);
+                        firstNew.TanIn = sdiStartB.subIn;
+                        firstNew.UseTanIn = sdiStartB.subIn != Vector2.zero;
+                        firstNew.TanOut = sdiStartB.subOut;
+                        firstNew.UseTanOut = sdiStartB.subOut != Vector2.zero;
+                    }
+                    outList.RemoveAt(0);
+                    newPath.Add(firstNew);
+
+
+                    BNode bnIt = startnode;
+                    float itLam = lam;
+
+                    BNode.SubdivideInfo sdiL;
+                    BNode.SubdivideInfo sdiR;
+
+                    while (true)
+                    {
+                        BNode bnPrev = bnIt;
+                        List<Utils.BezierSubdivSample> lstBss;
+                        if (dictCol.TryGetValue(bnIt, out lstBss) == false)
+                        {
+                            // If there are no collisions in the segment, just
+                            // add the whole segment
+                            itLam = 0.0f;
+                            bnIt = bnIt.next;
+
+                            if (bnIt == startnode && itLam == lam) // Are we back where we started?
+                            {
+                                // close the shape and we're done
+                                firstNew.TanIn = bnIt.TanIn;
+                                firstNew.UseTanIn = true;
+
+                                BNode prevToFirst = newPath[newPath.Count - 1];
+                                prevToFirst.TanOut = bnPrev.TanOut;
+                                prevToFirst.UseTanOut = true;
+                                break;
+                            }
+                            else
+                            {
+                                // Full copy. TanOut can be modified later.
+                                BNode bnDirAdd = new BNode(null, bnIt.Pos);
+                                bnDirAdd.TanOut = bnIt.TanOut;
+                                bnDirAdd.TanIn = bnIt.TanIn;
+                                bnDirAdd.UseTanIn = bnIt.UseTanIn;
+                                bnDirAdd.UseTanOut = bnIt.UseTanOut;
+                                newPath.Add(bnDirAdd);
+
+                                BNode prevToFirst = newPath[newPath.Count - 2];
+                                prevToFirst.TanOut = bnPrev.TanOut;
+                                prevToFirst.UseTanOut = true;
+                            }
+                            continue;
+                        }
+
+                        // If there are collision points, trace only the segment
+                        // and swap the segment chain we're tracing with the one
+                        // we collided with.
+                        // 
+                        // Where we've moved, in relationship to bnPrev.
+                        float itStart = itLam;
+                        float itEnd = 1.0f;
+
+                        bool nextProc = false;
+                        for (int i = 0; i < lstBss.Count - 1; ++i)
+                        {
+                            if (lstBss[i].a.lEst == itLam && i != lstBss.Count - 1)
+                            {
+                                itEnd = lstBss[i + 1].a.lEst;
+
+                                // Figure out where we continue after jumping to the next item
+                                bnIt = lstBss[i + 1].b.node;
+                                itLam = lstBss[i + 1].b.lEst;
+                                nextProc = true;
+
+                                if (outList.Remove(lstBss[i]) == false)
+                                    outList.Remove(lstBss[i].Reciprocal());
+
+                                break;
+                            }
+                        }
+
+                        if (nextProc == false)
+                        {
+                            if (itLam == 0.0f)
+                            {
+                                // The first collision in the segment
+                                itStart = 0.0f;
+                                itEnd = lstBss[0].a.lEst;
+
+                                // Swap as we were in the loop directly above
+                                bnIt = lstBss[0].b.node;
+                                itLam = lstBss[0].b.lEst;
+
+                            }
+                            else
+                            {
+                                // The last collision to the end
+                                itStart = lstBss[lstBss.Count - 1].a.lEst;
+                                itEnd = 1.0f;
+
+                                if (outList.Remove(lstBss[lstBss.Count - 1]) == false)
+                                    outList.Remove(lstBss[lstBss.Count - 1].Reciprocal());
+
+                                // Move on to the next node in the chain.
+                                bnIt = bnIt.next;
+                                itLam = 0.0f;
+                            }
+                        }
+
+                        bnPrev.GetSubdivideInfo(itStart, out sdiL, itEnd, out sdiR);
+
+                        if (bnIt == startnode && itLam == lam) // Are we back where we started?
+                        {
+                            // close the shape and we're done
+                            firstNew.TanIn = sdiR.subIn;
+                            firstNew.UseTanIn = true;
+
+                            newPath[newPath.Count - 1].TanOut = sdiL.subOut;
+                            newPath[newPath.Count - 1].UseTanOut = true;
+                            break;
+                        }
+                        else
+                        {
+                            // Add additional traced point.
+                            BNode bnNew = new BNode(null, sdiR.subPos);
+                            bnNew.TanIn = sdiR.subIn;
+                            bnNew.UseTanIn = true;
+
+                            newPath[newPath.Count - 1].TanOut = sdiL.subOut;
+                            newPath[newPath.Count - 1].UseTanOut = true;
+
+                            newPath.Add(bnNew);
+                        }
+                    }
+
+                    for (int i = 0; i < newPath.Count; ++i)
+                    {
+                        newPath[i].parent = loopInto;
+
+                        if (loopInto != null)
+                            loopInto.nodes.Add(newPath[i]);
+
+                        newPath[i].next = newPath[(i + 1) % newPath.Count];
+                        newPath[i].prev = newPath[((i - 1) + newPath.Count) % newPath.Count];
+                    }
+
+                    if (onIsle == null && newPath.Count > 0)
+                        onIsle = newPath[0];
+                }
+
+                if (removeInputs == true)
+                {
+                    foreach (BNode bn in allNodes)
+                    {
+                        if (bn.parent != null)
                             bn.parent.RemoveNode(bn);
                     }
                 }
@@ -1395,6 +1818,7 @@ namespace PxPre
                             si.subPos = loc;
                             si.subOut = outTan;
                             si.subIn = -outTan;
+                            si.windTangent = outTan;
                             //
                             ret.Add( new Utils.NodeTPos(node, subs[i]), si);
                         }
@@ -1455,6 +1879,7 @@ namespace PxPre
 
                             si.prevOut = subSpots[idx -2] - subSpots[idx - 3];
                             si.nextIn = subSpots[idx + 2] - subSpots[idx + 3];
+                            si.windTangent = si.subOut;
 
                             ret.Add(new Utils.NodeTPos(node, subs[i]), si);
                         }

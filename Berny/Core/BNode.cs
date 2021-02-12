@@ -305,6 +305,9 @@ namespace PxPre
                 public Vector2 subPos;
                 public Vector2 subIn;
                 public Vector2 subOut;
+
+                // Used for calculating windings
+                public Vector2 windTangent;
             }
 
             /// <summary>
@@ -1649,6 +1652,8 @@ namespace PxPre
 
                     retLine.subPos = Vector2.Lerp(this.pos, this.next.pos, t);
 
+                    retLine.windTangent = this.next.pos - this.pos;
+
                     return retLine;
                 }
 
@@ -1674,6 +1679,8 @@ namespace PxPre
                 ret.subPos = pp;
                 ret.subIn = p10 - pp;
                 ret.subOut = p11 - pp;
+
+                ret.windTangent = ret.subOut;
 
                 return ret;
             }
