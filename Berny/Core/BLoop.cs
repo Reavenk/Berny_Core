@@ -785,17 +785,6 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// Utility function, rotate a 2D vector 90 degrees counter clockwise.
-        /// </summary>
-        /// <param name="v2">The vector to rotate.</param>
-        /// <returns>The rotate vector.</returns>
-        // !TODO: Remove - unused duplicate?
-        public static Vector2 RotateEdge90CCW(Vector2 v2)
-        { 
-            return new Vector2(-v2.y, v2.x);
-        }
-
-        /// <summary>
         /// Inflate (dilate) the loop by a certain amount.
         /// </summary>
         /// <param name="amt">The distance to dialate the path contents.</param>

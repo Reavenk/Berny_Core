@@ -453,16 +453,6 @@ namespace PxPre.Berny
             this.ConsumeIntoTriangles(triangles, vectors, wr);
         }
 
-        // !TODO: Remove
-        public void ConsumeIntoTrianglesWithOutline(
-            float width, 
-            List<int> fillTris, 
-            List<int> strokeTris, 
-            Vector2Repo vectors)
-        { 
-                
-        }
-
         /// <summary>
         /// Create a deep copy of the object.
         /// </summary>

@@ -179,10 +179,7 @@ namespace PxPre.Berny
         /// <returns></returns>
         public Layer Clone()
         { 
-            return new Layer(this.document);
-
-            // !TODO: Above is incorrect.
-            // return Clone(this.document);
+            return Clone(this.document);
         }
 
         /// <summary>
