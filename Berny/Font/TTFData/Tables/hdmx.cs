@@ -24,67 +24,58 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// hdmx — Horizontal Device Metrics
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/hdmx
+    /// 
+    /// The 'hdmx' table relates to OpenType™ fonts with TrueType outlines. 
+    /// The Horizontal Device Metrics table stores integer advance widths 
+    /// scaled to particular pixel sizes. This allows the font manager to 
+    /// build integer width tables without calling the scaler for each glyph. 
+    /// Typically this table contains only selected screen sizes. This table 
+    /// is sorted by pixel size. The checksum for this table applies to both 
+    /// subtables listed.
+    /// </summary>
+    public struct hdmx
     {
-        namespace TTF
+        public struct DeviceRecord
         {
-            namespace Table
+            public byte pixelSize;          // Pixel size for following widths (as ppem).
+            public byte maxWidth;           // Maximum width.
+            public List<byte> widths;      // Array of widths (numGlyphs is from the 'maxp' table).
+        }
+
+        public const string TagName = "hdmx";
+
+        public ushort version;
+        public ushort numRecords;
+        public uint sizeDeviceRecord;
+        public List<DeviceRecord> records;
+
+        public void Read(TTFReader r, int numGlyphs)
+        {
+            r.ReadInt(out this.version);
+            r.ReadInt(out this.numRecords);
+            r.ReadInt(out this.sizeDeviceRecord);
+
+            this.records = new List<DeviceRecord>();
+            for (int i = 0; i < this.numRecords; ++i)
             {
-                /// <summary>
-                /// hdmx — Horizontal Device Metrics
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/hdmx
-                /// 
-                /// The 'hdmx' table relates to OpenType™ fonts with TrueType outlines. 
-                /// The Horizontal Device Metrics table stores integer advance widths 
-                /// scaled to particular pixel sizes. This allows the font manager to 
-                /// build integer width tables without calling the scaler for each glyph. 
-                /// Typically this table contains only selected screen sizes. This table 
-                /// is sorted by pixel size. The checksum for this table applies to both 
-                /// subtables listed.
-                /// </summary>
-                public struct hdmx
-                {
-                    public struct DeviceRecord
-                    {
-                        public byte pixelSize;          // Pixel size for following widths (as ppem).
-                        public byte maxWidth;           // Maximum width.
-                        public List<byte> widths;      // Array of widths (numGlyphs is from the 'maxp' table).
-                    }
+                DeviceRecord dr = new DeviceRecord();
 
-                    public const string TagName = "hdmx";
+                r.ReadInt(out dr.pixelSize);
+                r.ReadInt(out dr.maxWidth);
+                //
+                dr.widths = new List<byte>();
+                for(int j = 0; j < numGlyphs; ++j)
+                    dr.widths.Add(r.ReadUInt8());
 
-                    public ushort version;
-                    public ushort numRecords;
-                    public uint sizeDeviceRecord;
-                    public List<DeviceRecord> records;
-
-                    public void Read(TTFReader r, int numGlyphs)
-                    {
-                        r.ReadInt(out this.version);
-                        r.ReadInt(out this.numRecords);
-                        r.ReadInt(out this.sizeDeviceRecord);
-
-                        this.records = new List<DeviceRecord>();
-                        for (int i = 0; i < this.numRecords; ++i)
-                        {
-                            DeviceRecord dr = new DeviceRecord();
-
-                            r.ReadInt(out dr.pixelSize);
-                            r.ReadInt(out dr.maxWidth);
-                            //
-                            dr.widths = new List<byte>();
-                            for(int j = 0; j < numGlyphs; ++j)
-                                dr.widths.Add(r.ReadUInt8());
-
-                            this.records.Add(dr);
-                        }
-                        
-                    }
-                }
-
+                this.records.Add(dr);
             }
+                        
         }
     }
+
 }

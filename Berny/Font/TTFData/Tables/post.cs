@@ -24,88 +24,79 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// post — PostScript Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/post
+    /// 
+    /// This table contains additional information needed to use TrueType or 
+    /// OpenType™ fonts on PostScript printers. This includes data for the 
+    /// FontInfo dictionary entry and the PostScript names of all the glyphs. 
+    /// For more information about PostScript names, see the Adobe Glyph List 
+    /// Specification.
+    /// </summary>
+    public struct post
     {
-        namespace TTF
+        public const string TagName = "post";
+
+        public ushort minorVersion;
+        public ushort majorVersion;
+        public float italicAngle;
+        public short underlinePosition;
+        public short underlineThickness;
+        public uint isFixedPitch;
+        public uint minMemType42;
+        public uint maxMemType42;
+        public uint minMemType1;
+        public uint maxMemType1;
+
+        // Version 2
+        public ushort numGlyphs;
+        public List<ushort> glyphNameIndex;
+        public List<string> stringData;
+
+        // Version 2.5
+        // numGlyphs
+        public List<byte> offset;
+
+        public void Read(TTFReader r)
         {
-            namespace Table
+            r.ReadInt(out this.minorVersion);
+            r.ReadInt(out this.majorVersion);
+            this.italicAngle = r.ReadFixed();
+            r.ReadInt(out this.underlinePosition);
+            r.ReadInt(out this.underlineThickness);
+            r.ReadInt(out this.isFixedPitch);
+            r.ReadInt(out this.minMemType42);
+            r.ReadInt(out this.maxMemType42);
+            r.ReadInt(out this.minMemType1);
+            r.ReadInt(out this.maxMemType1);
+
+            if (this.majorVersion == 2 && this.minorVersion == 0)
             {
-                /// <summary>
-                /// post — PostScript Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/post
-                /// 
-                /// This table contains additional information needed to use TrueType or 
-                /// OpenType™ fonts on PostScript printers. This includes data for the 
-                /// FontInfo dictionary entry and the PostScript names of all the glyphs. 
-                /// For more information about PostScript names, see the Adobe Glyph List 
-                /// Specification.
-                /// </summary>
-                public struct post
-                {
-                    public const string TagName = "post";
+                r.ReadInt(out this.numGlyphs);
 
-                    public ushort minorVersion;
-                    public ushort majorVersion;
-                    public float italicAngle;
-                    public short underlinePosition;
-                    public short underlineThickness;
-                    public uint isFixedPitch;
-                    public uint minMemType42;
-                    public uint maxMemType42;
-                    public uint minMemType1;
-                    public uint maxMemType1;
+                this.glyphNameIndex = new List<ushort>();
+                for(int i = 0; i < this.numGlyphs; ++i)
+                    this.glyphNameIndex.Add(r.ReadUInt16());
 
-                    // Version 2
-                    public ushort numGlyphs;
-                    public List<ushort> glyphNameIndex;
-                    public List<string> stringData;
+                this.stringData = new List<string>();
+                //while(r.GetPosition() < end)
+                //    this.stringData.Add(r.ReadPascalString());
 
-                    // Version 2.5
-                    // numGlyphs
-                    public List<byte> offset;
-
-                    public void Read(TTFReader r)
-                    {
-                        r.ReadInt(out this.minorVersion);
-                        r.ReadInt(out this.majorVersion);
-                        this.italicAngle = r.ReadFixed();
-                        r.ReadInt(out this.underlinePosition);
-                        r.ReadInt(out this.underlineThickness);
-                        r.ReadInt(out this.isFixedPitch);
-                        r.ReadInt(out this.minMemType42);
-                        r.ReadInt(out this.maxMemType42);
-                        r.ReadInt(out this.minMemType1);
-                        r.ReadInt(out this.maxMemType1);
-
-                        if (this.majorVersion == 2 && this.minorVersion == 0)
-                        {
-                            r.ReadInt(out this.numGlyphs);
-
-                            this.glyphNameIndex = new List<ushort>();
-                            for(int i = 0; i < this.numGlyphs; ++i)
-                                this.glyphNameIndex.Add(r.ReadUInt16());
-
-                            this.stringData = new List<string>();
-                            //while(r.GetPosition() < end)
-                            //    this.stringData.Add(r.ReadPascalString());
-
-                            //for(int i = 0; i < )
-                        }
-                        else if (this.majorVersion == 2 && this.minorVersion == 5)
-                        {
-                            r.ReadInt(out this.numGlyphs);
-
-                            this.offset = new List<byte>();
-                            for(int i = 0; i < this.numGlyphs; ++i)
-                                this.offset.Add(r.ReadUInt8());
-                        }
-                        else if (this.majorVersion == 3 && this.minorVersion == 0)
-                        {} // Do nothing
-                    }
-                }
+                //for(int i = 0; i < )
             }
+            else if (this.majorVersion == 2 && this.minorVersion == 5)
+            {
+                r.ReadInt(out this.numGlyphs);
+
+                this.offset = new List<byte>();
+                for(int i = 0; i < this.numGlyphs; ++i)
+                    this.offset.Add(r.ReadUInt8());
+            }
+            else if (this.majorVersion == 3 && this.minorVersion == 0)
+            {} // Do nothing
         }
     }
 }

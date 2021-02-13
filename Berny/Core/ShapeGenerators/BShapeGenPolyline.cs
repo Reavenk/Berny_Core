@@ -24,112 +24,109 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    /// <summary>
+    /// Implements a procedural shape generator for the SVG polyline shape.
+    /// 
+    // https://www.w3schools.com/graphics/svg_polyline.asp
+    /// </summary>
+    public class BShapeGenPolyline : BShapeGen
     {
+        public override string ShapeType => "polyline";
+
         /// <summary>
-        /// Implements a procedural shape generator for the SVG polyline shape.
-        /// 
-        // https://www.w3schools.com/graphics/svg_polyline.asp
+        /// The ordered points of the line segments.
         /// </summary>
-        public class BShapeGenPolyline : BShapeGen
+        public List<Vector2> polyPoints = new List<Vector2>();
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="shape">The shape to attach to.</param>
+        /// <param name="points">The ordered point of the shape.</param>
+        public BShapeGenPolyline(BShape shape, params Vector2 [] points)
+            : base(shape)
+        { 
+            this.polyPoints = new List<Vector2>(points);
+        }
+
+        /// <summary>
+        /// The number of points.
+        /// </summary>
+        /// <returns>The number of points.</returns>
+        public int PointCt()
         {
-            public override string ShapeType => "polyline";
+            return this.polyPoints.Count;
+        }
 
-            /// <summary>
-            /// The ordered points of the line segments.
-            /// </summary>
-            public List<Vector2> polyPoints = new List<Vector2>();
+        /// <summary>
+        /// Adds an additional point to the end of the line strip.
+        /// </summary>
+        /// <param name="v2">The point to add.</param>
+        /// <returns>The index of the point added.</returns>
+        public int AddPoint(Vector2 v2)
+        {
+            int idx = this.polyPoints.Count;
+            this.polyPoints.Add(v2);
+            this.FlagDirty();
+            return idx;
+        }
 
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="shape">The shape to attach to.</param>
-            /// <param name="points">The ordered point of the shape.</param>
-            public BShapeGenPolyline(BShape shape, params Vector2 [] points)
-                : base(shape)
+        /// <summary>
+        /// Gets a point at a specified index.
+        /// </summary>
+        /// <param name="idx">The index of the point to retrieve.</param>
+        /// <returns>The point at the specified index.</returns>
+        public Vector2 GetPoint(int idx)
+        {
+            return this.polyPoints[idx];
+        }
+
+        public override void Reconstruct()
+        {
+            this.shape.Clear();
+
+            BLoop bl = this.shape.AddLoop();
+
+            BNode lastNode = null;
+            foreach(Vector2 v2 in this.polyPoints)
             { 
-                this.polyPoints = new List<Vector2>(points);
-            }
+                BNode bn = new BNode(bl,v2);
+                bl.nodes.Add(bn);
 
-            /// <summary>
-            /// The number of points.
-            /// </summary>
-            /// <returns>The number of points.</returns>
-            public int PointCt()
-            {
-                return this.polyPoints.Count;
-            }
-
-            /// <summary>
-            /// Adds an additional point to the end of the line strip.
-            /// </summary>
-            /// <param name="v2">The point to add.</param>
-            /// <returns>The index of the point added.</returns>
-            public int AddPoint(Vector2 v2)
-            {
-                int idx = this.polyPoints.Count;
-                this.polyPoints.Add(v2);
-                this.FlagDirty();
-                return idx;
-            }
-
-            /// <summary>
-            /// Gets a point at a specified index.
-            /// </summary>
-            /// <param name="idx">The index of the point to retrieve.</param>
-            /// <returns>The point at the specified index.</returns>
-            public Vector2 GetPoint(int idx)
-            {
-                return this.polyPoints[idx];
-            }
-
-            public override void Reconstruct()
-            {
-                this.shape.Clear();
-
-                BLoop bl = this.shape.AddLoop();
-
-                BNode lastNode = null;
-                foreach(Vector2 v2 in this.polyPoints)
+                if(lastNode != null)
                 { 
-                    BNode bn = new BNode(bl,v2);
-                    bl.nodes.Add(bn);
-
-                    if(lastNode != null)
-                    { 
-                        lastNode.next = bn;
-                        bn.prev = lastNode;
-                    }
-
-                    lastNode = bn;
+                    lastNode.next = bn;
+                    bn.prev = lastNode;
                 }
 
-                this.FlagDirty();
+                lastNode = bn;
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
-            {
-                System.Xml.XmlAttribute attrPoints = shapeEle.GetAttributeNode("points");
+            this.FlagDirty();
+        }
 
-                if(attrPoints == null)
-                    return false;
+        public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            System.Xml.XmlAttribute attrPoints = shapeEle.GetAttributeNode("points");
 
-                string val = attrPoints.Value;
-                this.polyPoints = SVGSerializer.SplitPointsString(val, invertY);
+            if(attrPoints == null)
+                return false;
 
-                return true;
-            }
+            string val = attrPoints.Value;
+            this.polyPoints = SVGSerializer.SplitPointsString(val, invertY);
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
-            {
-                shapeEle.SetAttributeNode(
-                    "points", 
-                    SVGSerializer.PointsToPointsString(this.polyPoints, invertY));
+            return true;
+        }
 
-                return true;
-            }
+        public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            shapeEle.SetAttributeNode(
+                "points", 
+                SVGSerializer.PointsToPointsString(this.polyPoints, invertY));
+
+            return true;
         }
     }
 }

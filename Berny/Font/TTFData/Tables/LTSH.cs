@@ -24,44 +24,35 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// LTSH - Linear Threshold
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/ltsh
+    /// 
+    /// The LTSH table relates to OpenType™ fonts containing TrueType outlines. There are
+    /// noticeable improvements to fonts on the screen when instructions are carefully 
+    /// applied to the sidebearings. The gain in readability is offset by the necessity 
+    /// for the OS to grid fit the glyphs in order to find the actual advance width for 
+    /// the glyphs (since instructions may be moving the sidebearing points). The TrueType 
+    /// outline format already has two mechanisms to side step the speed issues: the 'hdmx' 
+    /// table, where precomputed advance widths may be saved for selected ppem sizes, and 
+    /// the VDMX table, where precomputed vertical advance widths may be saved for selected 
+    /// ppem sizes. The LTSH table (Linear ThreSHold) is a second, complementary method.
+    /// </summary>
+    public struct LTSH
     {
-        namespace TTF
-        {
-            namespace Table
-            {
-                /// <summary>
-                /// LTSH - Linear Threshold
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/ltsh
-                /// 
-                /// The LTSH table relates to OpenType™ fonts containing TrueType outlines. There are
-                /// noticeable improvements to fonts on the screen when instructions are carefully 
-                /// applied to the sidebearings. The gain in readability is offset by the necessity 
-                /// for the OS to grid fit the glyphs in order to find the actual advance width for 
-                /// the glyphs (since instructions may be moving the sidebearing points). The TrueType 
-                /// outline format already has two mechanisms to side step the speed issues: the 'hdmx' 
-                /// table, where precomputed advance widths may be saved for selected ppem sizes, and 
-                /// the VDMX table, where precomputed vertical advance widths may be saved for selected 
-                /// ppem sizes. The LTSH table (Linear ThreSHold) is a second, complementary method.
-                /// </summary>
-                public struct LTSH
-                {
-                    public const string TagName = "LTSH";
+        public const string TagName = "LTSH";
 
-                    public ushort version;          // Version number (starts at 0).
-                    public ushort numGlyphs;        // Number of glyphs (from “numGlyphs” in 'maxp' table).
-                    public byte [] yPels;           // The vertical pel height at which the glyph can be assumed to scale linearly. On a per glyph basis.
+        public ushort version;          // Version number (starts at 0).
+        public ushort numGlyphs;        // Number of glyphs (from “numGlyphs” in 'maxp' table).
+        public byte [] yPels;           // The vertical pel height at which the glyph can be assumed to scale linearly. On a per glyph basis.
 
-                    public void Read(TTFReader r)
-                    { 
-                        r.ReadInt(out this.version);
-                        r.ReadInt(out this.numGlyphs);
-                        this.yPels = r.ReadBytes(this.numGlyphs);
-                    }
-                }
-            }
+        public void Read(TTFReader r)
+        { 
+            r.ReadInt(out this.version);
+            r.ReadInt(out this.numGlyphs);
+            this.yPels = r.ReadBytes(this.numGlyphs);
         }
     }
 }

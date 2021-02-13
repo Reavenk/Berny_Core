@@ -24,70 +24,60 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// vmtx — Vertical Metrics Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/vmtx
+    /// 
+    /// The vertical metrics table allows you to specify the vertical spacing for each 
+    /// glyph in a vertical font. This table consists of either one or two arrays that 
+    /// contain metric information (the advance heights and top sidebearings) for the 
+    /// vertical layout of each of the glyphs in the font. The vertical metrics coordinate 
+    /// system is shown below.
+    /// </summary>
+    public struct vmtx
     {
-        namespace TTF
+        // This is basically going to be like hmtx, except we swap the word
+        // "horizontal" with "vertical"
+
+        /// <summary>
+        /// The format of an entry in the vertical metrics array.
+        /// </summary>
+        public struct longVerMetric
         {
-            namespace Table
+            public ushort advanceHeight;    // The advance height of the glyph.Unsigned integer in FUnits
+            public ushort topSideBearing;   // The top sidebearing of the glyph. Signed integer in FUnits.
+        }
+
+        public const string TagName = "vmtx";
+
+        /// <summary>
+        /// In monospaced fonts, such as Courier or Kanji, all glyphs have the same 
+        /// advance height. If the font is monospaced, only one entry need be in the 
+        /// first array, but that one entry is required.
+        /// </summary>
+        public List<longVerMetric> vMetrics; 
+
+        public List<short> topSideBearings; // The top sidebearing of the glyph. Signed integer in FUnits.
+
+        public void Read(TTFReader r, int numberofVMetrics, int numGlyphs)
+        {
+
+            this.vMetrics = new List<longVerMetric>();
+            for (int i = 0; i < numberofVMetrics; ++i)
             {
-                /// <summary>
-                /// vmtx — Vertical Metrics Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/vmtx
-                /// 
-                /// The vertical metrics table allows you to specify the vertical spacing for each 
-                /// glyph in a vertical font. This table consists of either one or two arrays that 
-                /// contain metric information (the advance heights and top sidebearings) for the 
-                /// vertical layout of each of the glyphs in the font. The vertical metrics coordinate 
-                /// system is shown below.
-                /// </summary>
-                public struct vmtx
-                {
-                    // This is basically going to be like hmtx, except we swap the word
-                    // "horizontal" with "vertical"
-
-                    /// <summary>
-                    /// The format of an entry in the vertical metrics array.
-                    /// </summary>
-                    public struct longVerMetric
-                    {
-                        public ushort advanceHeight;    // The advance height of the glyph.Unsigned integer in FUnits
-                        public ushort topSideBearing;   // The top sidebearing of the glyph. Signed integer in FUnits.
-                    }
-
-                    public const string TagName = "vmtx";
-
-                    /// <summary>
-                    /// In monospaced fonts, such as Courier or Kanji, all glyphs have the same 
-                    /// advance height. If the font is monospaced, only one entry need be in the 
-                    /// first array, but that one entry is required.
-                    /// </summary>
-                    public List<longVerMetric> vMetrics; 
-
-                    public List<short> topSideBearings; // The top sidebearing of the glyph. Signed integer in FUnits.
-
-                    public void Read(TTFReader r, int numberofVMetrics, int numGlyphs)
-                    {
-
-                        this.vMetrics = new List<longVerMetric>();
-                        for (int i = 0; i < numberofVMetrics; ++i)
-                        {
-                            longVerMetric lvm = new longVerMetric();
-                            r.ReadInt(out lvm.advanceHeight);
-                            r.ReadInt(out lvm.topSideBearing);
-                            this.vMetrics.Add(lvm);
-                        }
-
-                        this.topSideBearings = new List<short>();
-                        // We could have them pass in the numGlyphs-numberOfHMetrics instead of 
-                        // calculating this ourselves, but I think this helps add rigor.
-                        for (int i = 0; i < numGlyphs - numberofVMetrics; ++i)
-                            this.topSideBearings.Add(r.ReadInt16());
-                    }
-                }
+                longVerMetric lvm = new longVerMetric();
+                r.ReadInt(out lvm.advanceHeight);
+                r.ReadInt(out lvm.topSideBearing);
+                this.vMetrics.Add(lvm);
             }
+
+            this.topSideBearings = new List<short>();
+            // We could have them pass in the numGlyphs-numberOfHMetrics instead of 
+            // calculating this ourselves, but I think this helps add rigor.
+            for (int i = 0; i < numGlyphs - numberofVMetrics; ++i)
+                this.topSideBearings.Add(r.ReadInt16());
         }
     }
 }
-

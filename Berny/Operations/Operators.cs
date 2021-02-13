@@ -24,108 +24,105 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
-    {
-        public static class Operators
+    public static class Operators
+    { 
+        public static List<BShape> CreateText(Font.Typeface typeface, Vector2 startPos, float scale, Layer layer, string str)
         { 
-            public static List<BShape> CreateText(Font.Typeface typeface, Vector2 startPos, float scale, Layer layer, string str)
-            { 
-                List<BShape> lst = new List<BShape>();
+            List<BShape> lst = new List<BShape>();
 
-                return lst;
-            }
+            return lst;
+        }
 
-            public static void Edgify(BLoop loop, float pushOut, float pullIn = 0.0f)
+        public static void Edgify(BLoop loop, float pushOut, float pullIn = 0.0f)
+        {
+            if(pushOut == 0.0f && pullIn == 0.0f)
+                return;
+
+            List<BNode> islands = loop.GetIslands();
+
+            foreach (BNode bisl in islands)
             {
-                if(pushOut == 0.0f && pullIn == 0.0f)
-                    return;
+                // This will probably just give us bisl back, but it that's the case, then it should
+                // be minimal overhead - just to be safe though, and to see what kind of connectivity we're dealing with.
+                BNode.EndpointQuery eq = bisl.GetPathLeftmost();
 
-                List<BNode> islands = loop.GetIslands();
-
-                foreach (BNode bisl in islands)
+                List<BNode> origs = new List<BNode>();
+                List<BNode> copies = new List<BNode>();
+                List<InflationCache> inflations = new List<InflationCache>();
+                foreach (BNode it in eq.Enumerate())
                 {
-                    // This will probably just give us bisl back, but it that's the case, then it should
-                    // be minimal overhead - just to be safe though, and to see what kind of connectivity we're dealing with.
-                    BNode.EndpointQuery eq = bisl.GetPathLeftmost();
+                    origs.Add(it);
 
-                    List<BNode> origs = new List<BNode>();
-                    List<BNode> copies = new List<BNode>();
-                    List<InflationCache> inflations = new List<InflationCache>();
-                    foreach (BNode it in eq.Enumerate())
-                    {
-                        origs.Add(it);
+                    BNode cpy = new BNode(loop, it, false, true);
+                    copies.Add(cpy);
 
-                        BNode cpy = new BNode(loop, it, false, true);
-                        copies.Add(cpy);
+                    loop.nodes.Add(cpy);
 
-                        loop.nodes.Add(cpy);
+                    InflationCache ic = new InflationCache();
+                    it.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
+                    inflations.Add(ic);
+                }
 
-                        InflationCache ic = new InflationCache();
-                        it.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
-                        inflations.Add(ic);
-                    }
+                // Stitch the new chain - it should have a reverse winding.
+                //
+                // The loop is a little backwards, but basically we sub instead of add to
+                // treat the prev item in the array like the next in the chain.
+                for (int i = 1; i < copies.Count; ++i)
+                {
+                    copies[i].next = copies[i - 1];
+                    copies[i - 1].prev = copies[i];
+                }
 
-                    // Stitch the new chain - it should have a reverse winding.
+                int lastIdx = copies.Count - 1;
+                if (eq.result == BNode.EndpointResult.Cyclical)
+                {
+                    // If it was cyclical, it should close in on itself and it should
+                    // never touch the original outline;
                     //
-                    // The loop is a little backwards, but basically we sub instead of add to
-                    // treat the prev item in the array like the next in the chain.
-                    for (int i = 1; i < copies.Count; ++i)
+                    // Remember we're treating copies in reverse.
+                    copies[lastIdx].prev = copies[0];
+                    copies[0].next = copies[lastIdx];
+                }
+                else
+                {
+                    // Or else the opposite ends connect to each other.
+                    // Remember we're treating copies in reverse.
+                    origs[0].prev = copies[0];
+                    copies[0].next = origs[0];
+
+                    origs[lastIdx].next = copies[lastIdx];
+                    copies[lastIdx].prev = origs[lastIdx];
+
+                    origs[0].UseTanIn = false;
+                    origs[lastIdx].UseTanOut = false;
+                    copies[0].UseTanOut = false;
+                    copies[lastIdx].UseTanIn = false;
+                }
+
+                if(pushOut != 0.0f)
+                {
+                    // Now that we have copies and connectivity set up, it's time
+                    // to apply the thickening
+                    for (int i = 0; i < origs.Count; ++i)
                     {
-                        copies[i].next = copies[i - 1];
-                        copies[i - 1].prev = copies[i];
+                        // Push out the original
+                        origs[i].Pos += pushOut * inflations[i].selfInf;
+                        origs[i].TanIn += pushOut * (inflations[i].inInf - inflations[i].selfInf);
+                        origs[i].TanOut += pushOut * (inflations[i].outInf - inflations[i].selfInf);
+
                     }
+                }
 
-                    int lastIdx = copies.Count - 1;
-                    if (eq.result == BNode.EndpointResult.Cyclical)
+                if(pullIn != 0.0f)
+                {
+                    // We can optionally pull in the copy
+                    for (int i = 0; i < copies.Count; ++i)
                     {
-                        // If it was cyclical, it should close in on itself and it should
-                        // never touch the original outline;
-                        //
-                        // Remember we're treating copies in reverse.
-                        copies[lastIdx].prev = copies[0];
-                        copies[0].next = copies[lastIdx];
-                    }
-                    else
-                    {
-                        // Or else the opposite ends connect to each other.
-                        // Remember we're treating copies in reverse.
-                        origs[0].prev = copies[0];
-                        copies[0].next = origs[0];
-
-                        origs[lastIdx].next = copies[lastIdx];
-                        copies[lastIdx].prev = origs[lastIdx];
-
-                        origs[0].UseTanIn = false;
-                        origs[lastIdx].UseTanOut = false;
-                        copies[0].UseTanOut = false;
-                        copies[lastIdx].UseTanIn = false;
-                    }
-
-                    if(pushOut != 0.0f)
-                    {
-                        // Now that we have copies and connectivity set up, it's time
-                        // to apply the thickening
-                        for (int i = 0; i < origs.Count; ++i)
-                        {
-                            // Push out the original
-                            origs[i].Pos += pushOut * inflations[i].selfInf;
-                            origs[i].TanIn += pushOut * (inflations[i].inInf - inflations[i].selfInf);
-                            origs[i].TanOut += pushOut * (inflations[i].outInf - inflations[i].selfInf);
-
-                        }
-                    }
-
-                    if(pullIn != 0.0f)
-                    {
-                        // We can optionally pull in the copy
-                        for (int i = 0; i < copies.Count; ++i)
-                        {
-                            copies[i].Pos += pullIn * inflations[i].selfInf;
-                            copies[i].TanIn += pullIn * (inflations[i].inInf - inflations[i].selfInf);
-                            copies[i].TanOut += pullIn * (inflations[i].outInf - inflations[i].selfInf);
-                        }
+                        copies[i].Pos += pullIn * inflations[i].selfInf;
+                        copies[i].TanIn += pullIn * (inflations[i].inInf - inflations[i].selfInf);
+                        copies[i].TanOut += pullIn * (inflations[i].outInf - inflations[i].selfInf);
                     }
                 }
             }

@@ -24,29 +24,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// Each RegionAxisCoordinates record provides coordinate values for a region along a single axis.
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// </summary>
+    public struct RegionAxisCoordinates
     {
-        namespace TTF
-        {
-            /// <summary>
-            /// Each RegionAxisCoordinates record provides coordinate values for a region along a single axis.
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// </summary>
-            public struct RegionAxisCoordinates
-            {
-                public float startCoord;    // The region start coordinate value for the current axis.
-                public float peakCoord;     // The region peak coordinate value for the current axis.
-                public float endCoord;      // The region end coordinate value for the current axis.
+        public float startCoord;    // The region start coordinate value for the current axis.
+        public float peakCoord;     // The region peak coordinate value for the current axis.
+        public float endCoord;      // The region end coordinate value for the current axis.
 
-                public void Read(TTFReader r)
-                {
-                    this.startCoord = r.ReadFDot14();
-                    this.peakCoord = r.ReadFDot14();
-                    this.endCoord = r.ReadFDot14();
-                }
-            }
+        public void Read(TTFReader r)
+        {
+            this.startCoord = r.ReadFDot14();
+            this.peakCoord = r.ReadFDot14();
+            this.endCoord = r.ReadFDot14();
         }
     }
 }

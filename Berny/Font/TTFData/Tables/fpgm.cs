@@ -24,34 +24,25 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// fpgm — Font Program
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/fpgm
+    /// 
+    /// This table is similar to the CVT Program, except that it is only run once, when the font is 
+    /// first used. It is used only for FDEFs and IDEFs. Thus the CVT Program need not contain function 
+    /// definitions. However, the CVT Program may redefine existing FDEFs or IDEFs.
+    /// </summary>
+    public struct fpgm
     {
-        namespace TTF
-        {
-            namespace Table
-            {
-                /// <summary>
-                /// fpgm — Font Program
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/fpgm
-                /// 
-                /// This table is similar to the CVT Program, except that it is only run once, when the font is 
-                /// first used. It is used only for FDEFs and IDEFs. Thus the CVT Program need not contain function 
-                /// definitions. However, the CVT Program may redefine existing FDEFs or IDEFs.
-                /// </summary>
-                public struct fpgm
-                {
-                    public const string TagName = "fpgm";
+        public const string TagName = "fpgm";
 
-                    public byte [] instructions;
+        public byte [] instructions;
 
-                    public void Read(TTFReader r, int tableSize)
-                    { 
-                        this.instructions = r.ReadBytes(tableSize);
-                    }
-                }
-            }
+        public void Read(TTFReader r, int tableSize)
+        { 
+            this.instructions = r.ReadBytes(tableSize);
         }
     }
 }

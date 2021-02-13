@@ -20,51 +20,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// TupleVariationHeader
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// 
+    /// The GlyphVariationData and 'cvar' header formats include an array of tuple variation 
+    /// headers. The TupleVariationHeader format is as follows.
+    /// </summary>
+    public struct TupleVariationHeader
     {
-        namespace TTF
+        // The tupleIndex field contains a packed value that includes flags and an
+        // index into a shared tuple records array(not used in the 'cvar' table). 
+        // The format of the tupleIndex field is as follows.
+        public const ushort EMBEDDED_PEAK_TUPLE = 0x8000;
+        public const ushort INTERMEDIATE_REGION = 0x4000;
+        public const ushort PRIVATE_POINT_NUMBERS = 0x2000;
+        public const ushort Reserved = 0x1000;
+        public const ushort TUPLE_INDEX_MASK = 0xFFFF;
+
+        public ushort variationDataSize;        // The size in bytes of the serialized data for this tuple variation table.
+        public ushort tupleIndex;               // A packed field. The high 4 bits are flags (see below). The low 12 bits are an index into a shared tuple records array.
+        public Tuple peakTuple;                 // Peak tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        public Tuple intermediateStartTuple;    // Intermediate start tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        public Tuple intermediateEndTuple;      // Intermediate end tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+
+        public void Read(TTFReader r, int axisCount)
         {
-            /// <summary>
-            /// TupleVariationHeader
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// 
-            /// The GlyphVariationData and 'cvar' header formats include an array of tuple variation 
-            /// headers. The TupleVariationHeader format is as follows.
-            /// </summary>
-            public struct TupleVariationHeader
-            {
-                // The tupleIndex field contains a packed value that includes flags and an
-                // index into a shared tuple records array(not used in the 'cvar' table). 
-                // The format of the tupleIndex field is as follows.
-                public const ushort EMBEDDED_PEAK_TUPLE = 0x8000;
-                public const ushort INTERMEDIATE_REGION = 0x4000;
-                public const ushort PRIVATE_POINT_NUMBERS = 0x2000;
-                public const ushort Reserved = 0x1000;
-                public const ushort TUPLE_INDEX_MASK = 0xFFFF;
+            r.ReadInt(out this.variationDataSize);
+            r.ReadInt(out this.tupleIndex);
 
-                public ushort variationDataSize;        // The size in bytes of the serialized data for this tuple variation table.
-                public ushort tupleIndex;               // A packed field. The high 4 bits are flags (see below). The low 12 bits are an index into a shared tuple records array.
-                public Tuple peakTuple;                 // Peak tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
-                public Tuple intermediateStartTuple;    // Intermediate start tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
-                public Tuple intermediateEndTuple;      // Intermediate end tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+            this.peakTuple = new Tuple();
+            this.peakTuple.Read(r, axisCount);
 
-                public void Read(TTFReader r, int axisCount)
-                {
-                    r.ReadInt(out this.variationDataSize);
-                    r.ReadInt(out this.tupleIndex);
+            this.intermediateStartTuple = new Tuple();
+            this.intermediateStartTuple.Read(r, axisCount);
 
-                    this.peakTuple = new Tuple();
-                    this.peakTuple.Read(r, axisCount);
-
-                    this.intermediateStartTuple = new Tuple();
-                    this.intermediateStartTuple.Read(r, axisCount);
-
-                    this.intermediateEndTuple = new Tuple();
-                    this.intermediateEndTuple.Read(r, axisCount);
-                }
-            }
+            this.intermediateEndTuple = new Tuple();
+            this.intermediateEndTuple.Read(r, axisCount);
         }
     }
 }

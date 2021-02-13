@@ -24,164 +24,161 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    /// <summary>
+    /// Implements a procedural shape generator for the SVG line shape.
+    ///         
+    /// https://www.w3schools.com/graphics/svg_polygon.asp
+    /// </summary>
+    public class BShapeGenPolygon : BShapeGen
     {
         /// <summary>
-        /// Implements a procedural shape generator for the SVG line shape.
-        ///         
-        /// https://www.w3schools.com/graphics/svg_polygon.asp
+        /// The rule for how to fill the polygon if there are intersections.
         /// </summary>
-        public class BShapeGenPolygon : BShapeGen
+        public enum FillRule
+        { 
+            /// <summary>
+            /// Fill anywhere inside the shape.
+            /// </summary>
+            NonZero,
+
+            /// <summary>
+            /// Fill in odd numbered overlaps and leave even numbered overlaps as hollow.
+            /// </summary>
+            EvenOdd
+        }
+
+        /// <summary>
+        /// The polygon's fill rule.
+        /// </summary>
+        FillRule fillRule = FillRule.NonZero;
+
+        public override string ShapeType => "polygon";
+
+        /// <summary>
+        /// Property for the polygon's fill rule.
+        /// </summary>
+        public FillRule FillingRule
+        { 
+            get => this.fillRule;
+            set { this.fillRule = value; this.FlagDirty(); }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        List<Vector2> points = new List<Vector2>();
+
+        public BShapeGenPolygon(BShape shape, params Vector2 [] points)
+            : base(shape)
+        { 
+            this.points = new List<Vector2>(points);
+        }
+
+        /// <summary>
+        /// Get the number of points in the polygon.
+        /// </summary>
+        /// <returns>The number of points.</returns>
+        public int PointCt()
+        { 
+            return this.points.Count;
+        }
+
+        /// <summary>
+        /// Adds a point at the end of the polygon list.
+        /// </summary>
+        /// <param name="v2">The point to add.</param>
+        /// <returns>The added point's index.</returns>
+        public int AddPoint(Vector2 v2)
+        { 
+            int idx = this.points.Count;
+            this.points.Add(v2);
+            this.FlagDirty();
+            return idx;
+        }
+
+        /// <summary>
+        /// Gets a point from the polygon based on a specified index.
+        /// </summary>
+        /// <param name="idx">The index to retrieve.</param>
+        /// <returns>The point at the specified index.</returns>
+        public Vector2 GetPoint(int idx)
+        { 
+            return this.points[idx];
+        }
+
+        public override void Reconstruct()
         {
-            /// <summary>
-            /// The rule for how to fill the polygon if there are intersections.
-            /// </summary>
-            public enum FillRule
-            { 
-                /// <summary>
-                /// Fill anywhere inside the shape.
-                /// </summary>
-                NonZero,
+            this.shape.Clear();
 
-                /// <summary>
-                /// Fill in odd numbered overlaps and leave even numbered overlaps as hollow.
-                /// </summary>
-                EvenOdd
-            }
+            BLoop bl = 
+                new BLoop(
+                    this.shape, 
+                    true,
+                    this.points.ToArray());
 
-            /// <summary>
-            /// The polygon's fill rule.
-            /// </summary>
-            FillRule fillRule = FillRule.NonZero;
-
-            public override string ShapeType => "polygon";
-
-            /// <summary>
-            /// Property for the polygon's fill rule.
-            /// </summary>
-            public FillRule FillingRule
-            { 
-                get => this.fillRule;
-                set { this.fillRule = value; this.FlagDirty(); }
-            }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            List<Vector2> points = new List<Vector2>();
-
-            public BShapeGenPolygon(BShape shape, params Vector2 [] points)
-                : base(shape)
-            { 
-                this.points = new List<Vector2>(points);
-            }
-
-            /// <summary>
-            /// Get the number of points in the polygon.
-            /// </summary>
-            /// <returns>The number of points.</returns>
-            public int PointCt()
-            { 
-                return this.points.Count;
-            }
-
-            /// <summary>
-            /// Adds a point at the end of the polygon list.
-            /// </summary>
-            /// <param name="v2">The point to add.</param>
-            /// <returns>The added point's index.</returns>
-            public int AddPoint(Vector2 v2)
-            { 
-                int idx = this.points.Count;
-                this.points.Add(v2);
-                this.FlagDirty();
-                return idx;
-            }
-
-            /// <summary>
-            /// Gets a point from the polygon based on a specified index.
-            /// </summary>
-            /// <param name="idx">The index to retrieve.</param>
-            /// <returns>The point at the specified index.</returns>
-            public Vector2 GetPoint(int idx)
-            { 
-                return this.points[idx];
-            }
-
-            public override void Reconstruct()
+            // There should only be 1 island, but let's extract it he proper way.
+            List<BNode> islands = bl.GetIslands( IslandTypeRequest.Closed);
+            foreach(BNode isl in islands)
             {
-                this.shape.Clear();
-
-                BLoop bl = 
-                    new BLoop(
-                        this.shape, 
-                        true,
-                        this.points.ToArray());
-
-                // There should only be 1 island, but let's extract it he proper way.
-                List<BNode> islands = bl.GetIslands( IslandTypeRequest.Closed);
-                foreach(BNode isl in islands)
-                {
                     
-                    //List<BNode> islandSegs = new List<BNode>(isl.Travel());
-                    //List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
-                    ////
-                    ////// Self collision
-                    //Boolean.GetLoopCollisionInfo(islandSegs, islandSegs, delCollisions);
-                    //
-                    //// TODO: Based on the fill rule - do something I haven't decided/figured-out
-                    //// yet.
-                    //// (wleu 12/21/2020)
-                    //if (this.fillRule == FillRule.NonZero)
-                    //{ 
-                    //}
-                    //else if(this.fillRule == FillRule.EvenOdd)
-                    //{ 
-                    //}
-                }
-
-                this.FlagDirty();
+                //List<BNode> islandSegs = new List<BNode>(isl.Travel());
+                //List<Utils.BezierSubdivSample> delCollisions = new List<Utils.BezierSubdivSample>();
+                ////
+                ////// Self collision
+                //Boolean.GetLoopCollisionInfo(islandSegs, islandSegs, delCollisions);
+                //
+                //// TODO: Based on the fill rule - do something I haven't decided/figured-out
+                //// yet.
+                //// (wleu 12/21/2020)
+                //if (this.fillRule == FillRule.NonZero)
+                //{ 
+                //}
+                //else if(this.fillRule == FillRule.EvenOdd)
+                //{ 
+                //}
             }
 
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+            this.FlagDirty();
+        }
+
+        public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            System.Xml.XmlAttribute attribPoints = shapeEle.GetAttributeNode("points");
+            if(attribPoints != null && string.IsNullOrEmpty(attribPoints.Value) == false)
+                this.points = SVGSerializer.SplitPointsString(attribPoints.Value, invertY);
+
+            System.Xml.XmlAttribute attribFillRule = shapeEle.GetAttributeNode("fill-rule");
+            if(attribFillRule != null && string.IsNullOrEmpty(attribFillRule.Value) == false)
+            { 
+                string fillRule = attribFillRule.Value.Trim();
+
+                if(fillRule == "evenodd")
+                    this.fillRule = FillRule.EvenOdd;
+                else if(fillRule == "nonzero")
+                    this.fillRule = FillRule.NonZero;
+            }
+
+            return true;
+        }
+
+        public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            shapeEle.SetAttribute("points", SVGSerializer.PointsToPointsString(this.points, invertY));
+
+            switch(this.fillRule)
             {
-                System.Xml.XmlAttribute attribPoints = shapeEle.GetAttributeNode("points");
-                if(attribPoints != null && string.IsNullOrEmpty(attribPoints.Value) == false)
-                    this.points = SVGSerializer.SplitPointsString(attribPoints.Value, invertY);
+                case FillRule.EvenOdd:
+                    shapeEle.SetAttribute("fill-rule", "evenodd");
+                    break;
 
-                System.Xml.XmlAttribute attribFillRule = shapeEle.GetAttributeNode("fill-rule");
-                if(attribFillRule != null && string.IsNullOrEmpty(attribFillRule.Value) == false)
-                { 
-                    string fillRule = attribFillRule.Value.Trim();
-
-                    if(fillRule == "evenodd")
-                        this.fillRule = FillRule.EvenOdd;
-                    else if(fillRule == "nonzero")
-                        this.fillRule = FillRule.NonZero;
-                }
-
-                return true;
+                case FillRule.NonZero:
+                    shapeEle.SetAttribute("fill-rule", "nonzero");
+                    break;
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
-            {
-                shapeEle.SetAttribute("points", SVGSerializer.PointsToPointsString(this.points, invertY));
-
-                switch(this.fillRule)
-                {
-                    case FillRule.EvenOdd:
-                        shapeEle.SetAttribute("fill-rule", "evenodd");
-                        break;
-
-                    case FillRule.NonZero:
-                        shapeEle.SetAttribute("fill-rule", "nonzero");
-                        break;
-                }
-
-                return true;
-            }
+            return true;
         }
     }
 }

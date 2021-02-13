@@ -23,81 +23,78 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    public class Vector2Repo
     {
-        public class Vector2Repo
+        List<Vector2> vectors = new List<Vector2>();
+        Dictionary<Vector2, int> lookup = new Dictionary<Vector2, int>();
+
+        public bool HasVector(Vector2 v)
+        { 
+            return lookup.ContainsKey(v);
+        }
+
+        public int GetVectorID(Vector3 v)
+        { 
+            int ret;
+            if(lookup.TryGetValue(v, out ret) == true)
+                return ret;
+
+            int idx = lookup.Count;
+            vectors.Add(v);
+            lookup.Add(v, idx);
+
+            return idx;
+        }
+
+        public Vector2 GetVector(int idx)
+        { 
+            return this.vectors[idx];
+        }
+
+        public Vector2 [] GetVector2Array()
+        { 
+            return this.vectors.ToArray();
+        }
+
+        public Vector3 [] GetVector3Array()
+        { 
+            Vector3 [] ret = new Vector3 [this.vectors.Count];
+
+            int ct = this.vectors.Count;
+            for (int i = 0; i < ct; ++i)
+            {
+                ret[i] = this.vectors[i];
+            }
+
+            return ret;
+        }
+
+        public Vector3 [] GetVector3Array(float z)
         {
-            List<Vector2> vectors = new List<Vector2>();
-            Dictionary<Vector2, int> lookup = new Dictionary<Vector2, int>();
+            Vector3[] ret = new Vector3[this.vectors.Count];
 
-            public bool HasVector(Vector2 v)
-            { 
-                return lookup.ContainsKey(v);
-            }
-
-            public int GetVectorID(Vector3 v)
-            { 
-                int ret;
-                if(lookup.TryGetValue(v, out ret) == true)
-                    return ret;
-
-                int idx = lookup.Count;
-                vectors.Add(v);
-                lookup.Add(v, idx);
-
-                return idx;
-            }
-
-            public Vector2 GetVector(int idx)
-            { 
-                return this.vectors[idx];
-            }
-
-            public Vector2 [] GetVector2Array()
-            { 
-                return this.vectors.ToArray();
-            }
-
-            public Vector3 [] GetVector3Array()
-            { 
-                Vector3 [] ret = new Vector3 [this.vectors.Count];
-
-                int ct = this.vectors.Count;
-                for (int i = 0; i < ct; ++i)
-                {
-                    ret[i] = this.vectors[i];
-                }
-
-                return ret;
-            }
-
-            public Vector3 [] GetVector3Array(float z)
+            int ct = this.vectors.Count;
+            for (int i = 0; i < ct; ++i)
             {
-                Vector3[] ret = new Vector3[this.vectors.Count];
-
-                int ct = this.vectors.Count;
-                for (int i = 0; i < ct; ++i)
-                {
-                    ret[i] = 
-                        new Vector3(
-                            this.vectors[i].x,
-                            this.vectors[i].y,
-                            z);
-                }
-
-                return ret;
+                ret[i] = 
+                    new Vector3(
+                        this.vectors[i].x,
+                        this.vectors[i].y,
+                        z);
             }
 
-            public void Scale(float f)
-            {
-                this.lookup.Clear();
-                for(int i = 0; i < this.vectors.Count; ++i)
-                { 
-                    this.vectors[i] *= f;
-                    this.lookup.Add(this.vectors[i], i);
-                }
+            return ret;
+        }
+
+        public void Scale(float f)
+        {
+            this.lookup.Clear();
+            for(int i = 0; i < this.vectors.Count; ++i)
+            { 
+                this.vectors[i] *= f;
+                this.lookup.Add(this.vectors[i], i);
             }
         }
     }

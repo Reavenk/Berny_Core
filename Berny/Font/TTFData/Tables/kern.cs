@@ -24,102 +24,93 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// kern - Kerning
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/kern
+    /// 
+    /// The kerning table contains the values that control the inter-character spacing 
+    /// for the glyphs in a font. There is currently no system level support for kerning 
+    /// (other than returning the kern pairs and kern values). OpenType™ fonts containing 
+    /// CFF outlines are not supported by the 'kern' table and must use the GPOS OpenType
+    /// Layout table.
+    /// </summary>
+    public struct kern
     {
-        namespace TTF
+        public struct SubTable
         {
-            namespace Table
+            [System.Flags]
+            public enum Flags
             {
-                /// <summary>
-                /// kern - Kerning
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/kern
-                /// 
-                /// The kerning table contains the values that control the inter-character spacing 
-                /// for the glyphs in a font. There is currently no system level support for kerning 
-                /// (other than returning the kern pairs and kern values). OpenType™ fonts containing 
-                /// CFF outlines are not supported by the 'kern' table and must use the GPOS OpenType
-                /// Layout table.
-                /// </summary>
-                public struct kern
+                horizontal      = (1 << 0),
+                minimum         = (1 << 1),
+                crossstream     = (1 << 2),
+                overrideacc     = (1 << 3) // the reference calls this "override", but that's a C# keyword
+            }
+
+            public ushort version;
+            public ushort length;
+            public byte flags;
+            public byte format;
+
+            public void Read(TTFReader r)
+            {
+                r.ReadInt(out this.version);
+                r.ReadInt(out this.length);
+                r.ReadInt(out this.flags);
+                r.ReadInt(out this.format);
+            }
+        }
+
+        public struct Format0
+        {
+            public ushort nPairs;
+            public ushort searchRange;
+            public ushort entrySelector;
+            public ushort rangeShift;
+            public List<KerningPair> kerningPairs;
+
+            public void Read(TTFReader r)
+            {
+                r.ReadInt(out this.nPairs);
+                r.ReadInt(out this.searchRange);
+                r.ReadInt(out this.entrySelector);
+                r.ReadInt(out this.rangeShift);
+
+                this.kerningPairs = new List<KerningPair>();
+                for (int i = 0; i < this.nPairs; ++i)
                 {
-                    public struct SubTable
-                    {
-                        [System.Flags]
-                        public enum Flags
-                        {
-                            horizontal      = (1 << 0),
-                            minimum         = (1 << 1),
-                            crossstream     = (1 << 2),
-                            overrideacc     = (1 << 3) // the reference calls this "override", but that's a C# keyword
-                        }
-
-                        public ushort version;
-                        public ushort length;
-                        public byte flags;
-                        public byte format;
-
-                        public void Read(TTFReader r)
-                        {
-                            r.ReadInt(out this.version);
-                            r.ReadInt(out this.length);
-                            r.ReadInt(out this.flags);
-                            r.ReadInt(out this.format);
-                        }
-                    }
-
-                    public struct Format0
-                    {
-                        public ushort nPairs;
-                        public ushort searchRange;
-                        public ushort entrySelector;
-                        public ushort rangeShift;
-                        public List<KerningPair> kerningPairs;
-
-                        public void Read(TTFReader r)
-                        {
-                            r.ReadInt(out this.nPairs);
-                            r.ReadInt(out this.searchRange);
-                            r.ReadInt(out this.entrySelector);
-                            r.ReadInt(out this.rangeShift);
-
-                            this.kerningPairs = new List<KerningPair>();
-                            for (int i = 0; i < this.nPairs; ++i)
-                            {
-                                KerningPair kp = new KerningPair();
-                                kp.Read(r);
-                                this.kerningPairs.Add(kp);
-                            }
-                        }
-                    }
-
-                    public struct KerningPair
-                    {
-                        public ushort left;
-                        public ushort right;
-                        public short value;
-
-                        public void Read(TTFReader r)
-                        {
-                            r.ReadInt(out this.left);
-                            r.ReadInt(out this.right);
-                            r.ReadInt(out this.value);
-                        }
-                    }
-
-                    public const string TagName = "kern";
-
-                    public short version;
-                    public short nTables;
-
-                    public void Read(TTFReader r)
-                    { 
-                        r.ReadInt(out this.version);
-                        r.ReadInt(out this.nTables);
-                    }
+                    KerningPair kp = new KerningPair();
+                    kp.Read(r);
+                    this.kerningPairs.Add(kp);
                 }
             }
+        }
+
+        public struct KerningPair
+        {
+            public ushort left;
+            public ushort right;
+            public short value;
+
+            public void Read(TTFReader r)
+            {
+                r.ReadInt(out this.left);
+                r.ReadInt(out this.right);
+                r.ReadInt(out this.value);
+            }
+        }
+
+        public const string TagName = "kern";
+
+        public short version;
+        public short nTables;
+
+        public void Read(TTFReader r)
+        { 
+            r.ReadInt(out this.version);
+            r.ReadInt(out this.nTables);
         }
     }
 }

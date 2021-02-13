@@ -22,66 +22,63 @@
 
 using UnityEngine;
 
-namespace PxPre 
+namespace PxPre.Berny
 { 
-    namespace Berny
+    /// <summary>
+    /// A BNode curve sample segment.
+    /// 
+    /// While the BNode represents a path, it's the parametric path. The actual explicit data
+    /// of the path is represented by a linked list of BSample edges that are recreated 
+    /// every time a BNode is dirty. 
+    /// 
+    /// It is also the same region that ear clipping is perfomed
+    /// on for filling a closed island - although that is done with
+    /// the FillSegment class.
+    /// </summary>
+    public class BSample
     {
         /// <summary>
-        /// A BNode curve sample segment.
-        /// 
-        /// While the BNode represents a path, it's the parametric path. The actual explicit data
-        /// of the path is represented by a linked list of BSample edges that are recreated 
-        /// every time a BNode is dirty. 
-        /// 
-        /// It is also the same region that ear clipping is perfomed
-        /// on for filling a closed island - although that is done with
-        /// the FillSegment class.
+        /// The BNode the sample segment belongs to.
         /// </summary>
-        public class BSample
-        {
-            /// <summary>
-            /// The BNode the sample segment belongs to.
-            /// </summary>
-            public BNode parent;
+        public BNode parent;
 
-            /// <summary>
-            /// The next sample in the chain.
-            /// </summary>
-            public BSample next;
+        /// <summary>
+        /// The next sample in the chain.
+        /// </summary>
+        public BSample next;
 
-            /// <summary>
-            /// The previous sample in the chain.
-            /// </summary>
-            public BSample prev;
+        /// <summary>
+        /// The previous sample in the chain.
+        /// </summary>
+        public BSample prev;
 
-            /// <summary>
-            /// The evaluated position.
-            /// </summary>
-            public Vector2 pos;
+        /// <summary>
+        /// The evaluated position.
+        /// </summary>
+        public Vector2 pos;
 
-            // The lambda that created this point
-            public float lambda;
+        // The lambda that created this point
+        public float lambda;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-            int debugCounter;
+        int debugCounter;
 #endif
 
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="parent">The BNode being represented.</param>
-            /// <param name="pos">The sampled position.</param>
-            /// <param name="lambda">The t value being sampled.</param>
-            public BSample(BNode parent, Vector2 pos, float lambda)
-            { 
-                this.parent = parent;
-                this.pos = pos;
-                this.lambda = lambda;
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="parent">The BNode being represented.</param>
+        /// <param name="pos">The sampled position.</param>
+        /// <param name="lambda">The t value being sampled.</param>
+        public BSample(BNode parent, Vector2 pos, float lambda)
+        { 
+            this.parent = parent;
+            this.pos = pos;
+            this.lambda = lambda;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-                this.debugCounter = Utils.RegisterCounter();
+            this.debugCounter = Utils.RegisterCounter();
 #endif
-            }
         }
-    } 
-}
+    }
+} 

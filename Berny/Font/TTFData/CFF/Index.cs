@@ -24,31 +24,25 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.CFF
 {
-    namespace Berny
+    public struct INDEX
     {
-        namespace CFF
+        public ushort count;        // Number of objects stored in INDEX
+        public byte offSize;
+        public List<uint> offset;
+        public byte[] data;
+
+        public void Read(TTF.TTFReader r)
         {
-            public struct INDEX
-            {
-                public ushort count;        // Number of objects stored in INDEX
-                public byte offSize;
-                public List<uint> offset;
-                public byte[] data;
+            r.ReadInt(out this.count);
+            r.ReadInt(out this.offSize);
 
-                public void Read(TTF.TTFReader r)
-                {
-                    r.ReadInt(out this.count);
-                    r.ReadInt(out this.offSize);
+            this.offset = new List<uint>();
+            for (int i = 0; i < this.count + 1; ++i)
+                this.offset.Add(CFFFile.ReadOffset(r, this.offSize) - 1);
 
-                    this.offset = new List<uint>();
-                    for (int i = 0; i < this.count + 1; ++i)
-                        this.offset.Add(CFFFile.ReadOffset(r, this.offSize) - 1);
-
-                    this.data = r.ReadBytes((int)this.offset[this.offset.Count - 1]);
-                }
-            }
+            this.data = r.ReadBytes((int)this.offset[this.offset.Count - 1]);
         }
     }
 }

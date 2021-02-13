@@ -24,102 +24,96 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// An implementation of the TTFReader that pulls data from a file.
+    /// </summary>
+    public class TTFReaderFile : TTFReader
     {
-        namespace TTF
+        /// <summary>
+        /// The file reader.
+        /// </summary>
+        System.IO.BinaryReader reader = null;
+
+        /// <summary>
+        /// The file stream used by the binary reader.
+        /// </summary>
+        System.IO.FileStream filestream = null;
+
+        /// <summary>
+        /// File path constructor.
+        /// </summary>
+        /// <param name="path">The file path to open.</param>
+        public TTFReaderFile(string path)
         {
-            /// <summary>
-            /// An implementation of the TTFReader that pulls data from a file.
-            /// </summary>
-            public class TTFReaderFile : TTFReader
+            if (this.Open(path) == false)
+                throw new System.Exception("Could not open file");
+        }
+
+        /// <summary>
+        /// Opens a file.
+        /// </summary>
+        /// <param name="path">The file path to open.</param>
+        /// <returns>If true, the file was successfully opened. Else, false.</returns>
+        public bool Open(string path)
+        {
+            this.Close();
+
+            this.filestream = System.IO.File.Open(path, System.IO.FileMode.Open);
+            reader = new System.IO.BinaryReader(this.filestream);
+            return true;
+        }
+
+        public override bool IsOpen()
+        {
+            return this.reader != null;
+        }
+
+        public override bool Close()
+        {
+            if (this.filestream != null)
             {
-                /// <summary>
-                /// The file reader.
-                /// </summary>
-                System.IO.BinaryReader reader = null;
+                this.filestream.Close();
+                this.filestream = null;
+                this.reader = null;
 
-                /// <summary>
-                /// The file stream used by the binary reader.
-                /// </summary>
-                System.IO.FileStream filestream = null;
-
-                /// <summary>
-                /// File path constructor.
-                /// </summary>
-                /// <param name="path">The file path to open.</param>
-                public TTFReaderFile(string path)
-                {
-                    if (this.Open(path) == false)
-                        throw new System.Exception("Could not open file");
-                }
-
-                /// <summary>
-                /// Opens a file.
-                /// </summary>
-                /// <param name="path">The file path to open.</param>
-                /// <returns>If true, the file was successfully opened. Else, false.</returns>
-                public bool Open(string path)
-                {
-                    this.Close();
-
-                    this.filestream = System.IO.File.Open(path, System.IO.FileMode.Open);
-                    reader = new System.IO.BinaryReader(this.filestream);
-                    return true;
-                }
-
-                public override bool IsOpen()
-                {
-                    return this.reader != null;
-                }
-
-                public override bool Close()
-                {
-                    if (this.filestream != null)
-                    {
-                        this.filestream.Close();
-                        this.filestream = null;
-                        this.reader = null;
-
-                        return true;
-                    }
-                    return false;
-                }
-
-                public override bool AtEnd()
-                {
-                    return this.filestream.Position < this.filestream.Length;
-                }
-
-                public override sbyte ReadInt8()
-                {
-                    return this.reader.ReadSByte();
-                }
-
-                public override byte ReadUInt8()
-                {
-                    return this.reader.ReadByte();
-                }
-
-                public override long GetPosition()
-                {
-                    return this.filestream.Position;
-                }
-
-                public override bool SetPosition(long pos)
-                {
-                    if (this.filestream == null)
-                        return false;
-
-                    return this.filestream.Seek(pos, System.IO.SeekOrigin.Begin) == pos;
-                }
-
-                public override byte [] ReadBytes(int length)
-                { 
-                    return this.reader.ReadBytes(length);
-                }
+                return true;
             }
+            return false;
+        }
+
+        public override bool AtEnd()
+        {
+            return this.filestream.Position < this.filestream.Length;
+        }
+
+        public override sbyte ReadInt8()
+        {
+            return this.reader.ReadSByte();
+        }
+
+        public override byte ReadUInt8()
+        {
+            return this.reader.ReadByte();
+        }
+
+        public override long GetPosition()
+        {
+            return this.filestream.Position;
+        }
+
+        public override bool SetPosition(long pos)
+        {
+            if (this.filestream == null)
+                return false;
+
+            return this.filestream.Seek(pos, System.IO.SeekOrigin.Begin) == pos;
+        }
+
+        public override byte [] ReadBytes(int length)
+        { 
+            return this.reader.ReadBytes(length);
         }
     }
 }

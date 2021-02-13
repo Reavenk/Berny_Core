@@ -24,70 +24,60 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// maxp — Maximum Profile
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/maxp
+    /// 
+    /// This table establishes the memory requirements for this font. Fonts with CFF 
+    /// data must use Version 0.5 of this table, specifying only the numGlyphs field. 
+    /// Fonts with TrueType outlines must use Version 1.0 of this table, where all 
+    /// data is required.
+    /// </summary>
+    public struct maxp
     {
-        namespace TTF
+        public const string TagName = "maxp";
+
+        public ushort majorVersion;
+        public ushort minorVersion;
+        public ushort numGlyphs;
+
+        public ushort maxPoints;
+        public ushort maxCountours;
+        public ushort maxCompositePoints;
+        public ushort maxCompositeContours;
+        public ushort maxZones;
+        public ushort maxTwilightPoints;
+        public ushort maxStorage;
+        public ushort maxFunctionDefs;
+        public ushort maxIInstructionDefs;
+        public ushort maxStackElements;
+        public ushort maxSizeOfInstructions;
+        public ushort maxComponentElements;
+        public ushort maxComponentDepth;
+
+        public void Read(TTFReader r)
         {
-            namespace Table
-            {
-                /// <summary>
-                /// maxp — Maximum Profile
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/maxp
-                /// 
-                /// This table establishes the memory requirements for this font. Fonts with CFF 
-                /// data must use Version 0.5 of this table, specifying only the numGlyphs field. 
-                /// Fonts with TrueType outlines must use Version 1.0 of this table, where all 
-                /// data is required.
-                /// </summary>
-                public struct maxp
-                {
-                    public const string TagName = "maxp";
+            r.ReadInt(out this.majorVersion);
+            r.ReadInt(out this.minorVersion);
+            r.ReadInt(out this.numGlyphs);
 
-                    public ushort majorVersion;
-                    public ushort minorVersion;
-                    public ushort numGlyphs;
+            if (majorVersion == 0)
+                return;
 
-                    public ushort maxPoints;
-                    public ushort maxCountours;
-                    public ushort maxCompositePoints;
-                    public ushort maxCompositeContours;
-                    public ushort maxZones;
-                    public ushort maxTwilightPoints;
-                    public ushort maxStorage;
-                    public ushort maxFunctionDefs;
-                    public ushort maxIInstructionDefs;
-                    public ushort maxStackElements;
-                    public ushort maxSizeOfInstructions;
-                    public ushort maxComponentElements;
-                    public ushort maxComponentDepth;
-
-                    public void Read(TTFReader r)
-                    {
-                        r.ReadInt(out this.majorVersion);
-                        r.ReadInt(out this.minorVersion);
-                        r.ReadInt(out this.numGlyphs);
-
-                        if (majorVersion == 0)
-                            return;
-
-                        r.ReadInt(out this.maxPoints);
-                        r.ReadInt(out this.maxCountours);
-                        r.ReadInt(out this.maxCompositePoints);
-                        r.ReadInt(out this.maxCompositeContours);
-                        r.ReadInt(out this.maxTwilightPoints);
-                        r.ReadInt(out this.maxStorage);
-                        r.ReadInt(out this.maxFunctionDefs);
-                        r.ReadInt(out this.maxIInstructionDefs);
-                        r.ReadInt(out this.maxStackElements);
-                        r.ReadInt(out this.maxSizeOfInstructions);
-                        r.ReadInt(out this.maxComponentElements);
-                        r.ReadInt(out this.maxComponentDepth);
-                    }
-                }
-            }
+            r.ReadInt(out this.maxPoints);
+            r.ReadInt(out this.maxCountours);
+            r.ReadInt(out this.maxCompositePoints);
+            r.ReadInt(out this.maxCompositeContours);
+            r.ReadInt(out this.maxTwilightPoints);
+            r.ReadInt(out this.maxStorage);
+            r.ReadInt(out this.maxFunctionDefs);
+            r.ReadInt(out this.maxIInstructionDefs);
+            r.ReadInt(out this.maxStackElements);
+            r.ReadInt(out this.maxSizeOfInstructions);
+            r.ReadInt(out this.maxComponentElements);
+            r.ReadInt(out this.maxComponentDepth);
         }
     }
 }
-

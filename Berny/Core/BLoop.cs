@@ -23,876 +23,873 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre 
+namespace PxPre.Berny
 { 
-    namespace Berny
+    /// <summary>
+    /// A specification of the different types of islands that can be found.
+    /// </summary>
+    public enum IslandTypeRequest
+    { 
+        /// <summary>
+        /// Identify all islands.
+        /// </summary>
+        Any,
+
+        /// <summary>
+        /// Identify only opened islands.
+        /// </summary>
+        Open,
+
+        /// <summary>
+        /// Identify only closed islands.
+        /// </summary>
+        Closed
+    }
+
+    /// <summary>
+    /// Cached values for how much a node's part will move (per-unit)
+    /// during inflation.
+    /// </summary>
+    public struct InflationCache
+    { 
+        /// <summary>
+        /// Influence on the BNode's point.
+        /// </summary>
+        public Vector2 selfInf;
+
+        /// <summary>
+        /// Influence on the BNode's p1 tangent.
+        /// This is also known as the previous' output tangent.
+        /// </summary>
+        public Vector2 inInf;
+
+        /// <summary>
+        /// Influence on the BNode's p2 tangent.
+        /// This is also known as the next's input tangent.
+        /// </summary>
+        public Vector2 outInf;
+    }
+
+    /// <summary>
+    /// Represents a bezier path inside a shape. 
+    /// 
+    /// This class focuses explicitly on defining the path geometry and leaves
+    /// the rest of the visuals to the parent shape.
+    /// </summary>
+    public class BLoop
     {
         /// <summary>
-        /// A specification of the different types of islands that can be found.
+        /// The parent shape of the loop. If the loop belongs to a shape, the shape should
+        /// also reference this loop in its BShape.loop variable.
         /// </summary>
-        public enum IslandTypeRequest
+        public BShape shape;
+
+        /// <summary>
+        /// The nodes contained in the loop. If the loop
+        /// </summary>
+        public List<BNode> nodes = new List<BNode>();
+
+        /// <summary>
+        /// True if the loop has been changed since the last time the object was prepared
+        /// for presentation.
+        /// </summary>
+        public bool dirty = true;
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+        /// <summary>
+        /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
+        /// if each app session runs deterministically the same. Used for identifying objects when
+        /// debugging.
+        /// </summary>
+        public int debugCounter;
+#endif
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="shape">The parent shape. If not null, it will automatically add the created loop
+        /// to the shape.
+        /// </param>
+        /// <param name="initialInfo">Information on initial nodes to create.</param>
+        public BLoop(BShape shape, params BNode.BezierInfo [] initialInfo)
         { 
-            /// <summary>
-            /// Identify all islands.
-            /// </summary>
-            Any,
+            if(shape != null)
+                shape.AddLoop(this);
 
-            /// <summary>
-            /// Identify only opened islands.
-            /// </summary>
-            Open,
+            foreach(BNode.BezierInfo bi in initialInfo)
+            {
+                BNode bn = new BNode(this, bi);
+                bn.FlagDirty();
+                nodes.Add(bn);
+            }
 
-            /// <summary>
-            /// Identify only closed islands.
-            /// </summary>
-            Closed
+            if(initialInfo.Length == 0)
+            { } // Do nothing
+            else if(initialInfo.Length == 1)
+            { } // Also do nothing
+            if(initialInfo.Length == 2)
+            {
+                this.nodes[0].next = this.nodes[1];
+                this.nodes[1].prev = this.nodes[0];
+            }
+            else
+            { 
+                int lastIdx = this.nodes.Count - 1;
+
+                for(int i = 0; i < lastIdx; ++i)
+                { 
+                    BNode bnprv = this.nodes[i];
+                    BNode bnnxt = this.nodes[i + 1];
+
+                    bnprv.next = bnnxt;
+                    bnnxt.prev = bnprv;
+                }
+
+                // Close the shape.
+                if(this.nodes.Count > 0)
+                {
+                    BNode bnfirst = this.nodes[0];
+                    BNode bnlast = this.nodes[lastIdx];
+                    bnfirst.prev = bnlast;
+                    bnlast.next = bnfirst;
+                }
+            }
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+            this.debugCounter = Utils.RegisterCounter();
+#endif
         }
 
         /// <summary>
-        /// Cached values for how much a node's part will move (per-unit)
-        /// during inflation.
-        /// </summary>
-        public struct InflationCache
-        { 
-            /// <summary>
-            /// Influence on the BNode's point.
-            /// </summary>
-            public Vector2 selfInf;
-
-            /// <summary>
-            /// Influence on the BNode's p1 tangent.
-            /// This is also known as the previous' output tangent.
-            /// </summary>
-            public Vector2 inInf;
-
-            /// <summary>
-            /// Influence on the BNode's p2 tangent.
-            /// This is also known as the next's input tangent.
-            /// </summary>
-            public Vector2 outInf;
-        }
-
-        /// <summary>
-        /// Represents a bezier path inside a shape. 
+        /// Line loop constructor.
         /// 
-        /// This class focuses explicitly on defining the path geometry and leaves
-        /// the rest of the visuals to the parent shape.
+        /// Creates a shape constructed of straight lines, defined by an ordered array
+        /// of 2D points.
         /// </summary>
-        public class BLoop
+        /// <param name="shape">The parent shape.</param>
+        /// <param name="closed">
+        /// If true, the shape is created as a closed path.. 
+        /// Else if false, the shape is created as an open path</param>
+        /// <param name="linePoints">The ordered list of points used to define the initial path.</param>
+        public BLoop(BShape shape, bool closed, params Vector2 [] linePoints)
         {
-            /// <summary>
-            /// The parent shape of the loop. If the loop belongs to a shape, the shape should
-            /// also reference this loop in its BShape.loop variable.
-            /// </summary>
-            public BShape shape;
+            // Arguably, we could have made the style of creation between this and the 
+            // "params BNode.BezierInfo []" constructor the same style of either
+            // storing in an array and connecting afterwards (the other) or making 
+            // connections as we go and storing the last (this one).
+            if (shape != null)
+                shape.AddLoop(this);
 
-            /// <summary>
-            /// The nodes contained in the loop. If the loop
-            /// </summary>
-            public List<BNode> nodes = new List<BNode>();
-
-            /// <summary>
-            /// True if the loop has been changed since the last time the object was prepared
-            /// for presentation.
-            /// </summary>
-            public bool dirty = true;
-
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            /// <summary>
-            /// Debug ID. Each of this object created will have a unique ID that will be assigned the same way
-            /// if each app session runs deterministically the same. Used for identifying objects when
-            /// debugging.
-            /// </summary>
-            public int debugCounter;
-#endif
-
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="shape">The parent shape. If not null, it will automatically add the created loop
-            /// to the shape.
-            /// </param>
-            /// <param name="initialInfo">Information on initial nodes to create.</param>
-            public BLoop(BShape shape, params BNode.BezierInfo [] initialInfo)
+            if(linePoints.Length == 0)
+            { }
+            else if(linePoints.Length == 1)
             { 
-                if(shape != null)
-                    shape.AddLoop(this);
-
-                foreach(BNode.BezierInfo bi in initialInfo)
-                {
-                    BNode bn = new BNode(this, bi);
-                    bn.FlagDirty();
-                    nodes.Add(bn);
-                }
-
-                if(initialInfo.Length == 0)
-                { } // Do nothing
-                else if(initialInfo.Length == 1)
-                { } // Also do nothing
-                if(initialInfo.Length == 2)
-                {
-                    this.nodes[0].next = this.nodes[1];
-                    this.nodes[1].prev = this.nodes[0];
-                }
-                else
-                { 
-                    int lastIdx = this.nodes.Count - 1;
-
-                    for(int i = 0; i < lastIdx; ++i)
-                    { 
-                        BNode bnprv = this.nodes[i];
-                        BNode bnnxt = this.nodes[i + 1];
-
-                        bnprv.next = bnnxt;
-                        bnnxt.prev = bnprv;
-                    }
-
-                    // Close the shape.
-                    if(this.nodes.Count > 0)
-                    {
-                        BNode bnfirst = this.nodes[0];
-                        BNode bnlast = this.nodes[lastIdx];
-                        bnfirst.prev = bnlast;
-                        bnlast.next = bnfirst;
-                    }
-                }
-
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-                this.debugCounter = Utils.RegisterCounter();
-#endif
+                BNode bn = new BNode(this, linePoints[0]);
+                this.nodes.Add(bn);
             }
-
-            /// <summary>
-            /// Line loop constructor.
-            /// 
-            /// Creates a shape constructed of straight lines, defined by an ordered array
-            /// of 2D points.
-            /// </summary>
-            /// <param name="shape">The parent shape.</param>
-            /// <param name="closed">
-            /// If true, the shape is created as a closed path.. 
-            /// Else if false, the shape is created as an open path</param>
-            /// <param name="linePoints">The ordered list of points used to define the initial path.</param>
-            public BLoop(BShape shape, bool closed, params Vector2 [] linePoints)
+            else if(linePoints.Length == 2)
             {
-                // Arguably, we could have made the style of creation between this and the 
-                // "params BNode.BezierInfo []" constructor the same style of either
-                // storing in an array and connecting afterwards (the other) or making 
-                // connections as we go and storing the last (this one).
-                if (shape != null)
-                    shape.AddLoop(this);
+                BNode bnA = new BNode(this, linePoints[0]);
+                this.nodes.Add(bnA);
 
-                if(linePoints.Length == 0)
-                { }
-                else if(linePoints.Length == 1)
+                BNode bnB = new BNode(this, linePoints[1]);
+                this.nodes.Add(bnB);
+
+                bnA.next = bnB;
+                bnB.prev = bnA;
+            }
+            else
+            { 
+                BNode first = null;
+                BNode prev = null;
+
+                foreach(Vector2 v2 in linePoints)
                 { 
-                    BNode bn = new BNode(this, linePoints[0]);
+                    BNode bn = new BNode(this, v2);
                     this.nodes.Add(bn);
-                }
-                else if(linePoints.Length == 2)
-                {
-                    BNode bnA = new BNode(this, linePoints[0]);
-                    this.nodes.Add(bnA);
 
-                    BNode bnB = new BNode(this, linePoints[1]);
-                    this.nodes.Add(bnB);
-
-                    bnA.next = bnB;
-                    bnB.prev = bnA;
-                }
-                else
-                { 
-                    BNode first = null;
-                    BNode prev = null;
-
-                    foreach(Vector2 v2 in linePoints)
+                    if(prev == null)
                     { 
-                        BNode bn = new BNode(this, v2);
-                        this.nodes.Add(bn);
-
-                        if(prev == null)
-                        { 
-                            first = bn;
-                        }
-                        else
-                        { 
-                            prev.next = bn;
-                            bn.prev = prev;
-                        }
-                        prev = bn;
+                        first = bn;
                     }
-
-                    if(closed == true)
-                    {
-                        // At this point, prev will point to the last item.
-                        first.prev = prev;
-                        prev.next = first;
+                    else
+                    { 
+                        prev.next = bn;
+                        bn.prev = prev;
                     }
+                    prev = bn;
                 }
+
+                if(closed == true)
+                {
+                    // At this point, prev will point to the last item.
+                    first.prev = prev;
+                    prev.next = first;
+                }
+            }
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-                this.debugCounter = Utils.RegisterCounter();
+            this.debugCounter = Utils.RegisterCounter();
 #endif
-            }
+        }
 
-            /// <summary>
-            /// Clear out all flattened samples in the containing nodes.
-            /// </summary>
-            public void DissassembleSampleLoop()
+        /// <summary>
+        /// Clear out all flattened samples in the containing nodes.
+        /// </summary>
+        public void DissassembleSampleLoop()
+        { 
+            foreach(BNode bn in nodes)
+                bn.sample = null;
+        }
+
+        /// <summary>
+        /// Clear out all the nodes in the loop.
+        /// </summary>
+        public void Clear()
+        { 
+            this.DissassembleSampleLoop();
+
+            this.nodes.Clear();
+        }
+
+        /// <summary>
+        /// Get the number of nodes in the loop.
+        /// </summary>
+        /// <returns>The number of nodes in the loop.</returns>
+        public int NodeCount()
+        { 
+            return this.nodes.Count;
+        }
+
+        /// <summary>
+        /// If true, has at least one node. Else false.
+        /// </summary>
+        /// <returns>If true, the loop has at least one node.</returns>
+        public bool HasNodes()
+        {
+            return this.nodes.Count > 0;
+        }
+
+        /// <summary>
+        /// Remove a node from the loop.
+        /// 
+        /// The function will "properly" remove the node, which also includes
+        /// managing linked list connections of neighbors.
+        /// </summary>
+        /// <param name="bn">The node to remove.</param>
+        /// <returns>If true, the node was successfully remove. Else, false; thge node
+        /// was not found to exist in the invoking loop.</returns>
+        public bool RemoveNode(BNode bn)
+        { 
+            int idx = this.nodes.IndexOf(bn);
+            if(idx == -1)
+                return false;
+
+            this.nodes.RemoveAt(idx);
+
+            if(bn.prev != null && bn.next != null)
             { 
-                foreach(BNode bn in nodes)
-                    bn.sample = null;
-            }
+                // A full stitch job is needed here.
+                bn.prev.next = bn.next;
+                bn.next.prev = bn.prev;
+                bn.prev.FlagDirty();
+                bn.next.FlagDirty();
 
-            /// <summary>
-            /// Clear out all the nodes in the loop.
-            /// </summary>
-            public void Clear()
+                // Cut off the arc from the counter to us.
+                if(bn.prev.sample != null)
+                    bn.prev.sample.next = null;
+
+                // Cut off the arc from us to our clockwise.
+                if(bn.prev.sample != null)
+                    bn.prev.sample.prev = null;
+
+            }
+            else if(bn.prev != null)
             { 
-                this.DissassembleSampleLoop();
+                // If the counterclock item exists, not only do they need to
+                // forget about us, we need to do some trimming for them since
+                // we're their clockwise.
+                bn.prev.next = null;
+                bn.prev.FlagDirty();
 
-                this.nodes.Clear();
-            }
-
-            /// <summary>
-            /// Get the number of nodes in the loop.
-            /// </summary>
-            /// <returns>The number of nodes in the loop.</returns>
-            public int NodeCount()
-            { 
-                return this.nodes.Count;
-            }
-
-            /// <summary>
-            /// If true, has at least one node. Else false.
-            /// </summary>
-            /// <returns>If true, the loop has at least one node.</returns>
-            public bool HasNodes()
-            {
-                return this.nodes.Count > 0;
-            }
-
-            /// <summary>
-            /// Remove a node from the loop.
-            /// 
-            /// The function will "properly" remove the node, which also includes
-            /// managing linked list connections of neighbors.
-            /// </summary>
-            /// <param name="bn">The node to remove.</param>
-            /// <returns>If true, the node was successfully remove. Else, false; thge node
-            /// was not found to exist in the invoking loop.</returns>
-            public bool RemoveNode(BNode bn)
-            { 
-                int idx = this.nodes.IndexOf(bn);
-                if(idx == -1)
-                    return false;
-
-                this.nodes.RemoveAt(idx);
-
-                if(bn.prev != null && bn.next != null)
-                { 
-                    // A full stitch job is needed here.
-                    bn.prev.next = bn.next;
-                    bn.next.prev = bn.prev;
-                    bn.prev.FlagDirty();
-                    bn.next.FlagDirty();
-
-                    // Cut off the arc from the counter to us.
-                    if(bn.prev.sample != null)
+                if(bn.prev.sample != null)
+                {
+                    if(bn.prev.sample.next != null)
                         bn.prev.sample.next = null;
 
-                    // Cut off the arc from us to our clockwise.
-                    if(bn.prev.sample != null)
-                        bn.prev.sample.prev = null;
-
+                    bn.prev.sample = null;
                 }
-                else if(bn.prev != null)
-                { 
-                    // If the counterclock item exists, not only do they need to
-                    // forget about us, we need to do some trimming for them since
-                    // we're their clockwise.
-                    bn.prev.next = null;
-                    bn.prev.FlagDirty();
-
-                    if(bn.prev.sample != null)
-                    {
-                        if(bn.prev.sample.next != null)
-                            bn.prev.sample.next = null;
-
-                        bn.prev.sample = null;
-                    }
-                }
-                else if(bn.next != null)
-                { 
-                    // If the clockwise item exists, just have them forget about us.
-                    bn.next.prev = null;
-                }
-
-                if(this.nodes.Count == 1)
-                { 
-                    BNode onlyLeft = this.nodes[0];
-                    onlyLeft.next = null;
-                    onlyLeft.prev = null;
-                }
-
-                this.FlagDirty();
-                return true;
             }
-
-            /// <summary>
-            /// Remove all the nodes of an island from the loop.
-            /// </summary>
-            /// <param name="bn">A node from the island to be removed.</param>
-            /// <returns>True if removed. Else, false.</returns>
-            public bool RemoveIsland(BNode bn)
+            else if(bn.next != null)
             { 
-                if(this.nodes.Contains(bn) == false)
-                    return false;
-
-                bn = bn.GetPathLeftmost().node;
-                List<BNode> isls = new List<BNode>(bn.Travel());
-
-                foreach(BNode toRm in isls)
-                    this.RemoveNode(toRm);
-
-                return true;
+                // If the clockwise item exists, just have them forget about us.
+                bn.next.prev = null;
             }
 
-            /// <summary>
-            /// Flag the loop as dirty, meaning it has been changed since the last time
-            /// it was prepared for presentation.
-            /// 
-            /// This will also set parent objects as dirty (i.e., the shape, layer, and document).
-            /// </summary>
-            public void FlagDirty()
-            {
-                this.dirty = true;
-
-                if(this.shape != null)
-                    this.shape.FlagDirty();
-            }
-
-            /// <summary>
-            /// Check if the loop's dirty flag is set.
-            /// </summary>
-            /// <returns>If true, the loop is dirty.</returns>
-            public bool IsDirty()
+            if(this.nodes.Count == 1)
             { 
-                return this.dirty;
+                BNode onlyLeft = this.nodes[0];
+                onlyLeft.next = null;
+                onlyLeft.prev = null;
             }
 
-            /// <summary>
-            /// Prepare the loop for rendering if it is dirty.
-            /// Also clears the dirty flag afterwards.
-            /// </summary>
-            public void FlushDirty()
-            { 
-                foreach(BNode bn in this.nodes)
-                    bn.HandleDirty();
-
-                this.dirty = false;
-            }
-
-            /// <summary>
-            /// Counts how many islands are opened and closed.
-            /// </summary>
-            /// <param name="open">The number of open islands found in the loop object.</param>
-            /// <param name="closed">The number of closed islands in the loop object.</param>
-            /// <returns></returns>
-            public void CountOpenAndClosed(out int open, out int closed)
-            { 
-                open = 0;
-                closed = 0;
-
-                HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
-
-                while(nodesLeft.Count > 0)
-                { 
-                    BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
-                    BNode.EndpointQuery eq = n.GetPathLeftmost();
-
-                    if(eq.result == BNode.EndpointResult.Cyclical)
-                        ++closed;
-                    else
-                        ++open;
-
-                    BNode it = eq.node;
-                    while(it != null)
-                    { 
-                        nodesLeft.Remove(it);
-
-                        it = it.next;
-                        if(it == eq.node)
-                            break;
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Returns a node from each island found.
-            /// </summary>
-            /// <returns>A node from each island found in the loop.</returns>
-            public List<BNode> GetIslands(IslandTypeRequest req = IslandTypeRequest.Any)
-            { 
-                List<BNode> ret = new List<BNode>();
-                HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
-
-                while(nodesLeft.Count > 0)
-                {
-                    BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
-                    BNode.EndpointQuery eq = n.GetPathLeftmost();
-
-                    switch(req)
-                    { 
-                        case IslandTypeRequest.Any:
-                            ret.Add(eq.node);
-                            break;
-
-                        case IslandTypeRequest.Closed:
-                            if(eq.result == BNode.EndpointResult.Cyclical)
-                                ret.Add(eq.node);
-                            break;
-
-                        case IslandTypeRequest.Open:
-                            if(eq.result == BNode.EndpointResult.SuccessfulEdge)
-                                ret.Add(eq.node);
-                            break;
-                    }
-
-                    BNode it = eq.node;
-                    while (it != null)
-                    {
-                        nodesLeft.Remove(it);
-
-                        it = it.next;
-                        if (it == eq.node)
-                            break;
-                    }
-                }
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Get a list of all the islands and the type of loop they are, whether they're
-            /// opened or closed.
-            /// </summary>
-            /// <returns>A list of endpoint queries containing a reference to all the islands.</returns>
-            public List<BNode.EndpointQuery> GetIslandsDescriptive()
-            { 
-                List<BNode.EndpointQuery> ret = new List<BNode.EndpointQuery>();
-                HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
-
-                while (nodesLeft.Count > 0)
-                {
-                    BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
-                    BNode.EndpointQuery eq = n.GetPathLeftmost();
-
-                    ret.Add(eq);
-
-                    BNode it = eq.node;
-                    while (it != null)
-                    {
-                        nodesLeft.Remove(it);
-
-                        it = it.next;
-                        if (it == eq.node)
-                            break;
-                    }
-                }
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Test the properties contained in the datastructure to make sure
-            /// there are no errors.
-            /// </summary>
-            public void TestValidity()
-            { 
-                foreach(BNode node in this.nodes)
-                { 
-                    if(node.parent != this)
-                        Debug.Log("Validity Error: Mismatch between a loop's node and that node's reference to the parent loop.");
-
-                    if(node.prev != null)
-                    { 
-                        if(node.prev.next != node)
-                            Debug.Log("Validity Error: Node's previous doesn't reference node as next.");
-                    }
-
-                    if(node.next != null)
-                    { 
-                        if(node.next.prev != node)
-                            Debug.Log("Validity Error: Node's next doesn't reference node as previous.");
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Approximate the arc-length by summing the length of the flattened curve segments.
-            /// </summary>
-            /// <returns>The approximated arclength of all curve segments in the loop.</returns>
-            public float CalculateSampleLens()
-            { 
-                float ret = 0.0f;
-
-                foreach(BNode bn in this.nodes)
-                    ret += bn.CalculateSampleLens();
-        
-                return ret;
-            }
-
-            /// <summary>
-            /// Approximate the arc-length by flattening the node and accumulated the line lengths.
-            /// 
-            /// This generates lines for measurement with an arbitrary subdivision amount and does
-            /// not in any way touch the node segments.
-            /// </summary>
-            /// <param name="subdivs">The subdivision amount.</param>
-            /// <returns>The approximated arclength of all curve segments in the loop.</returns>
-            public float CalculateArclen(int subdivs = 30)
-            {
-                float ret = 0.0f;
-
-                if(subdivs < 2)
-                    subdivs = 2;
-
-                foreach(BNode bn in this.nodes)
-                    ret += bn.CalculateArcLen(subdivs);
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Count how many separate islands are in the loop. 
-            /// 
-            /// An island is a chain of nodes that are unconnected to another chain.
-            /// </summary>
-            /// <returns>The number of islands found.</returns>
-            public int CalculateIslands()
-            {
-                HashSet<BNode> nl = new HashSet<BNode>(this.nodes);
-                int ret = 0;
-
-                // If anything's left, then there's an island
-                while(nl.Count > 0)
-                { 
-                    // Count the island
-                    ++ret;
-
-                    // Get any point
-                    BNode bn = Utils.GetFirstInHash(nl);
-                    // Find a starting point to remove the island from our record
-                    BNode.EndpointQuery eq = bn.GetPathLeftmost();
-
-                    // Remove the island from our record
-                    nl.Remove(eq.node);
-                    for(BNode it = eq.node.next; it != null && it != eq.node; it = it.next)
-                        nl.Remove(it);
-                }
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Subdivide a child node into multiple parts.
-            /// </summary>
-            /// <remarks>Not reliable, to be replaced later with De Casteljau's algorithm.</remarks>
-            /// <param name="targ">The node path to subdivide.</param>
-            /// <param name="lambda">The interpolation location between (0.0, 1.0) to subdivide.</param>
-            /// <returns>The node create during the subdivision process. It will be connected right
-            /// after the targ node. If targ does not have a next node, it does not represent a segment
-            /// and cannot be subdivided; returning in a null return.</returns>
-            public BNode Subdivide(BNode targ, float lambda = 0.5f)
-            {
-                if (targ.parent != this)
-                    return null;
-
-                BNode.PathBridge pb = targ.GetPathBridgeInfo();
-
-                if (pb.pathType == BNode.PathType.None)
-                    return null;
-
-                BNode bn = null;
-                if (pb.pathType == BNode.PathType.Line)
-                {
-                    bn = 
-                        new BNode(
-                            this, 
-                            Vector2.Lerp(targ.Pos,  targ.next.Pos, lambda));
-
-                    bn.UseTanIn = false;
-                    bn.UseTanOut = false;
-                }
-                else if(pb.pathType == BNode.PathType.BezierCurve)
-                {
-                    BNode.SubdivideInfo sdi = targ.GetSubdivideInfo(lambda);
-                    bn = new BNode(
-                            this,
-                            sdi.subPos,
-                            sdi.subIn,
-                            sdi.subOut);
-
-                    targ.next.SetTangentDisconnected();
-                    targ.SetTangentDisconnected();
-
-                    bn.UseTanIn = true;
-                    bn.UseTanOut = true;
-                    targ.TanOut = sdi.prevOut;              
-                    targ.next.TanIn = sdi.nextIn;
-
-                }
-
-                if(bn != null)
-                {
-                    bn.next = targ.next;
-                    bn.prev = targ;
-                    bn.next.prev = bn;
-                    bn.prev.next = bn;
-
-                    //
-                    this.nodes.Add(bn);
-
-                    bn.FlagDirty();
-                    targ.FlagDirty();
-
-                    return bn;
-                }
-                return null;
-            }
-
-            /// <summary>
-            /// Connect multiple child nodes together. If input nodes are not both a part of the loop,
-            /// the request is ignored.
-            /// 
-            /// For a connection to be successful, it must be two edge nodes.
-            /// </summary>
-            /// <param name="a">The node to connect to b.</param>
-            /// <param name="b">The node to connect to a.</param>
-            /// <returns>True if the connection succeeded, else false.</returns>
-            public bool ConnectNodes(BNode a, BNode b)
-            { 
-                // We're only responsible for our nodes.
-                if(a.parent != this || b.parent != this)
-                    return false;
-
-                if(a.next != null && a.prev != null)
-                    return false;
-
-                if(b.next != null && b.prev != null)
-                    return false;
-
-                if(a.next != null && b.next == null)
-                {
-                    BNode tmp = a;
-                    a = b;
-                    b = tmp;
-                }
-
-                if(a.next != null)
-                    a.ReverseChainOrder();
-
-                // This should only happen if they're different strips
-                if(b.prev != null)
-                    b.ReverseChainOrder();
-
-                a.next = b;
-                b.prev = a;
-
-                a.FlagDirty();
-                b.FlagDirty();
-                return true;
-            }
-
-            /// <summary>
-            /// Given a node this in the loop, extract its entire island, and move it
-            /// into a newly created loop.
-            /// </summary>
-            /// <param name="member">A node in the loop that should be moved into its own
-            /// new loop.</param>
-            /// <param name="createInParent">If true, the created loop will be added to the
-            /// parent shape. Else, it will be created as an orphan.</param>
-            /// <returns>The newly created loop, or null if the operation fails.</returns>
-            public BLoop ExtractIsland(BNode member, bool createInParent = true)
-            { 
-                if(member.parent != this)
-                    return null;
-
-                BLoop bl = new BLoop(createInParent ? this.shape : null);
-
-                BNode.EndpointQuery eq = member.GetPathLeftmost();
-
-                eq.node.parent = bl;
-                this.nodes.Remove(eq.node);
-                bl.nodes.Add( eq.node);
-
-                for(BNode bn = eq.node.next; bn != null && bn != eq.node; bn = bn.next)
-                { 
-                    bn.parent = bl;
-                    this.nodes.Remove(bn);
-                    bl.nodes.Add(bn);
-                }
-
-                bl.FlagDirty();
-                this.FlagDirty();
-
-                return bl;
-            }
-
-            /// <summary>
-            /// Calculate the shape's winding based on the nodes and tangents.
-            /// This can be used for closed loops to determine if an island is filled or hollow.
-            /// </summary>
-            /// <param name="node">A node in the island to calculate the winding for. The node must
-            /// be a child of the loop.</param>
-            /// <param name="rewindMember"></param>
-            /// <returns>The winding value of the island. A negative value is filled, while a positive value is hollow.</returns>
-            public float CalculateWindingSimple(BNode node, bool rewindMember = true)
-            { 
-                if(rewindMember == true)
-                { 
-                    BNode.EndpointQuery eq = node.GetPathLeftmost();
-                    node = eq.node;
-                }
-
-                float ret = node.CalculateWindingSimple();
-                for(BNode it = node.next; it != null && it != node; it = it.next)
-                    ret += it.CalculateWindingSimple();
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Calculate the shape's winding based on the child nodes' segments.
-            /// This can be used for closed loops to determine if an island is filled or hollow.
-            /// </summary>
-            /// <param name="node">A node in the island to calculate the winding for. The node must
-            /// be a child of the loop.</param>
-            /// <param name="rewindMember">If true, rewind the node to the start of the chain before calculating.</param>
-            /// <returns>The winding value of the island. A negative value is filled, while a positive value is hollow.</returns>
-            public float CalculateWindingSamples(BNode node, bool rewindMember = true)
-            {
-                if (rewindMember == true)
-                {
-                    BNode.EndpointQuery eq = node.GetPathLeftmost();
-                    node = eq.node;
-                }
-
-                float ret = node.CalculateWindingSamples();
-                for (BNode it = node.next; it != null && it != node; it = it.next)
-                    ret += it.CalculateWindingSamples();
-
-                return ret;
-            }
-
-            /// <summary>
-            /// Utility function, rotate a 2D vector 90 degrees counter clockwise.
-            /// </summary>
-            /// <param name="v2">The vector to rotate.</param>
-            /// <returns>The rotate vector.</returns>
-            public static Vector2 RotateEdge90CCW(Vector2 v2)
-            { 
-                return new Vector2(-v2.y, v2.x);
-            }
-
-            /// <summary>
-            /// Inflate (dilate) the loop by a certain amount.
-            /// </summary>
-            /// <param name="amt">The distance to dialate the path contents.</param>
-            /// <remarks>Use a negative amt value to deflate/erode.</remarks>
-            public void Inflate(float amt)
-            { 
-                Dictionary<BNode, InflationCache> cachedInf = 
-                    new Dictionary<BNode, InflationCache>();
-
-                // Go through all nodes and get their influences. We can't do this
-                // on the same pass we update them, or else we would be modifying
-                // values that would be evaluated later as dirty neighbors.
-                foreach(BNode bn in this.nodes)
-                { 
-                    InflationCache ic = new InflationCache();
-                    bn.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
-
-                    cachedInf.Add(bn, ic);
-                }
-
-                foreach(KeyValuePair<BNode, InflationCache> kvp in cachedInf)
-                { 
-                    BNode bn = kvp.Key;
-                    // This is just us being lazy for sanity. Sure we could try to 
-                    // inflate while keeping smooth or symmetry, or it might just
-                    // naturally work itself out if we leave it alone - but I'd rather
-                    // take the easy way out on this for now.
-                    // (wleu)
-                    if(bn.tangentMode != BNode.TangentMode.Disconnected)
-                        bn.SetTangentDisconnected();
-
-                    bn.Pos += amt * kvp.Value.selfInf;
-                    bn.TanIn += amt * (kvp.Value.inInf - kvp.Value.selfInf);
-                    bn.TanOut += amt * (kvp.Value.outInf - kvp.Value.selfInf);
-                }
-            }
-
-            /// <summary>
-            /// Reverse the winding order of all nodes in the loop.
-            /// </summary>
-            public void Reverse()
-            { 
-                foreach(BNode bn in this.nodes)
-                    bn._Reverse();
-            }
-
-            /// <summary>
-            /// Move all the nodes in the loop into another loop.
-            /// </summary>
-            /// <param name="dst">The destination loop to dump node contents into.</param>
-            /// <remarks>If the dst isn't the same loop, the loop will end up empty. Of the dst is the same
-            /// loop, the operation is skipped.</remarks>
-            /// <remarks>The function only changes loop parenting. No changes are made to node topology/linked-lists.</remarks>
-            public void DumpInto(BLoop dst)
-            { 
-                if(dst == this)
-                    return;
-
-                foreach(BNode bn in this.nodes)
-                { 
-                    bn.parent = dst;
-                    dst.nodes.Add(bn);
-                }
-
-                this.nodes.Clear();
-            }
-
-            /// <summary>
-            /// Call BNode.Deinflect() for all nodes in the loop.
-            /// </summary>
-            public void Deinflect()
-            { 
-                List<BNode> nodeCpy = new List<BNode>( this.nodes);
-                foreach(BNode bn in nodeCpy)
-                    bn.Deinflect();
-            }
-
-            /// <summary>
-            /// If the loop has a shape generator, null it. This is used to make the official transition from
-            /// a procedural shape to Bezier defined path.
-            /// </summary>
-            /// <returns>If true, the operation was successful. If false, the loop did not have a 
-            /// shape generator.</returns>
-            public bool AbandonParentGenerator()
-            { 
-                if(this.shape != null)
-                    return this.shape.AbandonGenerator();
-
+            this.FlagDirty();
+            return true;
+        }
+
+        /// <summary>
+        /// Remove all the nodes of an island from the loop.
+        /// </summary>
+        /// <param name="bn">A node from the island to be removed.</param>
+        /// <returns>True if removed. Else, false.</returns>
+        public bool RemoveIsland(BNode bn)
+        { 
+            if(this.nodes.Contains(bn) == false)
                 return false;
-            }
 
-            public void Scale(float f)
+            bn = bn.GetPathLeftmost().node;
+            List<BNode> isls = new List<BNode>(bn.Travel());
+
+            foreach(BNode toRm in isls)
+                this.RemoveNode(toRm);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Flag the loop as dirty, meaning it has been changed since the last time
+        /// it was prepared for presentation.
+        /// 
+        /// This will also set parent objects as dirty (i.e., the shape, layer, and document).
+        /// </summary>
+        public void FlagDirty()
+        {
+            this.dirty = true;
+
+            if(this.shape != null)
+                this.shape.FlagDirty();
+        }
+
+        /// <summary>
+        /// Check if the loop's dirty flag is set.
+        /// </summary>
+        /// <returns>If true, the loop is dirty.</returns>
+        public bool IsDirty()
+        { 
+            return this.dirty;
+        }
+
+        /// <summary>
+        /// Prepare the loop for rendering if it is dirty.
+        /// Also clears the dirty flag afterwards.
+        /// </summary>
+        public void FlushDirty()
+        { 
+            foreach(BNode bn in this.nodes)
+                bn.HandleDirty();
+
+            this.dirty = false;
+        }
+
+        /// <summary>
+        /// Counts how many islands are opened and closed.
+        /// </summary>
+        /// <param name="open">The number of open islands found in the loop object.</param>
+        /// <param name="closed">The number of closed islands in the loop object.</param>
+        /// <returns></returns>
+        public void CountOpenAndClosed(out int open, out int closed)
+        { 
+            open = 0;
+            closed = 0;
+
+            HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
+
+            while(nodesLeft.Count > 0)
             { 
-                foreach(BNode n in this.nodes)
-                    n.Scale(f);
+                BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
+                BNode.EndpointQuery eq = n.GetPathLeftmost();
+
+                if(eq.result == BNode.EndpointResult.Cyclical)
+                    ++closed;
+                else
+                    ++open;
+
+                BNode it = eq.node;
+                while(it != null)
+                { 
+                    nodesLeft.Remove(it);
+
+                    it = it.next;
+                    if(it == eq.node)
+                        break;
+                }
             }
         }
-    } 
-}
+
+        /// <summary>
+        /// Returns a node from each island found.
+        /// </summary>
+        /// <returns>A node from each island found in the loop.</returns>
+        public List<BNode> GetIslands(IslandTypeRequest req = IslandTypeRequest.Any)
+        { 
+            List<BNode> ret = new List<BNode>();
+            HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
+
+            while(nodesLeft.Count > 0)
+            {
+                BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
+                BNode.EndpointQuery eq = n.GetPathLeftmost();
+
+                switch(req)
+                { 
+                    case IslandTypeRequest.Any:
+                        ret.Add(eq.node);
+                        break;
+
+                    case IslandTypeRequest.Closed:
+                        if(eq.result == BNode.EndpointResult.Cyclical)
+                            ret.Add(eq.node);
+                        break;
+
+                    case IslandTypeRequest.Open:
+                        if(eq.result == BNode.EndpointResult.SuccessfulEdge)
+                            ret.Add(eq.node);
+                        break;
+                }
+
+                BNode it = eq.node;
+                while (it != null)
+                {
+                    nodesLeft.Remove(it);
+
+                    it = it.next;
+                    if (it == eq.node)
+                        break;
+                }
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Get a list of all the islands and the type of loop they are, whether they're
+        /// opened or closed.
+        /// </summary>
+        /// <returns>A list of endpoint queries containing a reference to all the islands.</returns>
+        public List<BNode.EndpointQuery> GetIslandsDescriptive()
+        { 
+            List<BNode.EndpointQuery> ret = new List<BNode.EndpointQuery>();
+            HashSet<BNode> nodesLeft = new HashSet<BNode>(this.nodes);
+
+            while (nodesLeft.Count > 0)
+            {
+                BNode n = Utils.GetFirstInHash<BNode>(nodesLeft);
+                BNode.EndpointQuery eq = n.GetPathLeftmost();
+
+                ret.Add(eq);
+
+                BNode it = eq.node;
+                while (it != null)
+                {
+                    nodesLeft.Remove(it);
+
+                    it = it.next;
+                    if (it == eq.node)
+                        break;
+                }
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Test the properties contained in the datastructure to make sure
+        /// there are no errors.
+        /// </summary>
+        public void TestValidity()
+        { 
+            foreach(BNode node in this.nodes)
+            { 
+                if(node.parent != this)
+                    Debug.Log("Validity Error: Mismatch between a loop's node and that node's reference to the parent loop.");
+
+                if(node.prev != null)
+                { 
+                    if(node.prev.next != node)
+                        Debug.Log("Validity Error: Node's previous doesn't reference node as next.");
+                }
+
+                if(node.next != null)
+                { 
+                    if(node.next.prev != node)
+                        Debug.Log("Validity Error: Node's next doesn't reference node as previous.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Approximate the arc-length by summing the length of the flattened curve segments.
+        /// </summary>
+        /// <returns>The approximated arclength of all curve segments in the loop.</returns>
+        public float CalculateSampleLens()
+        { 
+            float ret = 0.0f;
+
+            foreach(BNode bn in this.nodes)
+                ret += bn.CalculateSampleLens();
+        
+            return ret;
+        }
+
+        /// <summary>
+        /// Approximate the arc-length by flattening the node and accumulated the line lengths.
+        /// 
+        /// This generates lines for measurement with an arbitrary subdivision amount and does
+        /// not in any way touch the node segments.
+        /// </summary>
+        /// <param name="subdivs">The subdivision amount.</param>
+        /// <returns>The approximated arclength of all curve segments in the loop.</returns>
+        public float CalculateArclen(int subdivs = 30)
+        {
+            float ret = 0.0f;
+
+            if(subdivs < 2)
+                subdivs = 2;
+
+            foreach(BNode bn in this.nodes)
+                ret += bn.CalculateArcLen(subdivs);
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Count how many separate islands are in the loop. 
+        /// 
+        /// An island is a chain of nodes that are unconnected to another chain.
+        /// </summary>
+        /// <returns>The number of islands found.</returns>
+        public int CalculateIslands()
+        {
+            HashSet<BNode> nl = new HashSet<BNode>(this.nodes);
+            int ret = 0;
+
+            // If anything's left, then there's an island
+            while(nl.Count > 0)
+            { 
+                // Count the island
+                ++ret;
+
+                // Get any point
+                BNode bn = Utils.GetFirstInHash(nl);
+                // Find a starting point to remove the island from our record
+                BNode.EndpointQuery eq = bn.GetPathLeftmost();
+
+                // Remove the island from our record
+                nl.Remove(eq.node);
+                for(BNode it = eq.node.next; it != null && it != eq.node; it = it.next)
+                    nl.Remove(it);
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Subdivide a child node into multiple parts.
+        /// </summary>
+        /// <remarks>Not reliable, to be replaced later with De Casteljau's algorithm.</remarks>
+        /// <param name="targ">The node path to subdivide.</param>
+        /// <param name="lambda">The interpolation location between (0.0, 1.0) to subdivide.</param>
+        /// <returns>The node create during the subdivision process. It will be connected right
+        /// after the targ node. If targ does not have a next node, it does not represent a segment
+        /// and cannot be subdivided; returning in a null return.</returns>
+        public BNode Subdivide(BNode targ, float lambda = 0.5f)
+        {
+            if (targ.parent != this)
+                return null;
+
+            BNode.PathBridge pb = targ.GetPathBridgeInfo();
+
+            if (pb.pathType == BNode.PathType.None)
+                return null;
+
+            BNode bn = null;
+            if (pb.pathType == BNode.PathType.Line)
+            {
+                bn = 
+                    new BNode(
+                        this, 
+                        Vector2.Lerp(targ.Pos,  targ.next.Pos, lambda));
+
+                bn.UseTanIn = false;
+                bn.UseTanOut = false;
+            }
+            else if(pb.pathType == BNode.PathType.BezierCurve)
+            {
+                BNode.SubdivideInfo sdi = targ.GetSubdivideInfo(lambda);
+                bn = new BNode(
+                        this,
+                        sdi.subPos,
+                        sdi.subIn,
+                        sdi.subOut);
+
+                targ.next.SetTangentDisconnected();
+                targ.SetTangentDisconnected();
+
+                bn.UseTanIn = true;
+                bn.UseTanOut = true;
+                targ.TanOut = sdi.prevOut;              
+                targ.next.TanIn = sdi.nextIn;
+
+            }
+
+            if(bn != null)
+            {
+                bn.next = targ.next;
+                bn.prev = targ;
+                bn.next.prev = bn;
+                bn.prev.next = bn;
+
+                //
+                this.nodes.Add(bn);
+
+                bn.FlagDirty();
+                targ.FlagDirty();
+
+                return bn;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Connect multiple child nodes together. If input nodes are not both a part of the loop,
+        /// the request is ignored.
+        /// 
+        /// For a connection to be successful, it must be two edge nodes.
+        /// </summary>
+        /// <param name="a">The node to connect to b.</param>
+        /// <param name="b">The node to connect to a.</param>
+        /// <returns>True if the connection succeeded, else false.</returns>
+        public bool ConnectNodes(BNode a, BNode b)
+        { 
+            // We're only responsible for our nodes.
+            if(a.parent != this || b.parent != this)
+                return false;
+
+            if(a.next != null && a.prev != null)
+                return false;
+
+            if(b.next != null && b.prev != null)
+                return false;
+
+            if(a.next != null && b.next == null)
+            {
+                BNode tmp = a;
+                a = b;
+                b = tmp;
+            }
+
+            if(a.next != null)
+                a.ReverseChainOrder();
+
+            // This should only happen if they're different strips
+            if(b.prev != null)
+                b.ReverseChainOrder();
+
+            a.next = b;
+            b.prev = a;
+
+            a.FlagDirty();
+            b.FlagDirty();
+            return true;
+        }
+
+        /// <summary>
+        /// Given a node this in the loop, extract its entire island, and move it
+        /// into a newly created loop.
+        /// </summary>
+        /// <param name="member">A node in the loop that should be moved into its own
+        /// new loop.</param>
+        /// <param name="createInParent">If true, the created loop will be added to the
+        /// parent shape. Else, it will be created as an orphan.</param>
+        /// <returns>The newly created loop, or null if the operation fails.</returns>
+        public BLoop ExtractIsland(BNode member, bool createInParent = true)
+        { 
+            if(member.parent != this)
+                return null;
+
+            BLoop bl = new BLoop(createInParent ? this.shape : null);
+
+            BNode.EndpointQuery eq = member.GetPathLeftmost();
+
+            eq.node.parent = bl;
+            this.nodes.Remove(eq.node);
+            bl.nodes.Add( eq.node);
+
+            for(BNode bn = eq.node.next; bn != null && bn != eq.node; bn = bn.next)
+            { 
+                bn.parent = bl;
+                this.nodes.Remove(bn);
+                bl.nodes.Add(bn);
+            }
+
+            bl.FlagDirty();
+            this.FlagDirty();
+
+            return bl;
+        }
+
+        /// <summary>
+        /// Calculate the shape's winding based on the nodes and tangents.
+        /// This can be used for closed loops to determine if an island is filled or hollow.
+        /// </summary>
+        /// <param name="node">A node in the island to calculate the winding for. The node must
+        /// be a child of the loop.</param>
+        /// <param name="rewindMember"></param>
+        /// <returns>The winding value of the island. A negative value is filled, while a positive value is hollow.</returns>
+        public float CalculateWindingSimple(BNode node, bool rewindMember = true)
+        { 
+            if(rewindMember == true)
+            { 
+                BNode.EndpointQuery eq = node.GetPathLeftmost();
+                node = eq.node;
+            }
+
+            float ret = node.CalculateWindingSimple();
+            for(BNode it = node.next; it != null && it != node; it = it.next)
+                ret += it.CalculateWindingSimple();
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Calculate the shape's winding based on the child nodes' segments.
+        /// This can be used for closed loops to determine if an island is filled or hollow.
+        /// </summary>
+        /// <param name="node">A node in the island to calculate the winding for. The node must
+        /// be a child of the loop.</param>
+        /// <param name="rewindMember">If true, rewind the node to the start of the chain before calculating.</param>
+        /// <returns>The winding value of the island. A negative value is filled, while a positive value is hollow.</returns>
+        public float CalculateWindingSamples(BNode node, bool rewindMember = true)
+        {
+            if (rewindMember == true)
+            {
+                BNode.EndpointQuery eq = node.GetPathLeftmost();
+                node = eq.node;
+            }
+
+            float ret = node.CalculateWindingSamples();
+            for (BNode it = node.next; it != null && it != node; it = it.next)
+                ret += it.CalculateWindingSamples();
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Utility function, rotate a 2D vector 90 degrees counter clockwise.
+        /// </summary>
+        /// <param name="v2">The vector to rotate.</param>
+        /// <returns>The rotate vector.</returns>
+        public static Vector2 RotateEdge90CCW(Vector2 v2)
+        { 
+            return new Vector2(-v2.y, v2.x);
+        }
+
+        /// <summary>
+        /// Inflate (dilate) the loop by a certain amount.
+        /// </summary>
+        /// <param name="amt">The distance to dialate the path contents.</param>
+        /// <remarks>Use a negative amt value to deflate/erode.</remarks>
+        public void Inflate(float amt)
+        { 
+            Dictionary<BNode, InflationCache> cachedInf = 
+                new Dictionary<BNode, InflationCache>();
+
+            // Go through all nodes and get their influences. We can't do this
+            // on the same pass we update them, or else we would be modifying
+            // values that would be evaluated later as dirty neighbors.
+            foreach(BNode bn in this.nodes)
+            { 
+                InflationCache ic = new InflationCache();
+                bn.GetInflateDirection(out ic.selfInf, out ic.inInf, out ic.outInf);
+
+                cachedInf.Add(bn, ic);
+            }
+
+            foreach(KeyValuePair<BNode, InflationCache> kvp in cachedInf)
+            { 
+                BNode bn = kvp.Key;
+                // This is just us being lazy for sanity. Sure we could try to 
+                // inflate while keeping smooth or symmetry, or it might just
+                // naturally work itself out if we leave it alone - but I'd rather
+                // take the easy way out on this for now.
+                // (wleu)
+                if(bn.tangentMode != BNode.TangentMode.Disconnected)
+                    bn.SetTangentDisconnected();
+
+                bn.Pos += amt * kvp.Value.selfInf;
+                bn.TanIn += amt * (kvp.Value.inInf - kvp.Value.selfInf);
+                bn.TanOut += amt * (kvp.Value.outInf - kvp.Value.selfInf);
+            }
+        }
+
+        /// <summary>
+        /// Reverse the winding order of all nodes in the loop.
+        /// </summary>
+        public void Reverse()
+        { 
+            foreach(BNode bn in this.nodes)
+                bn._Reverse();
+        }
+
+        /// <summary>
+        /// Move all the nodes in the loop into another loop.
+        /// </summary>
+        /// <param name="dst">The destination loop to dump node contents into.</param>
+        /// <remarks>If the dst isn't the same loop, the loop will end up empty. Of the dst is the same
+        /// loop, the operation is skipped.</remarks>
+        /// <remarks>The function only changes loop parenting. No changes are made to node topology/linked-lists.</remarks>
+        public void DumpInto(BLoop dst)
+        { 
+            if(dst == this)
+                return;
+
+            foreach(BNode bn in this.nodes)
+            { 
+                bn.parent = dst;
+                dst.nodes.Add(bn);
+            }
+
+            this.nodes.Clear();
+        }
+
+        /// <summary>
+        /// Call BNode.Deinflect() for all nodes in the loop.
+        /// </summary>
+        public void Deinflect()
+        { 
+            List<BNode> nodeCpy = new List<BNode>( this.nodes);
+            foreach(BNode bn in nodeCpy)
+                bn.Deinflect();
+        }
+
+        /// <summary>
+        /// If the loop has a shape generator, null it. This is used to make the official transition from
+        /// a procedural shape to Bezier defined path.
+        /// </summary>
+        /// <returns>If true, the operation was successful. If false, the loop did not have a 
+        /// shape generator.</returns>
+        public bool AbandonParentGenerator()
+        { 
+            if(this.shape != null)
+                return this.shape.AbandonGenerator();
+
+            return false;
+        }
+
+        public void Scale(float f)
+        { 
+            foreach(BNode n in this.nodes)
+                n.Scale(f);
+        }
+    }
+} 

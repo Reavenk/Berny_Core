@@ -22,39 +22,30 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// cvt — Control Value Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/cvt
+    /// 
+    /// This table contains a list of values that can be referenced by instructions. 
+    /// They can be used, among other things, to control characteristics for 
+    /// different glyphs. The length of the table must be an integral number of 
+    /// FWORD units.
+    /// </summary>
+    public struct cvt
     {
-        namespace TTF
+        public const string TagName = "cvt";
+
+        // List of n values referenceable by instructions. n is the number of FWORD 
+        // items that fit in the size of the table.
+        public List<short> values;
+
+        public void Read(TTFReader r, int n)
         {
-            namespace Table
-            {
-                /// <summary>
-                /// cvt — Control Value Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/cvt
-                /// 
-                /// This table contains a list of values that can be referenced by instructions. 
-                /// They can be used, among other things, to control characteristics for 
-                /// different glyphs. The length of the table must be an integral number of 
-                /// FWORD units.
-                /// </summary>
-                public struct cvt
-                {
-                    public const string TagName = "cvt";
-
-                    // List of n values referenceable by instructions. n is the number of FWORD 
-                    // items that fit in the size of the table.
-                    public List<short> values;
-
-                    public void Read(TTFReader r, int n)
-                    {
-                        this.values = new List<short>();
-                        for(int i = 0; i < n; ++i)
-                            this.values.Add(r.ReadInt16());
-                    }
-                }
-            }
+            this.values = new List<short>();
+            for(int i = 0; i < n; ++i)
+                this.values.Add(r.ReadInt16());
         }
     }
 }

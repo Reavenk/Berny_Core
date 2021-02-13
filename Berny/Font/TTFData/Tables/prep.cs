@@ -24,39 +24,30 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// prep — Control Value Program
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/prep
+    /// 
+    /// The Control Value Program consists of a set of TrueType instructions 
+    /// that will be executed whenever the font or point size or transformation 
+    /// matrix change and before each glyph is interpreted. Any instruction is 
+    /// valid in the CV Program but since no glyph is associated with it, 
+    /// instructions intended to move points within a particular glyph outline 
+    /// cannot be used in the CV Program. The name 'prep' is anachronistic (the 
+    /// table used to be known as the Pre Program table.)
+    /// </summary>
+    public struct prep
     {
-        namespace TTF
+        public const string TagName = "prep";
+
+        // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM03/Chap3.html
+        public byte [] instructions;
+
+        public void Read(TTFReader r, uint tableSz)
         {
-            namespace Table
-            {
-                /// <summary>
-                /// prep — Control Value Program
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/prep
-                /// 
-                /// The Control Value Program consists of a set of TrueType instructions 
-                /// that will be executed whenever the font or point size or transformation 
-                /// matrix change and before each glyph is interpreted. Any instruction is 
-                /// valid in the CV Program but since no glyph is associated with it, 
-                /// instructions intended to move points within a particular glyph outline 
-                /// cannot be used in the CV Program. The name 'prep' is anachronistic (the 
-                /// table used to be known as the Pre Program table.)
-                /// </summary>
-                public struct prep
-                {
-                    public const string TagName = "prep";
-
-                    // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM03/Chap3.html
-                    public byte [] instructions;
-
-                    public void Read(TTFReader r, uint tableSz)
-                    {
-                        this.instructions = r.ReadBytes((int)tableSz);
-                    }
-                }
-            }
+            this.instructions = r.ReadBytes((int)tableSz);
         }
     }
 }

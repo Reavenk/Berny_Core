@@ -23,178 +23,175 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    public class Layer
     {
-        public class Layer
+        public Document document;
+        public List<BShape> shapes = new List<BShape>();
+
+        public string name = "";
+
+        bool locked = false;
+        bool visible = true;
+
+        public bool Locked 
         {
-            public Document document;
-            public List<BShape> shapes = new List<BShape>();
+            get => this.locked;
+            set { this.locked = value; }
+        }
 
-            public string name = "";
-
-            bool locked = false;
-            bool visible = true;
-
-            public bool Locked 
-            {
-                get => this.locked;
-                set { this.locked = value; }
-            }
-
-            public bool Visible
+        public bool Visible
+        { 
+            get => this.visible;
+            set 
             { 
-                get => this.visible;
-                set 
-                { 
-                    if(this.visible == value)
-                        return;
+                if(this.visible == value)
+                    return;
 
-                    this.visible = value;
-                    this.FlagDirty();
-                }
+                this.visible = value;
+                this.FlagDirty();
             }
+        }
 
 
-            bool dirty = true;
+        bool dirty = true;
 
-            public Layer(Document doc)
-            { 
-                this.document = doc;
-            }
+        public Layer(Document doc)
+        { 
+            this.document = doc;
+        }
 
-            public void FlagDirty()
+        public void FlagDirty()
+        {
+            this.dirty = true;
+
+            if(this.document != null)
+                this.document.FlagDirty();
+        }
+
+        public bool IsDirty()
+        { 
+            return this.dirty;
+        }
+
+        public void FlushDirty()
+        {
+            foreach (BShape bs in this.shapes)
             {
-                this.dirty = true;
-
-                if(this.document != null)
-                    this.document.FlagDirty();
+                bs.FlushDirty();
             }
 
-            public bool IsDirty()
-            { 
-                return this.dirty;
-            }
+            this.dirty = false;
+        }
 
-            public void FlushDirty()
+        public IEnumerable<BShape> Shapes()
+        { 
+            return this.shapes;
+        }
+
+        public void TestValidity()
+        {
+            foreach (BShape bs in this.shapes)
             {
-                foreach (BShape bs in this.shapes)
-                {
-                    bs.FlushDirty();
-                }
+                if (bs.layer != this)
+                    Debug.LogError("Validity Error: Document layer referencing incorrect parent document.");
 
-                this.dirty = false;
+                bs.TestValidity();
             }
 
-            public IEnumerable<BShape> Shapes()
-            { 
-                return this.shapes;
-            }
+            Debug.Log("Finished validity check.");
+        }
 
-            public void TestValidity()
-            {
-                foreach (BShape bs in this.shapes)
-                {
-                    if (bs.layer != this)
-                        Debug.LogError("Validity Error: Document layer referencing incorrect parent document.");
+        public BShape CreateEmptyShape()
+        { 
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
+            return bs;
+        }
 
-                    bs.TestValidity();
-                }
+        public Layer Clone()
+        { 
+            return new Layer(this.document);
+        }
 
-                Debug.Log("Finished validity check.");
-            }
+        public Layer Clone(Document doc)
+        {
+            Layer ret = null;
+            if(doc != null)
+                ret = doc.AddLayer();
+            else
+                ret = new Layer(null);
 
-            public BShape CreateEmptyShape()
-            { 
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
-                return bs;
-            }
+            ret.locked = this.locked;
+            ret.visible = this.visible;
+            ret.name = this.name;
 
-            public Layer Clone()
-            { 
-                return new Layer(this.document);
-            }
+            foreach(BShape shape in this.shapes)
+                this.shapes.Add(shape.Clone(this));
 
-            public Layer Clone(Document doc)
-            {
-                Layer ret = null;
-                if(doc != null)
-                    ret = doc.AddLayer();
-                else
-                    ret = new Layer(null);
+            return new Layer(this.document);
+        }
 
-                ret.locked = this.locked;
-                ret.visible = this.visible;
-                ret.name = this.name;
+        public BShapeGenCircle AddCircle(Vector2 center, float radius)
+        { 
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
 
-                foreach(BShape shape in this.shapes)
-                    this.shapes.Add(shape.Clone(this));
+            BShapeGenCircle gen = new BShapeGenCircle(bs, center, radius);
+            bs.shapeGenerator = gen;
+            gen.FlagDirty();
+            return gen;
+        }
 
-                return new Layer(this.document);
-            }
+        public BShapeGenEllipse AddEllipse(Vector2 center, Vector2 radius)
+        {
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
 
-            public BShapeGenCircle AddCircle(Vector2 center, float radius)
-            { 
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
+            BShapeGenEllipse gen = new BShapeGenEllipse(bs, center, radius);
+            bs.shapeGenerator = gen;
+            gen.FlagDirty();
+            return gen;
+        }
 
-                BShapeGenCircle gen = new BShapeGenCircle(bs, center, radius);
-                bs.shapeGenerator = gen;
-                gen.FlagDirty();
-                return gen;
-            }
+        public BShapeGenRect AddRect(Vector2 pos, Vector2 dim, Vector2 ? round = null)
+        {
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
 
-            public BShapeGenEllipse AddEllipse(Vector2 center, Vector2 radius)
-            {
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
+            BShapeGenRect gen = new BShapeGenRect(bs, pos, dim, round);
+            bs.shapeGenerator = gen;
+            gen.FlagDirty();
+            return gen;
+        }
 
-                BShapeGenEllipse gen = new BShapeGenEllipse(bs, center, radius);
-                bs.shapeGenerator = gen;
-                gen.FlagDirty();
-                return gen;
-            }
+        public BShapeGenPolygon AddPolygon(params Vector2 [] points)
+        {
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
 
-            public BShapeGenRect AddRect(Vector2 pos, Vector2 dim, Vector2 ? round = null)
-            {
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
+            BShapeGenPolygon gen = new BShapeGenPolygon(bs, points);
+            bs.layer = this;
+            gen.FlagDirty();
+            return gen;
+        }
 
-                BShapeGenRect gen = new BShapeGenRect(bs, pos, dim, round);
-                bs.shapeGenerator = gen;
-                gen.FlagDirty();
-                return gen;
-            }
+        public BShapeGenPolyline AddPolyline(params Vector2 [] points)
+        {
+            BShape bs = new BShape(Vector2.zero, 0.0f);
+            bs.layer = this;
+            this.shapes.Add(bs);
 
-            public BShapeGenPolygon AddPolygon(params Vector2 [] points)
-            {
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
-
-                BShapeGenPolygon gen = new BShapeGenPolygon(bs, points);
-                bs.layer = this;
-                gen.FlagDirty();
-                return gen;
-            }
-
-            public BShapeGenPolyline AddPolyline(params Vector2 [] points)
-            {
-                BShape bs = new BShape(Vector2.zero, 0.0f);
-                bs.layer = this;
-                this.shapes.Add(bs);
-
-                BShapeGenPolyline gen = new BShapeGenPolyline(bs, points);
-                bs.layer = this;
-                gen.FlagDirty();
-                return gen;
-            }
+            BShapeGenPolyline gen = new BShapeGenPolyline(bs, points);
+            bs.layer = this;
+            gen.FlagDirty();
+            return gen;
         }
     }
 }

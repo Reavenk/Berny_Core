@@ -22,30 +22,24 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// VariationRegion 
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// </summary>
+    public struct VariationRegion
     {
-        namespace TTF
-        {
-            /// <summary>
-            /// VariationRegion 
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// </summary>
-            public struct VariationRegion
-            {
-                public List<RegionAxisCoordinates> regionAxes;  // Array of region axis coordinates records, in the order of axes given in the 'fvar' table.
+        public List<RegionAxisCoordinates> regionAxes;  // Array of region axis coordinates records, in the order of axes given in the 'fvar' table.
 
-                public void Read(TTFReader r, int axisCount)
-                {
-                    this.regionAxes = new List<RegionAxisCoordinates>();
-                    for (int i = 0; i < axisCount; ++i)
-                    {
-                        RegionAxisCoordinates rac = new RegionAxisCoordinates();
-                        rac.Read(r);
-                        this.regionAxes.Add(rac);
-                    }
-                }
+        public void Read(TTFReader r, int axisCount)
+        {
+            this.regionAxes = new List<RegionAxisCoordinates>();
+            for (int i = 0; i < axisCount; ++i)
+            {
+                RegionAxisCoordinates rac = new RegionAxisCoordinates();
+                rac.Read(r);
+                this.regionAxes.Add(rac);
             }
         }
     }

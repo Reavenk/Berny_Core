@@ -22,76 +22,67 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// avar — Axis Variations Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/avar
+    /// 
+    /// The axis variations table ('avar') is an optional table used in variable fonts. It can be used to modify aspects of how a design varies for different instances along a particular design-variation axis. Specifically, it allows modification of the coordinate normalization that is used when processing variation data for a particular variation instance.
+    /// </summary>
+    public struct avar
     {
-        namespace TTF
+        public const string TagName = "avar";
+
+        /// <summary>
+        /// There must be one segment map for each axis defined in the 'fvar' table, and the segment maps for the different axes must be given in the order of axes specified in the 'fvar' table. The segment map for each axis is comprised of a list of axis-value mapping records.
+        /// </summary>
+        public struct SegmentMap
         {
-            namespace Table
+            public ushort positionMapCount;             // The number of correspondence pairs for this axis.
+            public List<AxisValueMap> axisValueMaps;    // The array of axis value map records for this axis.
+        }
+
+        /// <summary>
+        /// Each axis value map record provides a single axis-value mapping correspondence.
+        /// </summary>
+        public struct AxisValueMap
+        {
+            public float fromCoordinate;                // A normalized coordinate value obtained using default normalization.
+            public float toCoordinate;                  // The modified, normalized coordinate value.
+        }
+
+        public ushort majorVersion;     // Major version number of the axis variations table — set to 1.
+        public ushort minorVersion;     // Minor version number of the axis variations table — set to 0.
+        public ushort reserved;         // Permanently reserved; set to zero.
+        public ushort axisCount;        // The number of variation axes for this font. This must be the same number as axisCount in the 'fvar' table.
+        public List<SegmentMap> axisSegmentMap; // The segment maps array — one segment map for each axis, in the order of axes specified in the 'fvar' table.
+
+        public void Read(TTFReader r)
+        {
+            r.ReadInt(out this.majorVersion);
+            r.ReadInt(out this.minorVersion);
+            r.ReadInt(out reserved);
+            r.ReadInt(out axisCount);
+
+            this.axisSegmentMap = new List<SegmentMap>();
+            for (int i = 0; i < this.axisCount; ++i)
             {
-                /// <summary>
-                /// avar — Axis Variations Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/avar
-                /// 
-                /// The axis variations table ('avar') is an optional table used in variable fonts. It can be used to modify aspects of how a design varies for different instances along a particular design-variation axis. Specifically, it allows modification of the coordinate normalization that is used when processing variation data for a particular variation instance.
-                /// </summary>
-                public struct avar
+                SegmentMap sm = new SegmentMap();
+                sm.axisValueMaps = new List<AxisValueMap>();
+
+                r.ReadInt(out sm.positionMapCount);
+                for (int j = 0; j < sm.positionMapCount; ++j)
                 {
-                    public const string TagName = "avar";
+                    AxisValueMap avm = new AxisValueMap();
 
-                    /// <summary>
-                    /// There must be one segment map for each axis defined in the 'fvar' table, and the segment maps for the different axes must be given in the order of axes specified in the 'fvar' table. The segment map for each axis is comprised of a list of axis-value mapping records.
-                    /// </summary>
-                    public struct SegmentMap
-                    {
-                        public ushort positionMapCount;             // The number of correspondence pairs for this axis.
-                        public List<AxisValueMap> axisValueMaps;    // The array of axis value map records for this axis.
-                    }
+                    avm.fromCoordinate = r.ReadFDot14();
+                    avm.toCoordinate = r.ReadFDot14();
 
-                    /// <summary>
-                    /// Each axis value map record provides a single axis-value mapping correspondence.
-                    /// </summary>
-                    public struct AxisValueMap
-                    {
-                        public float fromCoordinate;                // A normalized coordinate value obtained using default normalization.
-                        public float toCoordinate;                  // The modified, normalized coordinate value.
-                    }
-
-                    public ushort majorVersion;     // Major version number of the axis variations table — set to 1.
-                    public ushort minorVersion;     // Minor version number of the axis variations table — set to 0.
-                    public ushort reserved;         // Permanently reserved; set to zero.
-                    public ushort axisCount;        // The number of variation axes for this font. This must be the same number as axisCount in the 'fvar' table.
-                    public List<SegmentMap> axisSegmentMap; // The segment maps array — one segment map for each axis, in the order of axes specified in the 'fvar' table.
-
-                    public void Read(TTFReader r)
-                    {
-                        r.ReadInt(out this.majorVersion);
-                        r.ReadInt(out this.minorVersion);
-                        r.ReadInt(out reserved);
-                        r.ReadInt(out axisCount);
-
-                        this.axisSegmentMap = new List<SegmentMap>();
-                        for (int i = 0; i < this.axisCount; ++i)
-                        {
-                            SegmentMap sm = new SegmentMap();
-                            sm.axisValueMaps = new List<AxisValueMap>();
-
-                            r.ReadInt(out sm.positionMapCount);
-                            for (int j = 0; j < sm.positionMapCount; ++j)
-                            {
-                                AxisValueMap avm = new AxisValueMap();
-
-                                avm.fromCoordinate = r.ReadFDot14();
-                                avm.toCoordinate = r.ReadFDot14();
-
-                                sm.axisValueMaps.Add(avm);
-                            }
-
-                            this.axisSegmentMap.Add(sm);
-                        }
-                    }
+                    sm.axisValueMaps.Add(avm);
                 }
+
+                this.axisSegmentMap.Add(sm);
             }
         }
     }

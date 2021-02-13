@@ -24,207 +24,204 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    /// <summary>
+    /// Implements a procedural shape generator for the SVG ellipse shape.
+    /// 
+    /// https://www.w3schools.com/graphics/svg_ellipse.asp
+    /// </summary>
+    public class BShapeGenEllipse : BShapeGen
     {
         /// <summary>
-        /// Implements a procedural shape generator for the SVG ellipse shape.
-        /// 
-        /// https://www.w3schools.com/graphics/svg_ellipse.asp
+        /// The x component of the ellipse's center.
         /// </summary>
-        public class BShapeGenEllipse : BShapeGen
+        public float cx = 1.0f;
+
+        /// <summary>
+        /// The y component of the ellipse's center.
+        /// </summary>
+        public float cy = 1.0f;
+
+        /// <summary>
+        /// The x radius of the ellipse.
+        /// </summary>
+        public float rx = 1.0f;
+
+        /// <summary>
+        /// The y radius of the ellipse.
+        /// </summary>
+        public float ry = 1.0f;
+
+        public override string ShapeType => "ellipse";
+
+        /// <summary>
+        /// Property for the ellipse's center.
+        /// </summary>
+        public Vector2 Center
+        { 
+            get => new Vector2(this.cx, this.cy);
+            set
+            { 
+                this.cx = value.x;
+                this.cy = value.y;
+                this.FlagDirty();
+            }
+        }
+
+        /// <summary>
+        /// Property for the ellipse's radii.
+        /// </summary>
+        public Vector2 Radius
+        { 
+            get => new Vector2(this.rx, this.ry);
+            set
+            { 
+                this.rx = value.x;
+                this.ry = value.y;
+                this.FlagDirty();
+            }
+        }
+
+        /// <summary>
+        /// Property for the x component of the ellipse's center.
+        /// </summary>
+        public float CX 
+        { 
+            get => this.cx; 
+            set { this.cx = value; this.FlagDirty(); } 
+        }
+
+        /// <summary>
+        /// Property for the y component of the ellipse's center.
+        /// </summary>
+        public float CY 
+        { 
+            get => this.cy; 
+            set { this.cy = value; this.FlagDirty(); } 
+        }
+
+        /// <summary>
+        /// Property for the x component of the ellipse's radius.
+        /// </summary>
+        public float RadX 
+        { 
+            get => this.rx; 
+            set { this.rx = value; this.FlagDirty(); } 
+        }
+
+        /// <summary>
+        /// Property for the y component of the ellipse's radius.
+        /// </summary>
+        public float RadY 
+        { 
+            get => this.ry; 
+            set { this.ry = value; this.FlagDirty(); } 
+        }
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="shape">The shape to attach to.</param>
+        /// <param name="center"></param>
+        /// <param name="radius"></param>
+        public BShapeGenEllipse(BShape shape, Vector2 center, Vector2 radius)
+            : base(shape)
+        { 
+            this.cx = center.x;
+            this.cy = center.y;
+            this.rx = radius.x;
+            this.ry = radius.y;
+        }
+
+        public override void Reconstruct()
         {
-            /// <summary>
-            /// The x component of the ellipse's center.
-            /// </summary>
-            public float cx = 1.0f;
+            this.shape.Clear();
 
-            /// <summary>
-            /// The y component of the ellipse's center.
-            /// </summary>
-            public float cy = 1.0f;
+            List<BNode.BezierInfo> nodes = new List<BNode.BezierInfo>();
 
-            /// <summary>
-            /// The x radius of the ellipse.
-            /// </summary>
-            public float rx = 1.0f;
-
-            /// <summary>
-            /// The y radius of the ellipse.
-            /// </summary>
-            public float ry = 1.0f;
-
-            public override string ShapeType => "ellipse";
-
-            /// <summary>
-            /// Property for the ellipse's center.
-            /// </summary>
-            public Vector2 Center
-            { 
-                get => new Vector2(this.cx, this.cy);
-                set
-                { 
-                    this.cx = value.x;
-                    this.cy = value.y;
-                    this.FlagDirty();
-                }
-            }
-
-            /// <summary>
-            /// Property for the ellipse's radii.
-            /// </summary>
-            public Vector2 Radius
-            { 
-                get => new Vector2(this.rx, this.ry);
-                set
-                { 
-                    this.rx = value.x;
-                    this.ry = value.y;
-                    this.FlagDirty();
-                }
-            }
-
-            /// <summary>
-            /// Property for the x component of the ellipse's center.
-            /// </summary>
-            public float CX 
-            { 
-                get => this.cx; 
-                set { this.cx = value; this.FlagDirty(); } 
-            }
-
-            /// <summary>
-            /// Property for the y component of the ellipse's center.
-            /// </summary>
-            public float CY 
-            { 
-                get => this.cy; 
-                set { this.cy = value; this.FlagDirty(); } 
-            }
-
-            /// <summary>
-            /// Property for the x component of the ellipse's radius.
-            /// </summary>
-            public float RadX 
-            { 
-                get => this.rx; 
-                set { this.rx = value; this.FlagDirty(); } 
-            }
-
-            /// <summary>
-            /// Property for the y component of the ellipse's radius.
-            /// </summary>
-            public float RadY 
-            { 
-                get => this.ry; 
-                set { this.ry = value; this.FlagDirty(); } 
-            }
-
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="shape">The shape to attach to.</param>
-            /// <param name="center"></param>
-            /// <param name="radius"></param>
-            public BShapeGenEllipse(BShape shape, Vector2 center, Vector2 radius)
-                : base(shape)
-            { 
-                this.cx = center.x;
-                this.cy = center.y;
-                this.rx = radius.x;
-                this.ry = radius.y;
-            }
-
-            public override void Reconstruct()
-            {
-                this.shape.Clear();
-
-                List<BNode.BezierInfo> nodes = new List<BNode.BezierInfo>();
-
-                const int circSegs = 16;
-                float circR = 2.0f * Mathf.PI / circSegs;
+            const int circSegs = 16;
+            float circR = 2.0f * Mathf.PI / circSegs;
                 
-                // The tangents aren't as simple as the circle case. What was chosen was to pick the
-                // delta to the neighbors - to do this, 
-                // we :
-                // first just fill in the points
-                // next we set the tangent as the delta to the next and previous point
-                // We then do line collision
-                // and then pull back 2/3rd to turn the quadratic to cubic.
+            // The tangents aren't as simple as the circle case. What was chosen was to pick the
+            // delta to the neighbors - to do this, 
+            // we :
+            // first just fill in the points
+            // next we set the tangent as the delta to the next and previous point
+            // We then do line collision
+            // and then pull back 2/3rd to turn the quadratic to cubic.
 
-                // Fill in the points
-                for(int i = 0; i < circSegs; ++i)
-                {
-                    float thR = -circR * i;
-
-                    float x = Mathf.Cos(thR) * this.rx;
-                    float y = Mathf.Sin(thR) * this.ry;
-
-                    nodes.Add(
-                        new BNode.BezierInfo(
-                            new Vector2(this.cx + x, this.cy + y)));
-                }
-
-                BLoop bl = this.shape.AddLoop(nodes.ToArray());
-
-                // We're going to travel instead of iterate over the list - I suspect
-                // the list might turn into a HashSet in the future so I don't want to
-                // over-leverage it.
-                BNode bnStart = bl.nodes[0];
-                foreach(BNode bnit in bnStart.Travel())
-                { 
-                    bnit.UseTanIn = true;
-                    bnit.UseTanOut = true;
-
-                    Vector2 prevToNext = bnit.next.Pos - bnit.prev.Pos;
-                    bnit.TanIn =  -prevToNext;
-                    bnit.TanOut = prevToNext;
-                }
-
-                // Treat the tangents are rays and find the intersection. This is where
-                // we emulate quadratic tangents and convert them to cubic.
-                foreach(BNode bnit in bnStart.Travel())
-                { 
-                    float s, t;
-
-                    // Previous tangent to be 2/3rds the intersection
-                    Utils.ProjectSegmentToSegment(bnit.Pos, bnit.Pos + bnit.TanIn, bnit.prev.Pos, bnit.prev.Pos + bnit.prev.TanOut, out s, out t);
-                    bnit.TanIn *= (s * 2.0f / 3.0f);
-
-                    // Next tangent to be 2/3rds the intersection
-                    Utils.ProjectSegmentToSegment(bnit.Pos, bnit.Pos + bnit.TanOut, bnit.next.Pos, bnit.next.Pos + bnit.next.TanIn, out s, out t);
-                    bnit.TanOut *= (s * 2.0f / 3.0f);
-                }
-            }
-
-            public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+            // Fill in the points
+            for(int i = 0; i < circSegs; ++i)
             {
-                System.Xml.XmlAttribute attrCX = shapeEle.GetAttributeNode("cx");
-                SVGSerializer.AttribToFloat(attrCX, ref this.cx);
+                float thR = -circR * i;
 
-                System.Xml.XmlAttribute attrCY = shapeEle.GetAttributeNode("cy");
-                SVGSerializer.AttribToFloat(attrCY, ref this.cy);
+                float x = Mathf.Cos(thR) * this.rx;
+                float y = Mathf.Sin(thR) * this.ry;
 
-                System.Xml.XmlAttribute attrRX = shapeEle.GetAttributeNode("rx");
-                SVGSerializer.AttribToFloat(attrRX, ref this.rx);
-
-                System.Xml.XmlAttribute attrRY = shapeEle.GetAttributeNode("ry");
-                SVGSerializer.AttribToFloat(attrRY, ref this.ry);
-
-                return true;
+                nodes.Add(
+                    new BNode.BezierInfo(
+                        new Vector2(this.cx + x, this.cy + y)));
             }
 
-            public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
-            {
-                shapeEle.SetAttribute("cx", this.cx.ToString());
-                shapeEle.SetAttribute("cy", SVGSerializer.InvertBranch(this.cy, invertY).ToString());
+            BLoop bl = this.shape.AddLoop(nodes.ToArray());
 
-                shapeEle.SetAttribute("rx", this.rx.ToString());
-                shapeEle.SetAttribute("ry", this.ry.ToString());
+            // We're going to travel instead of iterate over the list - I suspect
+            // the list might turn into a HashSet in the future so I don't want to
+            // over-leverage it.
+            BNode bnStart = bl.nodes[0];
+            foreach(BNode bnit in bnStart.Travel())
+            { 
+                bnit.UseTanIn = true;
+                bnit.UseTanOut = true;
 
-                return true;
+                Vector2 prevToNext = bnit.next.Pos - bnit.prev.Pos;
+                bnit.TanIn =  -prevToNext;
+                bnit.TanOut = prevToNext;
             }
+
+            // Treat the tangents are rays and find the intersection. This is where
+            // we emulate quadratic tangents and convert them to cubic.
+            foreach(BNode bnit in bnStart.Travel())
+            { 
+                float s, t;
+
+                // Previous tangent to be 2/3rds the intersection
+                Utils.ProjectSegmentToSegment(bnit.Pos, bnit.Pos + bnit.TanIn, bnit.prev.Pos, bnit.prev.Pos + bnit.prev.TanOut, out s, out t);
+                bnit.TanIn *= (s * 2.0f / 3.0f);
+
+                // Next tangent to be 2/3rds the intersection
+                Utils.ProjectSegmentToSegment(bnit.Pos, bnit.Pos + bnit.TanOut, bnit.next.Pos, bnit.next.Pos + bnit.next.TanIn, out s, out t);
+                bnit.TanOut *= (s * 2.0f / 3.0f);
+            }
+        }
+
+        public override bool LoadFromSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            System.Xml.XmlAttribute attrCX = shapeEle.GetAttributeNode("cx");
+            SVGSerializer.AttribToFloat(attrCX, ref this.cx);
+
+            System.Xml.XmlAttribute attrCY = shapeEle.GetAttributeNode("cy");
+            SVGSerializer.AttribToFloat(attrCY, ref this.cy);
+
+            System.Xml.XmlAttribute attrRX = shapeEle.GetAttributeNode("rx");
+            SVGSerializer.AttribToFloat(attrRX, ref this.rx);
+
+            System.Xml.XmlAttribute attrRY = shapeEle.GetAttributeNode("ry");
+            SVGSerializer.AttribToFloat(attrRY, ref this.ry);
+
+            return true;
+        }
+
+        public override bool SaveToSVGXML(System.Xml.XmlElement shapeEle, bool invertY)
+        {
+            shapeEle.SetAttribute("cx", this.cx.ToString());
+            shapeEle.SetAttribute("cy", SVGSerializer.InvertBranch(this.cy, invertY).ToString());
+
+            shapeEle.SetAttribute("rx", this.rx.ToString());
+            shapeEle.SetAttribute("ry", this.ry.ToString());
+
+            return true;
         }
     }
 }

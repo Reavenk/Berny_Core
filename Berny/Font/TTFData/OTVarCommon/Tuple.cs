@@ -23,67 +23,61 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// Tuple Records
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// 
+    /// he tuple variation store formats reference regions within the font’s variation space using tuple records. These references identify positions in terms of normalized coordinates, which use F2DOT14 values.
+    /// </summary>
+    public struct Tuple
     {
-        namespace TTF
+        public List<float> coordinates;
+
+        public void Read(TTFReader r, int ct)
         {
-            /// <summary>
-            /// Tuple Records
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// 
-            /// he tuple variation store formats reference regions within the font’s variation space using tuple records. These references identify positions in terms of normalized coordinates, which use F2DOT14 values.
-            /// </summary>
-            public struct Tuple
-            {
-                public List<float> coordinates;
+            if(this.coordinates == null)
+                this.coordinates = new List<float>();
 
-                public void Read(TTFReader r, int ct)
-                {
-                    if(this.coordinates == null)
-                        this.coordinates = new List<float>();
+            for(int i = 0; i < ct; ++i)
+                coordinates.Add(r.ReadFDot14());
+        }
+    }
 
-                    for(int i = 0; i < ct; ++i)
-                        coordinates.Add(r.ReadFDot14());
-                }
-            }
+    public struct Tuple2
+    {
+        public Vector2 v;
 
-            public struct Tuple2
-            {
-                public Vector2 v;
+        public void Read(TTFReader r)
+        {
+            v.x = r.ReadFDot14();
+            v.y = r.ReadFDot14();
+        }
+    }
 
-                public void Read(TTFReader r)
-                {
-                    v.x = r.ReadFDot14();
-                    v.y = r.ReadFDot14();
-                }
-            }
+    public struct Tuple3
+    {
+        public Vector3 v;
 
-            public struct Tuple3
-            {
-                public Vector3 v;
+        public void Read(TTFReader r)
+        {
+            v.x = r.ReadFDot14();
+            v.y = r.ReadFDot14();
+            v.z = r.ReadFDot14();
+        }
+    }
 
-                public void Read(TTFReader r)
-                {
-                    v.x = r.ReadFDot14();
-                    v.y = r.ReadFDot14();
-                    v.z = r.ReadFDot14();
-                }
-            }
+    public struct Tuple4
+    {
+        public Vector4 v;
 
-            public struct Tuple4
-            {
-                public Vector4 v;
-
-                public void Read(TTFReader r)
-                {
-                    v.x = r.ReadFDot14();
-                    v.y = r.ReadFDot14();
-                    v.z = r.ReadFDot14();
-                    v.w = r.ReadFDot14();
-                }
-            }
+        public void Read(TTFReader r)
+        {
+            v.x = r.ReadFDot14();
+            v.y = r.ReadFDot14();
+            v.z = r.ReadFDot14();
+            v.w = r.ReadFDot14();
         }
     }
 }

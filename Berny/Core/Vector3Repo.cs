@@ -24,42 +24,39 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny
 {
-    namespace Berny
+    public class Vector3Repo : MonoBehaviour
     {
-        public class Vector3Repo : MonoBehaviour
+        List<Vector3> vectors = new List<Vector3>();
+        Dictionary<Vector3, int> lookup = new Dictionary<Vector3, int>();
+
+        public bool HasVector(Vector3 v)
         {
-            List<Vector3> vectors = new List<Vector3>();
-            Dictionary<Vector3, int> lookup = new Dictionary<Vector3, int>();
+            return lookup.ContainsKey(v);
+        }
 
-            public bool HasVector(Vector3 v)
-            {
-                return lookup.ContainsKey(v);
-            }
+        public int GetVectorID(Vector3 v)
+        {
+            int ret;
+            if (lookup.TryGetValue(v, out ret) == true)
+                return ret;
 
-            public int GetVectorID(Vector3 v)
-            {
-                int ret;
-                if (lookup.TryGetValue(v, out ret) == true)
-                    return ret;
+            int idx = lookup.Count;
+            vectors.Add(v);
+            lookup.Add(v, idx);
 
-                int idx = lookup.Count;
-                vectors.Add(v);
-                lookup.Add(v, idx);
+            return idx;
+        }
 
-                return idx;
-            }
+        public Vector3 GetVector(int idx)
+        {
+            return this.vectors[idx];
+        }
 
-            public Vector3 GetVector(int idx)
-            {
-                return this.vectors[idx];
-            }
-
-            public Vector3[] GetVector3Array()
-            {
-                return this.vectors.ToArray();
-            }
+        public Vector3[] GetVector3Array()
+        {
+            return this.vectors.ToArray();
         }
     }
 }

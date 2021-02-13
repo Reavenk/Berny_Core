@@ -24,59 +24,50 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// JSTF — Justification Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/jstf
+    /// 
+    /// The Justification table (JSTF) provides font developers with additional control 
+    /// over glyph substitution and positioning in justified text. Text-processing clients 
+    /// now have more options to expand or shrink word and glyph spacing so text fills 
+    /// the specified line length.
+    /// </summary>
+    public struct JSTF
     {
-        namespace TTF
-        {
-            namespace Table
+        public struct JstfScriptRecord
+        { 
+            public string jstfScriptTag;        // 4-byte JstfScript identification
+            public ushort jstfScriptOffset;     // Offset to JstfScript table, from beginning of JSTF Header
+
+            public void Read(TTFReader r)
             {
-                /// <summary>
-                /// JSTF — Justification Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/jstf
-                /// 
-                /// The Justification table (JSTF) provides font developers with additional control 
-                /// over glyph substitution and positioning in justified text. Text-processing clients 
-                /// now have more options to expand or shrink word and glyph spacing so text fills 
-                /// the specified line length.
-                /// </summary>
-                public struct JSTF
-                {
-                    public struct JstfScriptRecord
-                    { 
-                        public string jstfScriptTag;        // 4-byte JstfScript identification
-                        public ushort jstfScriptOffset;     // Offset to JstfScript table, from beginning of JSTF Header
+                this.jstfScriptTag = r.ReadString(4);
+                r.ReadInt(out this.jstfScriptOffset);
+            }
+        }
 
-                        public void Read(TTFReader r)
-                        {
-                            this.jstfScriptTag = r.ReadString(4);
-                            r.ReadInt(out this.jstfScriptOffset);
-                        }
-                    }
+        public const string TagName = "JSTF";
 
-                    public const string TagName = "JSTF";
+        public ushort majorVersion;             // Major version of the JSTF table, = 1
+        public ushort minorVersion;             // Minor version of the JSTF table, = 0
+        public ushort jsftScriptCount;          // Number of JstfScriptRecords in this table
+        public List<JstfScriptRecord> jstfScriptRecords; // Array of JstfScriptRecords, in alphabetical order by jstfScriptTag
 
-                    public ushort majorVersion;             // Major version of the JSTF table, = 1
-                    public ushort minorVersion;             // Minor version of the JSTF table, = 0
-                    public ushort jsftScriptCount;          // Number of JstfScriptRecords in this table
-                    public List<JstfScriptRecord> jstfScriptRecords; // Array of JstfScriptRecords, in alphabetical order by jstfScriptTag
+        public void Read(TTFReader r)
+        { 
+            r.ReadInt(out this.majorVersion);
+            r.ReadInt(out this.minorVersion);
+            r.ReadInt(out this.jsftScriptCount);
 
-                    public void Read(TTFReader r)
-                    { 
-                        r.ReadInt(out this.majorVersion);
-                        r.ReadInt(out this.minorVersion);
-                        r.ReadInt(out this.jsftScriptCount);
-
-                        this.jstfScriptRecords = new List<JstfScriptRecord>();
-                        for(int i = 0; i < jsftScriptCount; ++i)
-                        {
-                            JstfScriptRecord rec = new JstfScriptRecord();
-                            rec.Read(r);
-                            this.jstfScriptRecords.Add(rec);
-                        }
-                    }
-                }
+            this.jstfScriptRecords = new List<JstfScriptRecord>();
+            for(int i = 0; i < jsftScriptCount; ++i)
+            {
+                JstfScriptRecord rec = new JstfScriptRecord();
+                rec.Read(r);
+                this.jstfScriptRecords.Add(rec);
             }
         }
     }

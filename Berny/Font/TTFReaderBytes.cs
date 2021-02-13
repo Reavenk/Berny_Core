@@ -24,93 +24,87 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// 
+    /// </summary>
+    public class TTFReaderBytes : TTFReader
     {
-        namespace TTF
+        /// <summary>
+        /// The read position.
+        /// </summary>
+        long pos = 0;
+
+        /// <summary>
+        /// The data buffer to read from.
+        /// </summary>
+        byte [] data;
+
+        /// <summary>
+        /// The state variable to simulate closing the reader.
+        /// </summary>
+        bool closed = true;
+
+        public override bool AtEnd()
         {
-            /// <summary>
-            /// 
-            /// </summary>
-            public class TTFReaderBytes : TTFReader
-            {
-                /// <summary>
-                /// The read position.
-                /// </summary>
-                long pos = 0;
+            return this.pos >= data.Length;
+        }
 
-                /// <summary>
-                /// The data buffer to read from.
-                /// </summary>
-                byte [] data;
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="data">The data buffer to read from.</param>
+        public TTFReaderBytes(byte [] data)
+        { 
+            this.data = data;
+            this.closed = false;
+        }
 
-                /// <summary>
-                /// The state variable to simulate closing the reader.
-                /// </summary>
-                bool closed = true;
+        public override bool IsOpen()
+        { 
+            return this.closed == false;
+        }
 
-                public override bool AtEnd()
-                {
-                    return this.pos >= data.Length;
-                }
+        public override bool Close()
+        { 
+            this.closed = true;
+            return true;
+        }
 
-                /// <summary>
-                /// Constructor.
-                /// </summary>
-                /// <param name="data">The data buffer to read from.</param>
-                public TTFReaderBytes(byte [] data)
-                { 
-                    this.data = data;
-                    this.closed = false;
-                }
+        public override sbyte ReadInt8()
+        { 
+            sbyte ret = (sbyte)this.data[this.pos];
+            ++this.pos;
+            return ret;
+        }
 
-                public override bool IsOpen()
-                { 
-                    return this.closed == false;
-                }
+        public override byte ReadUInt8()
+        { 
+            byte ret = this.data[this.pos];
+            ++this.pos;
+            return ret;
+        }
 
-                public override bool Close()
-                { 
-                    this.closed = true;
-                    return true;
-                }
+        public override long GetPosition()
+        { 
+            return this.pos;
+        }
 
-                public override sbyte ReadInt8()
-                { 
-                    sbyte ret = (sbyte)this.data[this.pos];
-                    ++this.pos;
-                    return ret;
-                }
+        public override bool SetPosition(long newPos)
+        { 
+            this.pos = newPos;
+            return true;
+        }
 
-                public override byte ReadUInt8()
-                { 
-                    byte ret = this.data[this.pos];
-                    ++this.pos;
-                    return ret;
-                }
+        public override byte[] ReadBytes(int length)
+        { 
+            byte [] ret = new byte[length];
+            System.Buffer.BlockCopy(this.data, (int)this.pos, ret, 0, length);
 
-                public override long GetPosition()
-                { 
-                    return this.pos;
-                }
+            this.pos += length;
 
-                public override bool SetPosition(long newPos)
-                { 
-                    this.pos = newPos;
-                    return true;
-                }
-
-                public override byte[] ReadBytes(int length)
-                { 
-                    byte [] ret = new byte[length];
-                    System.Buffer.BlockCopy(this.data, (int)this.pos, ret, 0, length);
-
-                    this.pos += length;
-
-                    return ret;
-                }
-            }
+            return ret;
         }
     }
 }

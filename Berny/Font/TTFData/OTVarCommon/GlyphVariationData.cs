@@ -22,39 +22,33 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// Tuple Variation Store Header
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// 
+    /// The two variants of a tuple variation store header, the GlyphVariationData table 
+    /// header and the 'cvar' header, are only slightly different. 
+    /// </summary>
+    public struct GlyphVariationData
     {
-        namespace TTF
+        ushort tupleVariationCount; // A packed field. The high 4 bits are flags (see below), and the low 12 bits are the number of tuple variation tables for this glyph. The count can be any number between 1 and 4095.
+        ushort dataOffset;          // Offset from the start of the GlyphVariationData table to the serialized data.
+        List<TupleVariationHeader> tupleVariationHeaders;   // Array of tuple variation headers.
+
+        public void Read(TTFReader r, int axisCount)
         {
-            /// <summary>
-            /// Tuple Variation Store Header
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// 
-            /// The two variants of a tuple variation store header, the GlyphVariationData table 
-            /// header and the 'cvar' header, are only slightly different. 
-            /// </summary>
-            public struct GlyphVariationData
+            r.ReadInt(out this.tupleVariationCount);
+            r.ReadInt(out this.dataOffset);
+
+            this.tupleVariationHeaders = new List<TupleVariationHeader>();
+            for (int i = 0; i < this.tupleVariationCount; ++i)
             {
-                ushort tupleVariationCount; // A packed field. The high 4 bits are flags (see below), and the low 12 bits are the number of tuple variation tables for this glyph. The count can be any number between 1 and 4095.
-                ushort dataOffset;          // Offset from the start of the GlyphVariationData table to the serialized data.
-                List<TupleVariationHeader> tupleVariationHeaders;   // Array of tuple variation headers.
+                TupleVariationHeader tvh = new TupleVariationHeader();
+                tvh.Read(r, axisCount);
 
-                public void Read(TTFReader r, int axisCount)
-                {
-                    r.ReadInt(out this.tupleVariationCount);
-                    r.ReadInt(out this.dataOffset);
-
-                    this.tupleVariationHeaders = new List<TupleVariationHeader>();
-                    for (int i = 0; i < this.tupleVariationCount; ++i)
-                    {
-                        TupleVariationHeader tvh = new TupleVariationHeader();
-                        tvh.Read(r, axisCount);
-
-                        this.tupleVariationHeaders.Add(tvh);
-                    }
-                }
+                this.tupleVariationHeaders.Add(tvh);
             }
         }
     }

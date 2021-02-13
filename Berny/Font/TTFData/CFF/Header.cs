@@ -25,27 +25,21 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace PxPre
+namespace PxPre.Berny.CFF
 {
-    namespace Berny
+    public struct Header
     {
-        namespace CFF
-        {
-            public struct Header
-            {
-                public byte major;
-                public byte minor;
-                public byte hdrSize;
-                public byte offSize;
+        public byte major;
+        public byte minor;
+        public byte hdrSize;
+        public byte offSize;
 
-                public void Read(TTF.TTFReader r)
-                {
-                    r.ReadInt(out this.major);
-                    r.ReadInt(out this.minor);
-                    r.ReadInt(out this.hdrSize);
-                    r.ReadInt(out this.offSize);
-                }
-            }
+        public void Read(TTF.TTFReader r)
+        {
+            r.ReadInt(out this.major);
+            r.ReadInt(out this.minor);
+            r.ReadInt(out this.hdrSize);
+            r.ReadInt(out this.offSize);
         }
     }
 }

@@ -24,20 +24,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.Font
 {
-    namespace Berny
+    public class Typeface
     {
-        namespace Font
-        {
-            public class Typeface
-            {
-                public string name = "";
-                public List<Glyph> glyphs = new List<Glyph>();
-                public Dictionary<int, Glyph> glyphLookup = new Dictionary<int, Glyph>();
-                public float newlineDst = 0.0f;
+        public string name = "";
+        public List<Glyph> glyphs = new List<Glyph>();
+        public Dictionary<int, Glyph> glyphLookup = new Dictionary<int, Glyph>();
+        public float newlineDst = 0.0f;
 
-            }
-        }
     }
 }

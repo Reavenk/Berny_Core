@@ -22,37 +22,31 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// VariationRegionList
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// 
+    /// For a given item variation store, a set of regions is specified using a VariationRegionList.
+    /// </summary>
+    public struct VariationRegionList
     {
-        namespace TTF
+        public ushort axisCount;
+        public ushort regionCount;
+        public List<VariationRegion> variationRegions;
+
+        public void Read(TTFReader r)
         {
-            /// <summary>
-            /// VariationRegionList
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// 
-            /// For a given item variation store, a set of regions is specified using a VariationRegionList.
-            /// </summary>
-            public struct VariationRegionList
+            r.ReadInt(out this.axisCount);
+            r.ReadInt(out this.regionCount);
+
+            this.variationRegions = new List<VariationRegion>();
+            for (int i = 0; i < this.regionCount; ++i)
             {
-                public ushort axisCount;
-                public ushort regionCount;
-                public List<VariationRegion> variationRegions;
-
-                public void Read(TTFReader r)
-                {
-                    r.ReadInt(out this.axisCount);
-                    r.ReadInt(out this.regionCount);
-
-                    this.variationRegions = new List<VariationRegion>();
-                    for (int i = 0; i < this.regionCount; ++i)
-                    {
-                        VariationRegion vr = new VariationRegion();
-                        vr.Read(r, axisCount);
-                        this.variationRegions.Add(vr);
-                    }
-                }
+                VariationRegion vr = new VariationRegion();
+                vr.Read(r, axisCount);
+                this.variationRegions.Add(vr);
             }
         }
     }

@@ -24,38 +24,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// DeltaSet
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// 
+    /// The deltaSets array represents a logical two-dimensional table of delta values with 
+    /// itemCount rows and regionIndexCount columns. Rows in the table provide sets of deltas 
+    /// for particular target items, and columns correspond to regions of the variation 
+    /// space. Each DeltaSet record in the array represents one row of the delta-value 
+    /// table — one delta set.
+    /// </summary>
+    public struct DeltaSet
     {
-        namespace TTF
+        public List<int> deltaData;     // Variation delta values.
+
+        public void Read(TTFReader r, int regionIndexCount, int shortDeltaCount)
         {
-            /// <summary>
-            /// DeltaSet
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// 
-            /// The deltaSets array represents a logical two-dimensional table of delta values with 
-            /// itemCount rows and regionIndexCount columns. Rows in the table provide sets of deltas 
-            /// for particular target items, and columns correspond to regions of the variation 
-            /// space. Each DeltaSet record in the array represents one row of the delta-value 
-            /// table — one delta set.
-            /// </summary>
-            public struct DeltaSet
-            {
-                public List<int> deltaData;     // Variation delta values.
+            this.deltaData = new List<int>();
 
-                public void Read(TTFReader r, int regionIndexCount, int shortDeltaCount)
-                {
-                    this.deltaData = new List<int>();
+            for (int i = 0; i < shortDeltaCount; ++i)
+                deltaData.Add(r.ReadInt16());
 
-                    for (int i = 0; i < shortDeltaCount; ++i)
-                        deltaData.Add(r.ReadInt16());
-
-                    for (int i = 0; i < regionIndexCount - shortDeltaCount; ++i)
-                        deltaData.Add(r.ReadInt8());
-                }
-            }
-
+            for (int i = 0; i < regionIndexCount - shortDeltaCount; ++i)
+                deltaData.Add(r.ReadInt8());
         }
     }
+
 }

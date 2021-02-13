@@ -24,57 +24,47 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// hmtx — Horizontal Metrics Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx
+    /// 
+    /// Glyph metrics used for horizontal text layout include glyph advance widths, 
+    /// side bearings and X-direction min and max values (xMin, xMax). These are 
+    /// derived using a combination of the glyph outline data ('glyf', 'CFF ' or CFF2) 
+    /// and the horizontal metrics table. The horizontal metrics ('hmtx') table provides 
+    /// glyph advance widths and left side bearings.
+    /// </summary>
+    public struct hmtx
     {
-        namespace TTF
+        public struct longHorMetric
         {
-            namespace Table
+            public ushort advanceWidth;     // Advance width, in font design units.
+            public short lsb;               // Glyph left side bearing, in font design units.
+        }
+
+        public const string TagName = "hmtx";
+
+        public List<longHorMetric> hMetrics;    // Paired advance width and left side bearing values for each glyph. Records are indexed by glyph ID.
+        public List<short> leftSideBearings;    // Left side bearings for glyph IDs greater than or equal to numberOfHMetrics.
+
+        public void Read(TTFReader r, int numberOfHMetrics, int numGlyphs)
+        {
+            this.hMetrics = new List<longHorMetric>();
+            for (int i = 0; i < numberOfHMetrics; ++i)
             {
-                /// <summary>
-                /// hmtx — Horizontal Metrics Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/hmtx
-                /// 
-                /// Glyph metrics used for horizontal text layout include glyph advance widths, 
-                /// side bearings and X-direction min and max values (xMin, xMax). These are 
-                /// derived using a combination of the glyph outline data ('glyf', 'CFF ' or CFF2) 
-                /// and the horizontal metrics table. The horizontal metrics ('hmtx') table provides 
-                /// glyph advance widths and left side bearings.
-                /// </summary>
-                public struct hmtx
-                {
-                    public struct longHorMetric
-                    {
-                        public ushort advanceWidth;     // Advance width, in font design units.
-                        public short lsb;               // Glyph left side bearing, in font design units.
-                    }
-
-                    public const string TagName = "hmtx";
-
-                    public List<longHorMetric> hMetrics;    // Paired advance width and left side bearing values for each glyph. Records are indexed by glyph ID.
-                    public List<short> leftSideBearings;    // Left side bearings for glyph IDs greater than or equal to numberOfHMetrics.
-
-                    public void Read(TTFReader r, int numberOfHMetrics, int numGlyphs)
-                    {
-                        this.hMetrics = new List<longHorMetric>();
-                        for (int i = 0; i < numberOfHMetrics; ++i)
-                        {
-                            longHorMetric lhm = new longHorMetric();
-                            r.ReadInt(out lhm.advanceWidth);
-                            r.ReadInt(out lhm.lsb);
-                            this.hMetrics.Add(lhm);
-                        }
-
-                        this.leftSideBearings = new List<short>();
-                        // We could have them pass in the numGlyphs-numberOfHMetrics instead of 
-                        // calculating this ourselves, but I think this helps add rigor.
-                        for (int i = 0; i < numGlyphs - numberOfHMetrics; ++i)
-                            this.leftSideBearings.Add(r.ReadInt16());
-                    }
-                }
+                longHorMetric lhm = new longHorMetric();
+                r.ReadInt(out lhm.advanceWidth);
+                r.ReadInt(out lhm.lsb);
+                this.hMetrics.Add(lhm);
             }
+
+            this.leftSideBearings = new List<short>();
+            // We could have them pass in the numGlyphs-numberOfHMetrics instead of 
+            // calculating this ourselves, but I think this helps add rigor.
+            for (int i = 0; i < numGlyphs - numberOfHMetrics; ++i)
+                this.leftSideBearings.Add(r.ReadInt16());
         }
     }
 }
-

@@ -22,34 +22,28 @@
 
 using System.Collections.Generic;
 
-namespace PxPre
+namespace PxPre.Berny.TTF
 {
-    namespace Berny
+    /// <summary>
+    /// ItemVariationStore
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
+    /// </summary>
+    public struct ItemVariationStore
     {
-        namespace TTF
+        public ushort format;                       // Format — set to 1
+        public uint variationRegionListOffset;      // Offset in bytes from the start of the item variation store to the variation region list.
+        public ushort itemVariationDataCount;       // The number of item variation data subtables.
+        public List<uint> itemVariationDataOffsets; // Offsets in bytes from the start of the item variation store to each item variation data subtable.
+
+        public void Read(TTFReader r)
         {
-            /// <summary>
-            /// ItemVariationStore
-            /// https://docs.microsoft.com/en-us/typography/opentype/spec/otvarcommonformats
-            /// </summary>
-            public struct ItemVariationStore
-            {
-                public ushort format;                       // Format — set to 1
-                public uint variationRegionListOffset;      // Offset in bytes from the start of the item variation store to the variation region list.
-                public ushort itemVariationDataCount;       // The number of item variation data subtables.
-                public List<uint> itemVariationDataOffsets; // Offsets in bytes from the start of the item variation store to each item variation data subtable.
+            r.ReadInt(out this.format);
+            r.ReadInt(out this.variationRegionListOffset);
+            r.ReadInt(out this.itemVariationDataCount);
 
-                public void Read(TTFReader r)
-                {
-                    r.ReadInt(out this.format);
-                    r.ReadInt(out this.variationRegionListOffset);
-                    r.ReadInt(out this.itemVariationDataCount);
-
-                    this.itemVariationDataOffsets = new List<uint>();
-                    for(int i = 0; i < this.itemVariationDataCount; ++i)
-                        itemVariationDataOffsets.Add(r.ReadUInt16());
-                }
-            }
+            this.itemVariationDataOffsets = new List<uint>();
+            for(int i = 0; i < this.itemVariationDataCount; ++i)
+                itemVariationDataOffsets.Add(r.ReadUInt16());
         }
     }
 }

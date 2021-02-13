@@ -24,70 +24,60 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    /// <summary>
+    /// loca — Index to Location
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/loca
+    /// 
+    /// The indexToLoc table stores the offsets to the locations of the glyphs 
+    /// in the font, relative to the beginning of the glyphData table. In order 
+    /// to compute the length of the last glyph element, there is an extra entry 
+    /// after the last valid index.
+    /// </summary>
+    public struct loca
     {
-        namespace TTF
+        public const string TagName = "loca";
+
+        // If int16:
+        //      The actual local offset divided by 2 is stored. The value of n 
+        //      is numGlyphs + 1. The value for numGlyphs is found in the 'maxp' 
+        //      table.
+        // If Int32:
+        //      The actual local offset is stored. The value of n is numGlyphs + 1. 
+        //      The value for numGlyphs is found in the 'maxp' table.
+        public List<uint> offset; 
+
+        public void Read(TTFReader r, int numGlyphs, bool longVer)
         {
-            namespace Table
+            int readCt = numGlyphs + 1;
+            this.offset = new List<uint>();
+
+            if (longVer == false)
             {
-                /// <summary>
-                /// loca — Index to Location
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/loca
-                /// 
-                /// The indexToLoc table stores the offsets to the locations of the glyphs 
-                /// in the font, relative to the beginning of the glyphData table. In order 
-                /// to compute the length of the last glyph element, there is an extra entry 
-                /// after the last valid index.
-                /// </summary>
-                public struct loca
-                {
-                    public const string TagName = "loca";
-
-                    // If int16:
-                    //      The actual local offset divided by 2 is stored. The value of n 
-                    //      is numGlyphs + 1. The value for numGlyphs is found in the 'maxp' 
-                    //      table.
-                    // If Int32:
-                    //      The actual local offset is stored. The value of n is numGlyphs + 1. 
-                    //      The value for numGlyphs is found in the 'maxp' table.
-                    public List<uint> offset; 
-
-                    public void Read(TTFReader r, int numGlyphs, bool longVer)
-                    {
-                        int readCt = numGlyphs + 1;
-                        this.offset = new List<uint>();
-
-                        if (longVer == false)
-                        {
-                            for (int i = 0; i < readCt; ++i)
-                                this.offset.Add( (uint)(r.ReadUInt16() * 2));
-                        }
-                        else
-                        {
-                            for (int i = 0; i < readCt; ++i)
-                                this.offset.Add( r.ReadUInt32());
-                        }
-                    }
-
-                    public int GetGlyphCount()
-                    { 
-                        return this.offset.Count - 1;
-                    }
-
-                    public uint GetGlyphSize(int idx)
-                    { 
-                        return this.offset[idx + 1] - this.offset[idx];
-                    }
-
-                    public uint GetGlyphOffset(Loader.Table tableGlyf, int idx)
-                    { 
-                        return tableGlyf.offset + this.offset[idx];
-                    }
-                }
+                for (int i = 0; i < readCt; ++i)
+                    this.offset.Add( (uint)(r.ReadUInt16() * 2));
+            }
+            else
+            {
+                for (int i = 0; i < readCt; ++i)
+                    this.offset.Add( r.ReadUInt32());
             }
         }
-    }
 
+        public int GetGlyphCount()
+        { 
+            return this.offset.Count - 1;
+        }
+
+        public uint GetGlyphSize(int idx)
+        { 
+            return this.offset[idx + 1] - this.offset[idx];
+        }
+
+        public uint GetGlyphOffset(Loader.Table tableGlyf, int idx)
+        { 
+            return tableGlyf.offset + this.offset[idx];
+        }
+    }
 }

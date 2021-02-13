@@ -24,93 +24,84 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PxPre
+namespace PxPre.Berny.TTF.Table
 {
-    namespace Berny
+    
+    /// <summary>
+    /// gvar — Glyph Variations Table
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/gvar
+    /// 
+    /// OpenType Font Variations allow a font designer to incorporate multiple faces 
+    /// within a font family into a single font resource. In a variable font, the font 
+    /// variations ('fvar') table defines a set of design variations supported by the 
+    /// font, and then various tables provide data that specify how different font 
+    /// values, such as X-height or X and Y coordinates for glyph outline points, are 
+    /// adjusted for different variation instances. The glyph variations ('gvar') 
+    /// table provides all of the variation data that describe how TrueType glyph 
+    /// outlines in a 'glyf' table change across the font’s variation space.
+    /// </summary>
+    public struct gvar
     {
-        namespace TTF
+        public struct TupleRecord
         {
-            namespace Table
-            {
-                /// <summary>
-                /// gvar — Glyph Variations Table
-                /// https://docs.microsoft.com/en-us/typography/opentype/spec/gvar
-                /// 
-                /// OpenType Font Variations allow a font designer to incorporate multiple faces 
-                /// within a font family into a single font resource. In a variable font, the font 
-                /// variations ('fvar') table defines a set of design variations supported by the 
-                /// font, and then various tables provide data that specify how different font 
-                /// values, such as X-height or X and Y coordinates for glyph outline points, are 
-                /// adjusted for different variation instances. The glyph variations ('gvar') 
-                /// table provides all of the variation data that describe how TrueType glyph 
-                /// outlines in a 'glyf' table change across the font’s variation space.
-                /// </summary>
-                public struct gvar
-                {
-                    public struct TupleRecord
-                    {
-                        // Not sure if this implementation is correct
-                        public ushort flags;
-                        public short cx;
-                        public short cy;
-                    }
+            // Not sure if this implementation is correct
+            public ushort flags;
+            public short cx;
+            public short cy;
+        }
                     
-                    public const string TagName = "gvar";
+        public const string TagName = "gvar";
 
-                    public ushort majorVersion;                     // Major version number of the glyph variations table — set to 1.
-                    public ushort minorVersion;                     // Minor version number of the glyph variations table — set to 0.
-                    public ushort axisCount;                        // The number of variation axes for this font. This must be the same number as axisCount in the 'fvar' table.
-                    public ushort sharedTupleCount;                 // The number of shared tuple records. Shared tuple records can be referenced within glyph variation data tables for multiple glyphs, as opposed to other tuple records stored directly within a glyph variation data table.
-                    public uint sharedTupleOffset;                  // Offset from the start of this table to the shared tuple records.
-                    public ushort glyphCount;                       // The number of glyphs in this font. This must match the number of glyphs stored elsewhere in the font.
-                    public ushort flags;                            // Bit-field that gives the format of the offset array that follows. If bit 0 is clear, the offsets are uint16; if bit 0 is set, the offsets are uint32.
-                    public uint glyphVariationDataArrayOffset;      // Offset from the start of this table to the array of GlyphVariationData tables.
-                    public List<uint> glyphVariationDataOffsets;    // Offsets from the start of the GlyphVariationData array to each GlyphVariationData table.
+        public ushort majorVersion;                     // Major version number of the glyph variations table — set to 1.
+        public ushort minorVersion;                     // Minor version number of the glyph variations table — set to 0.
+        public ushort axisCount;                        // The number of variation axes for this font. This must be the same number as axisCount in the 'fvar' table.
+        public ushort sharedTupleCount;                 // The number of shared tuple records. Shared tuple records can be referenced within glyph variation data tables for multiple glyphs, as opposed to other tuple records stored directly within a glyph variation data table.
+        public uint sharedTupleOffset;                  // Offset from the start of this table to the shared tuple records.
+        public ushort glyphCount;                       // The number of glyphs in this font. This must match the number of glyphs stored elsewhere in the font.
+        public ushort flags;                            // Bit-field that gives the format of the offset array that follows. If bit 0 is clear, the offsets are uint16; if bit 0 is set, the offsets are uint32.
+        public uint glyphVariationDataArrayOffset;      // Offset from the start of this table to the array of GlyphVariationData tables.
+        public List<uint> glyphVariationDataOffsets;    // Offsets from the start of the GlyphVariationData array to each GlyphVariationData table.
 
-                    public List<TupleRecord> sharedTuples;
-                    public GlyphVariationData glyphVariationData;
+        public List<TupleRecord> sharedTuples;
+        public GlyphVariationData glyphVariationData;
 
-                    public void Read(TTFReader r)
-                    {
-                        r.ReadInt(out this.majorVersion);
-                        r.ReadInt(out this.minorVersion);
-                        r.ReadInt(out this.axisCount);
-                        r.ReadInt(out this.sharedTupleCount);
-                        r.ReadInt(out this.glyphCount);
-                        r.ReadInt(out this.flags);
-                        r.ReadInt(out this.glyphVariationDataArrayOffset);
+        public void Read(TTFReader r)
+        {
+            r.ReadInt(out this.majorVersion);
+            r.ReadInt(out this.minorVersion);
+            r.ReadInt(out this.axisCount);
+            r.ReadInt(out this.sharedTupleCount);
+            r.ReadInt(out this.glyphCount);
+            r.ReadInt(out this.flags);
+            r.ReadInt(out this.glyphVariationDataArrayOffset);
 
-                        this.glyphVariationDataOffsets = new List<uint>();
-                        if ((this.flags & 0x0001) != 0)
-                        {
-                            for (int i = 0; i < this.glyphCount + 1; ++i)
-                                this.glyphVariationDataOffsets.Add(r.ReadUInt32());
-                        }
-                        else
-                        {
-                            for (int i = 0; i < this.glyphCount + 1; ++i)
-                                this.glyphVariationDataOffsets.Add((uint)r.ReadUInt16());
-                        }
-
-                        // Shared tuple records
-                        // This is probably not right - I cant get good documentation
-                        // that I can understand for this.
-                        this.sharedTuples = new List<TupleRecord>();
-                        for (int i = 0; i < this.sharedTupleCount; ++i)
-                        {
-                            TupleRecord tr = new TupleRecord();
-                            r.ReadInt(out tr.flags);
-                            r.ReadInt(out tr.cx);
-                            r.ReadInt(out tr.cy);
-                            this.sharedTuples.Add(tr);
-                        }
-
-                        // Glyph variation data tables
-                        this.glyphVariationData.Read(r, this.axisCount);
-                    }
-
-                }
+            this.glyphVariationDataOffsets = new List<uint>();
+            if ((this.flags & 0x0001) != 0)
+            {
+                for (int i = 0; i < this.glyphCount + 1; ++i)
+                    this.glyphVariationDataOffsets.Add(r.ReadUInt32());
             }
+            else
+            {
+                for (int i = 0; i < this.glyphCount + 1; ++i)
+                    this.glyphVariationDataOffsets.Add((uint)r.ReadUInt16());
+            }
+
+            // Shared tuple records
+            // This is probably not right - I cant get good documentation
+            // that I can understand for this.
+            this.sharedTuples = new List<TupleRecord>();
+            for (int i = 0; i < this.sharedTupleCount; ++i)
+            {
+                TupleRecord tr = new TupleRecord();
+                r.ReadInt(out tr.flags);
+                r.ReadInt(out tr.cx);
+                r.ReadInt(out tr.cy);
+                this.sharedTuples.Add(tr);
+            }
+
+            // Glyph variation data tables
+            this.glyphVariationData.Read(r, this.axisCount);
         }
     }
 }
