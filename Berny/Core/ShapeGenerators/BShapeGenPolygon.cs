@@ -66,10 +66,15 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// The points in the polygon.
         /// </summary>
         List<Vector2> points = new List<Vector2>();
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="shape">The shape the generator is attached to.</param>
+        /// <param name="points">The initial points in the polygon.</param>
         public BShapeGenPolygon(BShape shape, params Vector2 [] points)
             : base(shape)
         { 
