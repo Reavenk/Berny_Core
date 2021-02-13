@@ -68,6 +68,9 @@ namespace PxPre.Berny
         public readonly int debugCtr;
 #endif
 
+        /// <summary>
+        /// 
+        /// </summary>
         public FillSegment()
         {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
@@ -75,6 +78,10 @@ namespace PxPre.Berny
 #endif
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="v2"></param>
         public FillSegment(Vector2 v2)
         {
             this.pos = v2;
@@ -84,6 +91,10 @@ namespace PxPre.Berny
 #endif
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public Vector2 InflateDir()
         {
             if (this.prev == null)
@@ -117,6 +128,11 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Create a deep copy of the FillSegment.
+        /// </summary>
+        /// <param name="copyLinks">If true, copy the linked list references. Else, leave null.</param>
+        /// <returns>A duplicate FillSegment.</returns>
         public FillSegment Clone(bool copyLinks)
         { 
             FillSegment fs = new FillSegment();
@@ -130,6 +146,10 @@ namespace PxPre.Berny
             return fs;
         }
 
+        /// <summary>
+        /// Create an enumerable through the entire island.
+        /// </summary>
+        /// <returns>The enumerable through the entire island.</returns>
         public IEnumerable<FillSegment> Travel()
         { 
             FillSegment it = this;

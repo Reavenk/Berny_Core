@@ -116,6 +116,10 @@ namespace PxPre.Berny
                 this.result = result;
             }
 
+            /// <summary>
+            /// Enumerate through the island.
+            /// </summary>
+            /// <returns></returns>
             public IEnumerable<BNode> Enumerate()
             { 
                 return this.node.Travel();
@@ -217,6 +221,11 @@ namespace PxPre.Berny
             /// </summary>
             public TangentMode tangentMode;
 
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="fx">The position's x coordinate.</param>
+            /// <param name="fy">The position's y coordinate.</param>
             public BezierInfo(float fx, float fy)
             {
                 this.pos = new Vector2(fx, fy);
@@ -295,16 +304,41 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Information related to how to subdivide a path without
+        /// changing its geometry.
+        /// </summary>
         public struct SubdivideInfo
         { 
+            /// <summary>
+            /// The previous node's new output tangent.
+            /// </summary>
             public Vector2 prevOut;
+
+            /// <summary>
+            /// The next node's new input tangent.
+            /// </summary>
             public Vector2 nextIn;
 
+            /// <summary>
+            /// The subdivision node's position.
+            /// </summary>
             public Vector2 subPos;
+
+            /// <summary>
+            /// The subdivision node's incomming tangent.
+            /// </summary>
             public Vector2 subIn;
+
+            /// <summary>
+            /// The subdivision node's outgoing tangent.
+            /// </summary>
             public Vector2 subOut;
 
-            // Used for calculating windings
+            /// <summary>
+            /// Directional tangent. The direction should be correct, buit the
+            /// magnitude doesn't matter. Used for calculating windings
+            /// </summary>
             public Vector2 windTangent;
         }
 
@@ -494,8 +528,27 @@ namespace PxPre.Berny
         /// <summary>
         /// The tangent mode.
         /// </summary>
-        // TODO: public access to this needs to be wrapped into a property.
-        public TangentMode tangentMode = TangentMode.Disconnected;
+        TangentMode tanMode = TangentMode.Disconnected;
+
+        /// <summary>
+        /// Public accessor and modifier for tangent mode.
+        /// </summary>
+        public TangentMode tangentMode
+        { 
+            get => this.tanMode;
+            set
+            { 
+                if(this.tanMode == value)
+                    return;
+
+                this.tanMode = value;
+
+                if(this.tanMode == TangentMode.Smooth)
+                    this.SetTangentSmooth(true);
+                else if(this.tanMode == TangentMode.Symmetric)
+                    this.SetTangentsSymmetry(true);
+            }
+        }
 
         /// <summary>
         /// The dirty state of the. If true, the node is dirty which means it has been
@@ -531,12 +584,12 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Copy constructor.
         /// </summary>
-        /// <param name="parent"></param>
-        /// <param name="reference"></param>
-        /// <param name="copyLinks"></param>
-        /// <param name="reverse"></param>
+        /// <param name="parent">The parent loop.</param>
+        /// <param name="reference">The node to copy.</param>
+        /// <param name="copyLinks">If true, the link list nodes are copied. Else, leave null.</param>
+        /// <param name="reverse">If true, reverse tangents and linked list references.</param>
         public BNode(BLoop parent, BNode reference, bool copyLinks, bool reverse)
         { 
             this.parent = parent;
@@ -857,7 +910,7 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Make sure the initial sample reference is non-null.
         /// </summary>
         public void EnsureSyncedSelfSample()
         {
@@ -866,9 +919,10 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Set the tangent mode as smooth.
         /// </summary>
-        /// <param name="force"></param>
+        /// <param name="force">If true, continue to set tangent mode, even if
+        /// already set to smooth.</param>
         public void SetTangentSmooth(bool force = false)
         { 
             if(force == false && this.tangentMode == TangentMode.Smooth)
@@ -895,9 +949,10 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Set the tangent mode as symmetry.
         /// </summary>
-        /// <param name="force"></param>
+        /// <param name="force">If true, continue to set tangent mode, even if 
+        /// already set to symmetric.</param>
         public void SetTangentsSymmetry(bool force = false)
         {
             if(force == false && this.tangentMode == TangentMode.Symmetric)
@@ -1005,11 +1060,12 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Set the parent loop.
         /// </summary>
-        /// <param name="newParent"></param>
-        /// <param name="formal"></param>
-        /// <returns></returns>
+        /// <param name="newParent">The new parent.</param>
+        /// <param name="formal">If true, and the node is already parented, correctly
+        /// unparent the node from its current parent before reparenting to the new one.</param>
+        /// <returns>If true, the parent was changed. Else, false.</returns>
         public bool SetParent(BLoop newParent, bool formal = false)
         { 
             if(newParent == this.parent)
@@ -1117,13 +1173,13 @@ namespace PxPre.Berny
         }
 
         /// <summary>
+        /// Create a node at a specified position to subdivide the line segment.
         /// 
+        /// The created node will maintain the path's geometry and automatically 
+        /// integrate itself into the (linked list) topology.
         /// </summary>
         /// <param name="lambda">The t value to subdivide.</param>
-        /// <returns></returns>
-        // TODO: Has been tested to be inaccurate in certain sitations.
-        // This implementation is deprecated and is going to be replaced
-        // with De Casteljau's algorithm for solving the tangents.
+        /// <returns>The subdivision node that was created.</returns>
         public BNode Subdivide(float lambda = 0.5f)
         {
             if(this.parent == null)
@@ -1575,11 +1631,11 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Get the vectors needed to inflate the path by 1 unit.
         /// </summary>
-        /// <param name="selfInf"></param>
-        /// <param name="inInf"></param>
-        /// <param name="outInf"></param>
+        /// <param name="selfInf">Output parameter, the vector to inflate the position.</param>
+        /// <param name="inInf">Output parameter, the The vector to inflate the input tangent.</param>
+        /// <param name="outInf">Output parameter, the vector to inflate the output tangent.</param>
         public void GetInflateDirection(out Vector2 selfInf, out Vector2 inInf, out Vector2 outInf)
         {
             PathBridge pb = this.GetPathBridgeInfo();
@@ -1683,6 +1739,14 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Given two interpolation points, get useful values on how a middle segment could be 
+        /// subdivided between there.
+        /// </summary>
+        /// <param name="tL">The lower interpolation point.</param>
+        /// <param name="sdiL">Information on the higher interpolation point's subdivision.</param>
+        /// <param name="tR">The higher interpolation point.</param>
+        /// <param name="sdiR">Information on the higher interpolation point's subdivision.</param>
         public void GetSubdivideInfo(float tL, out SubdivideInfo sdiL, float tR, out SubdivideInfo sdiR)
         {
             PathBridge pb = this.GetPathBridgeInfo();
@@ -1969,6 +2033,17 @@ namespace PxPre.Berny
             otherOut.UseTanIn = false;
         }
 
+        /// <summary>
+        /// Given two islands, where one is inside another, create a 0 width channel
+        /// between the inside and the outside so that the inside is a hollow region
+        /// when the bridged shape is filled.
+        /// </summary>
+        /// <param name="islSegsOuter">The nodes that are a part of the outer island path.</param>
+        /// <param name="islSegsInner">The nodes that are a part of the inner island path.</param>
+        /// <param name="inner">The inner node of the bride.</param>
+        /// <param name="outer">The outer node of the bridge.</param>
+        /// <param name="innerT">The position on the inner node where the bridge connects.</param>
+        /// <param name="outerT">The position on the outer node where the bridge connects.</param>
         public static void FindBridge(
             List<BNode> islSegsOuter,
             List<BNode> islSegsInner,
@@ -2153,12 +2228,15 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Project a ray through the line segment and calculate how many times it intersects.
         /// </summary>
-        /// <param name="rayStart"></param>
-        /// <param name="rayControl"></param>
-        /// <param name="interCurve"></param>
-        /// <param name="interLine"></param>
+        /// <param name="rayStart">The start location of the raycast.</param>
+        /// <param name="rayControl">The direction of the raycast.</param>
+        /// <param name="interCurve">An output list of intersection points on the curve.</param>
+        /// <param name="interLine">An output list of intersection points on the ray. The size and elements
+        /// should match interCurve.</param>
+        /// <param name="clampParallelPositives">If false, rays that are parallel to the segment are ignored. 
+        /// If true, colinear results are added but are clamped to the ends of the segment.</param>
         /// <returns></returns>
         public int ProjectSegment(
             Vector2 rayStart, 
@@ -2314,6 +2392,17 @@ namespace PxPre.Berny
             return mapping;
         }
 
+        /// <summary>
+        /// Clone a list of nodes.
+        /// </summary>
+        /// <param name="original">The original nodes to be cloned.</param>
+        /// <param name="transferLoop">If true, transfer linked list references.</param>
+        /// <param name="remap">Only relevant is transferLoop is true. If true, remap
+        /// linked list references to use remapped references to the cloned nodes.</param>
+        /// <param name="allowOnlyRemaps">Only relevant is transferLoop is true.
+        /// If true, null-out linked list references if there isn't a mapped clone equivalent.</param>
+        /// <returns>The list of cloned nodes, mapped per-element to match the contents in the
+        /// original parameter.</returns>
         public static List<BNode> CloneNodesList(
             List<BNode> original, 
             bool transferLoop, 
@@ -2366,6 +2455,10 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Scale the node.
+        /// </summary>
+        /// <param name="f">The scale amount.</param>
         public void Scale(float f)
         { 
             this.pos *= f;

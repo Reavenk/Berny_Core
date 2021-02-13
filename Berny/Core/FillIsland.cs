@@ -67,12 +67,12 @@ namespace PxPre.Berny
         public HashSet<FillSegment> segments = new HashSet<FillSegment>();
 
         /// <summary>
-        /// 
+        /// Create an inflated edge mesh. 
         /// </summary>
-        /// <param name="ie"></param>
-        /// <param name="pushin"></param>
-        /// <param name="pushout"></param>
-        /// <returns></returns>
+        /// <param name="ie">The outline to inflate.</param>
+        /// <param name="pushin">The amount to inflate inwards.</param>
+        /// <param name="pushout">The amount to inflate outwards.</param>
+        /// <returns>A FillIsland representing the shape of the outline.</returns>
         public static FillIsland CreateEdged(IEnumerable<Vector2> ie, float pushin, float pushout)
         { 
             List<FillSegment> segA = new List<FillSegment>();
@@ -136,10 +136,11 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Create a FillIsland from a shape defined by a set of points 
+        /// that create a closed island.
         /// </summary>
-        /// <param name="ie"></param>
-        /// <returns></returns>
+        /// <param name="ie">The vertices.</param>
+        /// <returns>The FillIsland representing the shape.</returns>
         public static FillIsland CreateLooped(IEnumerable<Vector2> ie)
         { 
             FillIsland fiRet = new FillIsland();
@@ -434,12 +435,25 @@ namespace PxPre.Berny
             }
         }
 
-        public void ConsumeIntoOulineTriangles(float width, List<int> triangles, Vector2Repo vectors, WindingRequirement wr)
+        /// <summary>
+        /// Calculate a triangle mesh that's an outline
+        /// of the FillIsland.
+        /// </summary>
+        /// <param name="width">The width of the outline.</param>
+        /// <param name="triangles">The output triangle indices.</param>
+        /// <param name="vectors">The output triangle vertices.</param>
+        /// <param name="wr">Rules on how to create the winding of the triangles.</param>
+        public void ConsumeIntoOulineTriangles(
+            float width, 
+            List<int> triangles, 
+            Vector2Repo vectors, 
+            WindingRequirement wr)
         {
             this.MakeOutlineBridged(width);
             this.ConsumeIntoTriangles(triangles, vectors, wr);
         }
 
+        // !TODO: Remove
         public void ConsumeIntoTrianglesWithOutline(
             float width, 
             List<int> fillTris, 
@@ -652,9 +666,9 @@ namespace PxPre.Berny
         }
 
         /// <summary>
-        /// 
+        /// Inflate the outline.
         /// </summary>
-        /// <param name="f"></param>
+        /// <param name="f">The amount to inflate by.</param>
         public void Inflate(float f)
         { 
             List<Vector2> infs = new List<Vector2>();

@@ -789,6 +789,7 @@ namespace PxPre.Berny
         /// </summary>
         /// <param name="v2">The vector to rotate.</param>
         /// <returns>The rotate vector.</returns>
+        // !TODO: Remove - unused duplicate?
         public static Vector2 RotateEdge90CCW(Vector2 v2)
         { 
             return new Vector2(-v2.y, v2.x);
@@ -886,6 +887,10 @@ namespace PxPre.Berny
             return false;
         }
 
+        /// <summary>
+        /// Scale all the nodes in the loop by a scalar.
+        /// </summary>
+        /// <param name="f">The scale amount.</param>
         public void Scale(float f)
         { 
             foreach(BNode n in this.nodes)

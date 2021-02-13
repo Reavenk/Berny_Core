@@ -26,11 +26,29 @@ using UnityEngine;
 
 namespace PxPre.Berny.Font
 {
+    /// <summary>
+    /// The information for a Berny font typeface.
+    /// </summary>
     public class Typeface
     {
+        /// <summary>
+        /// The name of the typeface. (Currently UNSET and UNUSED).
+        /// </summary>
         public string name = "";
+
+        /// <summary>
+        /// The glyphs, in index order.
+        /// </summary>
         public List<Glyph> glyphs = new List<Glyph>();
+
+        /// <summary>
+        /// The glyphs, mapped to ASCII/UNICODE values.
+        /// </summary>
         public Dictionary<int, Glyph> glyphLookup = new Dictionary<int, Glyph>();
+
+        /// <summary>
+        /// The vertical distance for a newline.
+        /// </summary>
         public float newlineDst = 0.0f;
 
     }

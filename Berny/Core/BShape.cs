@@ -136,6 +136,9 @@ namespace PxPre.Berny
         /// </summary>
         public Color fillColor = Color.white;
 
+        /// <summary>
+        /// If true, the shape has an outline. Else, false.
+        /// </summary>
         public bool stroke = true;
 
         /// <summary>
@@ -172,6 +175,9 @@ namespace PxPre.Berny
         /// </summary>
         bool dirty = true;
 
+        /// <summary>
+        /// The procedural shape generator.
+        /// </summary>
         public BShapeGen shapeGenerator = null;
 
         // Currently unused, planned for non-path SVG shapes
@@ -508,6 +514,10 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Scale all nodes in the shape by a scalar.
+        /// </summary>
+        /// <param name="f">The amount to scale by.</param>
         public void Scale(float f)
         { 
             if( f == 1.0f)

@@ -32,9 +32,20 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct RegionAxisCoordinates
     {
-        public float startCoord;    // The region start coordinate value for the current axis.
-        public float peakCoord;     // The region peak coordinate value for the current axis.
-        public float endCoord;      // The region end coordinate value for the current axis.
+        /// <summary>
+        /// The region start coordinate value for the current axis.
+        /// </summary>
+        public float startCoord;
+
+        /// <summary>
+        /// The region peak coordinate value for the current axis.
+        /// </summary>
+        public float peakCoord;
+
+        /// <summary>
+        /// The region end coordinate value for the current axis.
+        /// </summary>
+        public float endCoord;
 
         public void Read(TTFReader r)
         {

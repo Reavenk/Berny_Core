@@ -38,7 +38,10 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct DeltaSet
     {
-        public List<int> deltaData;     // Variation delta values.
+        /// <summary>
+        /// Variation delta values.
+        /// </summary>
+        public List<int> deltaData;
 
         public void Read(TTFReader r, int regionIndexCount, int shortDeltaCount)
         {

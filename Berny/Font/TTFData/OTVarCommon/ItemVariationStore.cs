@@ -30,10 +30,25 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct ItemVariationStore
     {
-        public ushort format;                       // Format — set to 1
-        public uint variationRegionListOffset;      // Offset in bytes from the start of the item variation store to the variation region list.
-        public ushort itemVariationDataCount;       // The number of item variation data subtables.
-        public List<uint> itemVariationDataOffsets; // Offsets in bytes from the start of the item variation store to each item variation data subtable.
+        /// <summary>
+        /// Format — set to 1
+        /// </summary>
+        public ushort format;
+
+        /// <summary>
+        /// Offset in bytes from the start of the item variation store to the variation region list.
+        /// </summary>
+        public uint variationRegionListOffset;
+
+        /// <summary>
+        /// The number of item variation data subtables.
+        /// </summary>
+        public ushort itemVariationDataCount;
+
+        /// <summary>
+        /// Offsets in bytes from the start of the item variation store to each item variation data subtable.
+        /// </summary>
+        public List<uint> itemVariationDataOffsets;
 
         public void Read(TTFReader r)
         {

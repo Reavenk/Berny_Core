@@ -40,11 +40,30 @@ namespace PxPre.Berny.TTF
         public const ushort Reserved = 0x1000;
         public const ushort TUPLE_INDEX_MASK = 0xFFFF;
 
-        public ushort variationDataSize;        // The size in bytes of the serialized data for this tuple variation table.
-        public ushort tupleIndex;               // A packed field. The high 4 bits are flags (see below). The low 12 bits are an index into a shared tuple records array.
-        public Tuple peakTuple;                 // Peak tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
-        public Tuple intermediateStartTuple;    // Intermediate start tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
-        public Tuple intermediateEndTuple;      // Intermediate end tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        /// <summary>
+        /// The size in bytes of the serialized data for this tuple variation table.
+        /// </summary>
+        public ushort variationDataSize;
+
+        /// <summary>
+        /// A packed field. The high 4 bits are flags (see below). The low 12 bits are an index into a shared tuple records array.
+        /// </summary>
+        public ushort tupleIndex;
+
+        /// <summary>
+        /// Peak tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        /// </summary>
+        public Tuple peakTuple;
+
+        /// <summary>
+        /// Intermediate start tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        /// </summary>
+        public Tuple intermediateStartTuple;
+
+        /// <summary>
+        /// Intermediate end tuple record for this tuple variation table — optional, determined by flags in the tupleIndex value.
+        /// </summary>
+        public Tuple intermediateEndTuple;
 
         public void Read(TTFReader r, int axisCount)
         {

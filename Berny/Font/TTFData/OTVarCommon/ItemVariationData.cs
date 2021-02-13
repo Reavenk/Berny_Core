@@ -34,11 +34,30 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct ItemVariationData
     {
-        public ushort itemCount;            // The number of delta sets for distinct items.
-        public ushort shortDeltaCount;      // The number of deltas in each delta set that use a 16-bit representation. Must be less than or equal to regionIndexCount.
-        public ushort regionIndexCount;     // The number of variation regions referenced.
-        public List<ushort> regionIndexes;  // Array of indices into the variation region list for the regions referenced by this item variation data table.
-        public List<DeltaSet> deltaSets;    // Delta-set rows.
+        /// <summary>
+        /// The number of delta sets for distinct items.
+        /// </summary>
+        public ushort itemCount;
+
+        /// <summary>
+        /// The number of deltas in each delta set that use a 16-bit representation. Must be less than or equal to regionIndexCount.
+        /// </summary>
+        public ushort shortDeltaCount;
+
+        /// <summary>
+        /// The number of variation regions referenced.
+        /// </summary>
+        public ushort regionIndexCount;
+
+        /// <summary>
+        /// Array of indices into the variation region list for the regions referenced by this item variation data table.
+        /// </summary>
+        public List<ushort> regionIndexes;
+
+        /// <summary>
+        /// Delta-set rows.
+        /// </summary>
+        public List<DeltaSet> deltaSets;
 
         public void Read(TTFReader r)
         {

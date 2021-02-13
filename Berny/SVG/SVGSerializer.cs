@@ -33,6 +33,13 @@ namespace PxPre.Berny
     /// stuff, and for quickly loading test scenes.</remarks>
     public static class SVGSerializer
     { 
+        /// <summary>
+        /// Save a Berny document as an SVG.
+        /// </summary>
+        /// <param name="filename">The filename.</param>
+        /// <param name="doc">The document to save.</param>
+        /// <param name="invertY">If true, the document is vertically inverted when saved.</param>
+        /// <returns>If true, the docuement successfuly saved. Else, false.</returns>
         public static bool Save(string filename, Document doc, bool invertY = true)
         { 
             System.Xml.XmlDocument xmlDoc = new System.Xml.XmlDocument();
@@ -47,6 +54,16 @@ namespace PxPre.Berny
             return true;
         }
 
+        /// <summary>
+        /// Convert the document into XML form.
+        /// 
+        /// This function is used for saving the document as an SVG.
+        /// </summary>
+        /// <param name="doc">The document to convert.</param>
+        /// <param name="xmldoc">The XML Document used to generate elements for the SVG.</param>
+        /// <param name="xmlroot">The XML element to insert the child elements into.</param>
+        /// <param name="invertY">If true, the document is vertically inverted when saved.</param>
+        /// <returns>If true, the document successfully converted. Else, false.</returns>
         public static bool ConvertToXML(Document doc, System.Xml.XmlDocument xmldoc, System.Xml.XmlElement xmlroot, bool invertY)
         { 
             xmlroot.SetAttribute("version", "PxPreVector", "0.0.1");
@@ -238,6 +255,13 @@ namespace PxPre.Berny
             return true;
         }
 
+        /// <summary>
+        /// Load the contents of an SVG document into a Berny document.
+        /// </summary>
+        /// <param name="filename">The path of the file to load.</param>
+        /// <param name="doc">The document to load the contents into.</param>
+        /// <param name="invertY">If true, invery the Y when the file is loaded into the document. Else, false.</param>
+        /// <returns>True, if the document is successfully loaded. Else, false.</returns>
         public static bool Load(string filename, Document doc, bool invertY = true)
         { 
             System.Xml.XmlDocument xmlDoc = new System.Xml.XmlDocument();
@@ -253,6 +277,13 @@ namespace PxPre.Berny
             return ConvertFromXML(xmlDoc, doc, invertY);
         }
 
+        /// <summary>
+        /// Load the contents of an SVG document into a Berny document.
+        /// </summary>
+        /// <param name="xmlDoc">The XML Document to load SVG content from.</param>
+        /// <param name="doc">The Berny document to load content into.</param>
+        /// <param name="invertY">If true, invery the Y when geometry content is loaded.</param>
+        /// <returns>True, if the document is successfully loaded. Else, false.</returns>
         public static bool ConvertFromXML(System.Xml.XmlDocument xmlDoc, Document doc, bool invertY)
         { 
             System.Xml.XmlElement root = xmlDoc.DocumentElement;
@@ -363,6 +394,13 @@ namespace PxPre.Berny
             return true;
         }
 
+        /// <summary>
+        /// Get the default layer that content can be loaded into. If no layers exists,
+        /// a layer is created.
+        /// </summary>
+        /// <param name="doc">The document to load content into.</param>
+        /// <param name="layer">If the layer is valid, relay it back for use.</param>
+        /// <returns>The layer that content should be placed into.</returns>
         public static Layer ResolveUsableLayer(Document doc, Layer layer)
         { 
             if(layer == null)
@@ -371,6 +409,14 @@ namespace PxPre.Berny
             return layer;
         }
 
+        /// <summary>
+        /// Create a Berny shape from an SVG path.
+        /// </summary>
+        /// <param name="ele">The SVG element with instructions on how to create the shape.</param>
+        /// <param name="doc">The Berny document to create the shape into.</param>
+        /// <param name="layer">The layer to create the shape into.</param>
+        /// <param name="invertY">If true, invert the Y of loaded geometry content.</param>
+        /// <returns>The created shape.</returns>
         public static BShape CreateShapeFromXML(System.Xml.XmlElement ele, Document doc, Layer layer, bool invertY)
         {
             BShape bs = null;
@@ -445,6 +491,14 @@ namespace PxPre.Berny
             return bs;
         }
 
+        /// <summary>
+        /// Load SVG shapes from an XML element..
+        /// </summary>
+        /// <param name="layer">The parent layer to create the shape into.</param>
+        /// <param name="ele">The element to load information from.</param>
+        /// <param name="mat">The matrix.</param>
+        /// <param name="invertY">If true, invert the Y of loaded geometry content.</param>
+        /// <returns>The created shape.</returns>
         public static BShape CreateTemplateShapeFromXML(Layer layer, System.Xml.XmlElement ele, out SVGMat mat, bool invertY)
         {
             BShape bs = new BShape(Vector2.zero, 0.0f);
@@ -455,6 +509,11 @@ namespace PxPre.Berny
             return bs;
         }
 
+        /// <summary>
+        /// Split a path's draw command into its individual tokens.
+        /// </summary>
+        /// <param name="drawCmd">The command the parse.</param>
+        /// <returns>A list of individual tokens from the draw command.</returns>
         public static List<string> SplitDrawCommand(string drawCmd)
         { 
             int idx = 0;
@@ -501,6 +560,13 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Given a point string, parse it into a series of usables point.
+        /// </summary>
+        /// <param name="pointsString">The string with concatenated points.</param>
+        /// <param name="invertY">If true, the Y coordinates are inverted after parsing. Else, the
+        /// Y coordinates are left unmodified.</param>
+        /// <returns>The list of parsed float vectors.</returns>
         public static List<Vector2> SplitPointsString(string pointsString, bool invertY)
         { 
             List<Vector2> ret = new List<Vector2>();
@@ -573,6 +639,12 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Given a collection of Vector2s, get the SVG string representation of that collection.
+        /// </summary>
+        /// <param name="ieV2">The Vector2s to convert to a string.</param>
+        /// <param name="invertY">If true, the vertices are converted with an inverted Y.</param>
+        /// <returns>The string representing the parameter vectors.</returns>
         public static string PointsToPointsString(IEnumerable<Vector2> ieV2, bool invertY)
         { 
             List<string> strs = new List<string>();
@@ -582,6 +654,14 @@ namespace PxPre.Berny
             return string.Join(" ", strs);
         }
 
+        /// <summary>
+        /// Load basic information of a shape from XML. This function is only concerned with
+        /// the properties that all SVG geometries have in common - and nothing type-specific.
+        /// </summary>
+        /// <param name="shape">The shape the load content into.</param>
+        /// <param name="ele">The XML element with the SVG shape's information.</param>
+        /// <param name="matrix">Output parameter of the matrix that should be used for the shape, parsed from the XML parameter.</param>
+        /// <param name="invertY">If true, invert geometry Y values.</param>
         public static void LoadShapeInfo(BShape shape, System.Xml.XmlElement ele, out SVGMat matrix, bool invertY)
         {
             System.Xml.XmlAttribute attrPathID = ele.Attributes["id"];
@@ -597,6 +677,14 @@ namespace PxPre.Berny
             matrix = (attrTrans != null) ? ProcessMatrixAttribute(attrTrans.Value, invertY) : SVGMat.Identity();
         }
 
+        /// <summary>
+        /// Process a SVG path draw command and create the path geometry that was parsed into
+        /// a Berny shape.
+        /// </summary>
+        /// <param name="shape">The shape to create geometry into.</param>
+        /// <param name="attrib">The path string.</param>
+        /// <param name="mat">The shape's matrix.</param>
+        /// <param name="invertY">If true, inverts the Y coordinate values parsed.</param>
         public static void ProcessPathDrawAttrib(BShape shape, string attrib, SVGMat mat, bool invertY)
         {
             BLoop curLoop = null;
@@ -887,6 +975,12 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Process a matrix's XML attribute value and return the converted matrix.
+        /// </summary>
+        /// <param name="attrib">The string value of a matrix from an XML attribute.</param>
+        /// <param name="invertY">If true, y components are inverted.</param>
+        /// <returns>The parsed matrix.</returns>
         public static SVGMat ProcessMatrixAttribute(string attrib, bool invertY)
         {
             SVGMat ret = SVGMat.Identity();
@@ -912,6 +1006,12 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Parse an XML attribute value for the SVG attributes of a shape, and apply
+        /// them to a Berny shape.
+        /// </summary>
+        /// <param name="shape">The shape to apply the parsed states into.</param>
+        /// <param name="attrib">The XML attribute value to parse.</param>
         public static void ProcessShapeStyleAttrib(BShape shape, string attrib)
         {
             Dictionary<string, string> styles = Utils.SplitProperties(attrib);
@@ -974,11 +1074,22 @@ namespace PxPre.Berny
                 shape.corner = BShape.StringToCorner(strokejoin);
         }
 
+        /// <summary>
+        /// Get the name of a shape from an SVG's shape name attribute.
+        /// </summary>
+        /// <param name="shape">The shape being named.</param>
+        /// <param name="attrib">The value of the shape name attribute.</param>
         public static void ProcessShapeIdAttrib(BShape shape, string attrib)
         { 
             shape.name = attrib;
         }
 
+        /// <summary>
+        /// Given a index in a string, move the index to the next non-whitespace character.
+        /// </summary>
+        /// <param name="str">The string being parsed.</param>
+        /// <param name="idx">The index of the string.</param>
+        /// <returns>True if there is anything left in str to parse after index idx.</returns>
         public static bool ConsumeWhitespace(string str, ref int idx)
         { 
             if(idx >= str.Length)
@@ -996,6 +1107,18 @@ namespace PxPre.Berny
             return true;
         }
 
+        /// <summary>
+        /// Given a tokenized list from a string whos contents represents a list of vectors, 
+        /// parse out a vector from a specific index in token's list.
+        /// 
+        /// If the operation is successful, the index is moved right after the part of the tokens 
+        /// list representing the vector that was parsed.
+        /// </summary>
+        /// <param name="lst">The list of tokens from a string that representing a vector list.</param>
+        /// <param name="idx">The index into the lst parameter being operated on.</param>
+        /// <param name="vecOut">The parsed vector.</param>
+        /// <param name="invertY">If true, the Y coordinate is inverted for the result in vecOut.</param>
+        /// <returns>True, if a vector was successfully parsed. Else, false.</returns>
         public static bool ConsumeVector2(List<string> lst, ref int idx, out Vector2 vecOut, bool invertY)
         { 
             if(lst.Count < idx + 2 || lst[idx + 1] != ",")
@@ -1022,6 +1145,17 @@ namespace PxPre.Berny
             return true;
         }
 
+        /// <summary>
+        /// Utility function to convert a string (gathered from accessing a specified index in a list
+        /// of strings) into a float. Afterwards, the index is incremented to point to the next element.
+        /// </summary>
+        /// <param name="lst">The list of strings to parse from. This is expected to come from a tokenized 
+        /// (i.e., Split) string that contained multiple float strings.</param>
+        /// <param name="idx">The index to parse from. If the function returns true, this index will also
+        /// be incremented.</param>
+        /// <param name="f">The output parameter for the parsed value. Only valid if the function returns true.</param>
+        /// <param name="invertY">If true, invert the parsed value returned from the f parameter.</param>
+        /// <returns>True, if an element was successfully parsed. Else, false.</returns>
         public static bool ConsumeFloat(List<string> lst, ref int idx, out float f, bool invertY)
         { 
             if(idx >= lst.Count)
@@ -1038,6 +1172,17 @@ namespace PxPre.Berny
             return ret;
         }
 
+        /// <summary>
+        /// Utility function used when processing the first instruction of a draw command.
+        /// </summary>
+        /// <param name="shape">The shape being operated on.</param>
+        /// <param name="loop">The loop that's set up for inserting new geometry content into.</param>
+        /// <param name="lastPos">The last position set from the last draw command.</param>
+        /// <param name="mat">The SVG matrix of the shape.</param>
+        /// <param name="first">The first node in the shape.</param>
+        /// <param name="prev">The reference to the previous node.</param>
+        /// <remarks>Some of these parameter descriptions are not too useful without seeing how the
+        /// function is used in context in the function ProcessPathDrawAttrib().</remarks>
         public static void EnsureLoopAndNode(BShape shape, ref BLoop loop, Vector2 lastPos, ref SVGMat mat, ref BNode first, ref BNode prev)
         { 
             if(loop == null)
@@ -1063,6 +1208,13 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Get an attribute from an element.
+        /// </summary>
+        /// <param name="ele">The XML element to pull the attribute from.</param>
+        /// <param name="attr">The attribute name.</param>
+        /// <param name="xmlns">The attribute namespace. If no namespace is used, this can be set to null.</param>
+        /// <returns>The attribute found matching the attribute name and namespace. </returns>
         public static System.Xml.XmlAttribute GetAttributeFromXMLElement(System.Xml.XmlElement ele, string attr, string xmlns)
         {
             if(string.IsNullOrEmpty(xmlns) == true)
@@ -1075,6 +1227,13 @@ namespace PxPre.Berny
             return ele.GetAttributeNode($"{ xmlns}:{ attr}");
         }
 
+        /// <summary>
+        /// Given an attribute, convert it to a float.
+        /// </summary>
+        /// <param name="attr">The attribute to pull the number data from.</param>
+        /// <param name="f">The </param>
+        /// <param name="invert">If true, invert the value.</param>
+        /// <returns></returns>
         public static bool AttribToFloat(System.Xml.XmlAttribute attr, ref float f, bool invert = false)
         { 
             if(attr == null || string.IsNullOrEmpty(attr.Value) == true)
@@ -1093,11 +1252,29 @@ namespace PxPre.Berny
             return false;
         }
 
+        /// <summary>
+        /// Invert a float based on a bool parameter.
+        /// 
+        /// When loading and saving SVGs, the SVGSerializer systems allow inverting the Y to convert between
+        /// coordinate systems
+        /// </summary>
+        /// <param name="val">The float to invert.</param>
+        /// <param name="invert">If true, the val parameter is inverted. Else, it's left alone.</param>
+        /// <returns></returns>
         public static float InvertBranch(float val, bool invert)
         { 
             return (invert == true) ? -val : val;
         }
 
+        /// <summary>
+        /// Enumerate through child elements of a parent element.
+        /// 
+        /// This is done because an element's children from iteration
+        /// can be more than just element - and we want to ignore the 
+        /// non-element children.
+        /// </summary>
+        /// <param name="ele">The XML element whos children are being iterated.</param>
+        /// <returns>The iterator through the parameter's children XML elements.</returns>
         public static IEnumerable<System.Xml.XmlElement> EnumerateChildElements(System.Xml.XmlElement ele)
         { 
             foreach(System.Xml.XmlNode node in ele)

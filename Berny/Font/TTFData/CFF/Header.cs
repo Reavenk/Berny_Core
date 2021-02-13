@@ -20,18 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-
 namespace PxPre.Berny.CFF
 {
+    /// <summary>
+    /// A header for a CFF file.
+    /// 
+    /// For more information see https://wwwimages2.adobe.com/content/dam/acom/en/devnet/font/pdfs/5176.CFF.pdf,
+    /// page 13.
+    /// </summary>
     public struct Header
     {
+        /// <summary>
+        /// The file's major version.
+        /// </summary>
         public byte major;
+
+        /// <summary>
+        /// The file's minor version.
+        /// </summary>
         public byte minor;
+
+        /// <summary>
+        /// Header size
+        /// </summary>
         public byte hdrSize;
+
+        /// <summary>
+        /// Absolute offset.
+        /// </summary>
         public byte offSize;
 
         public void Read(TTF.TTFReader r)

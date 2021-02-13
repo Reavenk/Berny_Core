@@ -28,7 +28,11 @@ namespace PxPre.Berny.CFF
 {
     public struct INDEX
     {
-        public ushort count;        // Number of objects stored in INDEX
+        /// <summary>
+        /// Number of objects stored in INDEX
+        /// </summary>
+        public ushort count;
+
         public byte offSize;
         public List<uint> offset;
         public byte[] data;

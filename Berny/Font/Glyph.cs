@@ -166,12 +166,29 @@ namespace PxPre.Berny.Font
     /// </summary>
     public class Glyph
     {
-
+        /// <summary>
+        /// A reference to other glyphs.
+        /// </summary>
         public struct CompositeReference
         { 
+            /// <summary>
+            /// The offset for the referenced glyph.
+            /// </summary>
             public Vector2 offset;
+
+            /// <summary>
+            /// The X axis for the referenced glyph.
+            /// </summary>
             public Vector2 xAxis;
+
+            /// <summary>
+            /// The Y axis for the referenced glyph.
+            /// </summary>
             public Vector2 yAxis;
+
+            /// <summary>
+            /// The index of the glyph being referenced.
+            /// </summary>
             public int glyphRef;
         }
 
@@ -206,6 +223,9 @@ namespace PxPre.Berny.Font
         /// </summary>
         public List<Contour> contours = new List<Contour>();
 
+        /// <summary>
+        /// A lst of glyph references is the glyph is a composite.
+        /// </summary>
         public List<CompositeReference> compositeRefs = null;
 
         /// <summary>

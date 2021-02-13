@@ -33,9 +33,21 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct GlyphVariationData
     {
-        ushort tupleVariationCount; // A packed field. The high 4 bits are flags (see below), and the low 12 bits are the number of tuple variation tables for this glyph. The count can be any number between 1 and 4095.
-        ushort dataOffset;          // Offset from the start of the GlyphVariationData table to the serialized data.
-        List<TupleVariationHeader> tupleVariationHeaders;   // Array of tuple variation headers.
+        /// <summary>
+        /// A packed field. The high 4 bits are flags (see below), and the low 12 bits are the number 
+        /// of tuple variation tables for this glyph. The count can be any number between 1 and 4095.
+        /// </summary>
+        ushort tupleVariationCount;
+
+        /// <summary>
+        /// Offset from the start of the GlyphVariationData table to the serialized data.
+        /// </summary>
+        ushort dataOffset;
+
+        /// <summary>
+        /// Array of tuple variation headers.
+        /// </summary>
+        List<TupleVariationHeader> tupleVariationHeaders;
 
         public void Read(TTFReader r, int axisCount)
         {

@@ -86,12 +86,30 @@ namespace PxPre.Berny.TTF
         public const int FormatOTF = 0x4F54544F;
 
         // Table directory
-        public uint sfntVersion;       // 0x00010000 or 0x4F54544F ('OTTO')
-        public ushort numTables;       // Number of tables.
-        public ushort searchRange;     // Maximum power of 2 less than or equal to numTables, times 16 ((2**floor(log2(numTables))) * 16, where “**” is an exponentiation operator).
-        public ushort entrySelector;   // Log2 of the maximum power of 2 less than or equal to numTables (log2(searchRange/16), which is equal to floor(log2(numTables))).
-        public ushort rangeShift;      // numTables times 16, minus searchRange((numTables* 16) - searchRange).
+        /// <summary>
+        /// 0x00010000 or 0x4F54544F ('OTTO')
+        /// </summary>
+        public uint sfntVersion;
 
+        /// <summary>
+        /// Number of tables.
+        /// </summary>
+        public ushort numTables;
+
+        /// <summary>
+        /// Maximum power of 2 less than or equal to numTables, times 16 ((2**floor(log2(numTables))) * 16, where “**” is an exponentiation operator).
+        /// </summary>
+        public ushort searchRange;
+
+        /// <summary>
+        /// Log2 of the maximum power of 2 less than or equal to numTables (log2(searchRange/16), which is equal to floor(log2(numTables))).
+        /// </summary>
+        public ushort entrySelector;
+
+        /// <summary>
+        /// numTables times 16, minus searchRange((numTables* 16) - searchRange).
+        /// </summary>
+        public ushort rangeShift;
 
         /// <summary>
         /// Dictionary of all tables parsed. Accessible by table tag name.
@@ -138,10 +156,10 @@ namespace PxPre.Berny.TTF
         public int numGlyphs = 0;
 
         /// <summary>
-        /// 
+        /// Read a TTF file.
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
+        /// <param name="path">The file path to a TTF or OTF file.</param>
+        /// <returns>The loaded font.</returns>
         public Font.Typeface ReadTTF(string path)
         {
             TTFReader r = new TTFReaderFile(path);
@@ -149,10 +167,10 @@ namespace PxPre.Berny.TTF
         }
 
         /// <summary>
-        /// 
+        /// Read a TTF binary.
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /// <param name="data">The binary data of a TTF or OTF file.</param>
+        /// <returns>The loaded font.</returns>
         public Font.Typeface ReadTTF(byte [] data)
         { 
             TTFReaderBytes r = new TTFReaderBytes(data);

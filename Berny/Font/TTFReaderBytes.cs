@@ -27,7 +27,7 @@ using UnityEngine;
 namespace PxPre.Berny.TTF
 {
     /// <summary>
-    /// 
+    /// Implementation of TTFReader for a byte array.
     /// </summary>
     public class TTFReaderBytes : TTFReader
     {

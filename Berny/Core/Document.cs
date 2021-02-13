@@ -176,11 +176,19 @@ namespace PxPre.Berny
             this.dirty = false;
         }
 
+        /// <summary>
+        /// Enumerate through all layers in the document.
+        /// </summary>
+        /// <returns>An enumerator for all layers in the document.</returns>
         public IEnumerable<Layer> EnumerateLayers()
         {
             return this.layers;
         }
 
+        /// <summary>
+        /// Enumerate through all shapes in the document.
+        /// </summary>
+        /// <returns>An enumerator for all shapes in the document.</returns>
         public IEnumerable<BShape> EnumerateShapes()
         { 
             foreach(Layer layer in this.layers)
@@ -191,6 +199,10 @@ namespace PxPre.Berny
             }
         }
 
+        /// <summary>
+        /// Enumerate through all loops in the document.
+        /// </summary>
+        /// <returns>An enumerator for all loops in the document.</returns>
         public IEnumerable<BLoop> EnumerateLoops()
         { 
             foreach(Layer layer in this.layers)
@@ -260,6 +272,9 @@ namespace PxPre.Berny
             this.FlagDirty();
         }
 
+        /// <summary>
+        /// Empty the entire document.
+        /// </summary>
         public void Clean()
         { 
             for(int itLayer = this.layers.Count - 1; itLayer >= 0 ; --itLayer)

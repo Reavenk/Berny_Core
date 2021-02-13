@@ -37,12 +37,14 @@ using UnityEngine;
 /// finding test font to test implementations of features against.</remarks>
 namespace PxPre.Berny.CFF
 {
-        
+
     /// <summary>
     /// The contents of a CFF file.
     /// 
     /// The CFF file is meant to be either a stand-alone CFF file or TTF/OTF file, although at the 
     /// moment, only CFFs embedded in a TTF/OTF file are being developed-for and tested against.
+    /// 
+    /// See https://wwwimages2.adobe.com/content/dam/acom/en/devnet/font/pdfs/5176.CFF.pdf for the specs.
     /// </summary>
     public class CFFFile
     {

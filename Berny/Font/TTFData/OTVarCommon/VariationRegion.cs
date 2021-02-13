@@ -30,7 +30,10 @@ namespace PxPre.Berny.TTF
     /// </summary>
     public struct VariationRegion
     {
-        public List<RegionAxisCoordinates> regionAxes;  // Array of region axis coordinates records, in the order of axes given in the 'fvar' table.
+        /// <summary>
+        /// Array of region axis coordinates records, in the order of axes given in the 'fvar' table.
+        /// </summary>
+        public List<RegionAxisCoordinates> regionAxes;
 
         public void Read(TTFReader r, int axisCount)
         {
