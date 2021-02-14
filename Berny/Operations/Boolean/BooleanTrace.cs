@@ -414,8 +414,8 @@ namespace PxPre.Berny
         public static bool TraceIntersection(
             BNode islA, 
             BNode islB, 
-            BLoop loopInto, 
-            out BNode onIsle, 
+            BLoop loopInto,
+            List<BNode> outShapes,
             bool removeInputs = true)
         {
             List<BNode> allNodes = new List<BNode>();
@@ -424,11 +424,8 @@ namespace PxPre.Berny
 
             GatherTraceData(islA, islB, allNodes, outList, dictCol);
 
-            onIsle = null;
             if (outList.Count == 0)
-            {
                 return false;
-            }
 
             while (outList.Count > 0)
             {
@@ -606,8 +603,8 @@ namespace PxPre.Berny
                     newPath[i].prev = newPath[((i - 1) + newPath.Count) % newPath.Count];
                 }
 
-                if (onIsle == null && newPath.Count > 0)
-                    onIsle = newPath[0];
+                if(outShapes != null && newPath.Count > 0)
+                    outShapes.Add(newPath[0]);
             }
 
             if (removeInputs == true)
@@ -638,7 +635,7 @@ namespace PxPre.Berny
             BNode islA, 
             BNode islB, 
             BLoop loopInto, 
-            out BNode onIsle, 
+            List<BNode> generated, 
             bool removeInputs = true)
         {
             List<BNode> allNodes = new List<BNode>();
@@ -649,11 +646,8 @@ namespace PxPre.Berny
 
             GatherTraceData(islA, islB, allNodes, outList, dictCol);
 
-            onIsle = null;
             if (outList.Count == 0)
-            {
                 return false;
-            }
 
             while (outList.Count > 0)
             {
@@ -835,8 +829,8 @@ namespace PxPre.Berny
                     newPath[i].prev = newPath[((i - 1) + newPath.Count) % newPath.Count];
                 }
 
-                if (onIsle == null && newPath.Count > 0)
-                    onIsle = newPath[0];
+                if(generated != null && newPath.Count > 0)
+                    generated.Add(newPath[0]);
             }
 
             if (removeInputs == true)
@@ -849,6 +843,251 @@ namespace PxPre.Berny
             }
 
             return true;
+        }
+
+        public static void TraceUnion(List<BLoop> loops, BLoop loopInto, List<BNode> finalOutlines, bool removeInputs = true)
+        {
+            List<BNode> islands = new List<BNode>();
+            foreach (BLoop bl in loops)
+            {
+                List<BNode> lisls = bl.GetIslands(IslandTypeRequest.Closed);
+                if (lisls != null)
+                    islands.AddRange(lisls);
+            }
+
+            TraceUnion(islands, loopInto, removeInputs);
+
+            // the island is used as a parameter that's both the input of island to unionize, and 
+            // the set of islands that are left afterwards.
+            if(finalOutlines != null)
+                finalOutlines.InsertRange(0, islands);
+        }
+
+        public static void TraceUnion(
+            List<BNode> islands, // input and outputs
+            BLoop loopInto,
+            bool removeInputs = true)
+        {
+            
+            for (int i = 0; i < islands.Count - 1;)
+            {
+                bool mergedAny = false;
+                for (int j = i + 1; j < islands.Count;)
+                {
+                    BNode newIsl;
+
+                    BLoop srcLoop = islands[i].parent;
+                    if (TraceUnion(islands[i], islands[j], srcLoop, out newIsl, removeInputs) == true)
+                    {
+                        islands[i] = newIsl;
+                        mergedAny = true;
+                        islands.RemoveAt(j);
+                    }
+                    else
+                    {
+                        BoundingMode bm = GetLoopBoundingMode(islands[i], islands[j], false);
+                        if (bm == BoundingMode.LeftSurroundsRight)
+                        {
+                            islands[j].RemoveIsland(false);
+                            islands.RemoveAt(j);
+                        }
+                        else if (bm == BoundingMode.RightSurroundsLeft)
+                        {
+                            islands[i].RemoveIsland(false);
+                            islands[i] = islands[j];
+                            islands.RemoveAt(j);
+                            mergedAny = true;
+                        }
+                        else
+                            ++j;
+                    }
+                }
+
+                if (mergedAny == false)
+                    ++i;
+            }
+        }
+
+        public static void TraceDifference(
+            BLoop loopA, 
+            BLoop loopB, 
+            BLoop loopInto, 
+            bool removeInputs = true)
+        {
+            List<BNode> islsA = loopA.GetIslands(IslandTypeRequest.Closed);
+            List<BNode> islsB = loopB.GetIslands(IslandTypeRequest.Closed);
+
+            TraceDifference(islsA, islsB, loopInto, removeInputs);
+        }
+
+
+        public static void TraceDifference(
+            List<BNode> islsA,
+            List<BNode> islsB,
+            BLoop loopInto,
+            bool removeInputs = true)
+        {
+            // If there's nothing we're subtracting, just abort.
+            if (islsB.Count == 0)
+                return;
+
+            // If we're not subtracing away from anything but still go through
+            // with the subtraction, the end result would be that the right
+            // side goes away.
+            if (islsA.Count == 0)
+            {
+                if (removeInputs == true)
+                {
+                    foreach (BNode bn in islsB)
+                        bn.RemoveIsland(false);
+                }
+                return;
+            }
+
+            // Make sure the islands are the appropriate winding order. We're 
+            // assuming the positive shape is counter-clockwise, and the 
+            // negative shape is counter clockwise.
+
+            foreach (BNode bnislA in islsA)
+            {
+                if (BNode.CalculateWinding(bnislA.Travel()) > 0)
+                    bnislA.ReverseChainOrder();
+            }
+
+            foreach (BNode bnislB in islsB)
+            {
+                if (BNode.CalculateWinding(bnislB.Travel()) < 0)
+                    bnislB.ReverseChainOrder();
+            }
+
+            // Were any paths created from intersections?
+            bool anyClipped = false;
+
+            // Negative islands (from islsB) that should be kept
+            // because they create hollow holes that are surrounded
+            // by positive regions.
+            HashSet<BNode> negativeHoles = new HashSet<BNode>();
+
+            // Compare each element of islaA with islsB. If there's a collision,
+            // islaA is replaced with the created geometry. Note that the number of
+            // generated islands is variable.
+            for (int i = 0; i < islsA.Count;)
+            {
+                bool incr = true;
+                for (int j = 0; j < islsB.Count; ++j)
+                {
+                    List<BNode> newTracedIslands = new List<BNode>();
+
+                    // Note how the removeInputs parameter for TraceDifference is false. 
+                    // That's something we're managing at this current level when operating 
+                    // in batch.
+                    if (TraceDifference(islsA[i], islsB[j], loopInto, newTracedIslands, false) == true)
+                    {
+                        if (removeInputs == true)
+                            islsA[i].RemoveIsland(false);
+
+                        // Replace
+                        islsA.RemoveAt(i);
+                        islsA.InsertRange(i, newTracedIslands);
+
+                        anyClipped = true;
+                    }
+                    else
+                    {
+                        BoundingMode bm = GetLoopBoundingMode(islsA[i], islsB[j], false);
+                        if (bm == BoundingMode.LeftSurroundsRight)
+                        {
+                            // Do nothing, leave the inside with a reverse hole in it.
+                            negativeHoles.Add(islsB[j]);
+                        }
+                        else if (bm == Boolean.BoundingMode.RightSurroundsLeft)
+                        {
+                            if (removeInputs == true)
+                                islsA[i].RemoveIsland(false);
+
+                            islsA.RemoveAt(i);
+                            incr = false;
+                        }
+                    }
+                }
+
+                if (incr == true)
+                    ++i;
+            }
+
+            if (removeInputs == true)
+            {
+                foreach (BNode bn in islsB)
+                {
+                    if (negativeHoles.Contains(bn) == false)
+                        bn.RemoveIsland(false);
+                }
+            }
+
+            if (anyClipped == true && negativeHoles.Count > 0)
+            {
+                // If we have any negative holes and clipping happened, combine the 
+                // negative regions and see if that punches a hole past the positive 
+                // region through recurion. 
+                //
+                // In theory, this should only happen at most once.
+
+                List<BNode> negs = new List<BNode>(negativeHoles);
+                TraceUnion(negs, loopInto, true);
+
+                TraceDifference(islsA, negs, loopInto, removeInputs);
+            }
+        }
+
+        public static void TraceIntersection(
+            BLoop loopA, 
+            BLoop loopB, 
+            BLoop loopInto,
+            List<BNode> outShapes,
+            bool removeInputs = true)
+        {
+            List<BNode> islsA = loopA.GetIslands(IslandTypeRequest.Closed);
+            List<BNode> islsB = loopB.GetIslands(IslandTypeRequest.Closed);
+
+            TraceIntersection(islsA, islsB, loopInto, outShapes, removeInputs);
+        }
+
+        public static void TraceIntersection(
+            List<BNode> islsA,
+            List<BNode> islsB,
+            BLoop loopInto,
+            List<BNode> outShapes,
+            bool removeInputs = true)
+        {
+            for(int i = 0; i < islsA.Count; ++i)
+            { 
+                for(int j = 0; j < islsB.Count; ++j)
+                {
+                    if (TraceIntersection(islsA[i], islsB[i], loopInto, outShapes, true) == true)
+                    { 
+                        // Do nothing
+                    }
+                    else
+                    {
+                        BoundingMode bm = Boolean.GetLoopBoundingMode(islsA[i], islsB[j], false);
+                        if (bm == BoundingMode.LeftSurroundsRight)
+                            islsB[j].Clone(loopInto);
+                        else if (bm == Boolean.BoundingMode.RightSurroundsLeft)
+                            islsA[i].Clone(loopInto);
+                    }
+                }
+            }
+
+            if(removeInputs == true)
+            { 
+                foreach(BNode bn in islsA)
+                    bn.RemoveIsland(false);
+
+                foreach(BNode bn in islsB)
+                    bn.RemoveIsland(false);
+
+            }
+            
         }
     }
 }
